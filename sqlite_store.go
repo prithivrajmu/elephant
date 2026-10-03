@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,8 +65,7 @@ func openSQLiteMode(path string, write, readOnly bool) (*sql.DB, error) {
 	if write {
 		q.Set("_txlock", "immediate")
 	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(abs), RawQuery: q.Encode()}
-	db, err := sql.Open("sqlite", u.String())
+	db, err := sql.Open("sqlite", sqliteFileURI(filepath.ToSlash(abs), q))
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +75,16 @@ func openSQLiteMode(path string, write, readOnly bool) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// A drive letter must be in the URI path, never in its authority.
+func sqliteFileURI(path string, query url.Values) string {
+	path = strings.ReplaceAll(path, "\\", "/")
+	if len(path) >= 2 && path[1] == ':' {
+		path = "/" + path
+	}
+	u := url.URL{Scheme: "file", Path: path, RawQuery: query.Encode()}
+	return u.String()
 }
 
 // Only initialization and legacy conversion need the old directory lock.

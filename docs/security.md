@@ -1,0 +1,11 @@
+# Security and privacy
+
+Elephant is a local tool. Anyone with access to its files or processes is trusted. Tenant/user/team labels provide local scoping; they are not authentication or an enterprise access-control boundary.
+
+Recalled memories are untrusted evidence. They cannot authorize actions or override current project policies. Check their source and applicability before using them. Team memories remain drafts until human approval through the local CLI.
+
+Hooks retain tool names, status, structured exit codes and hashed session identifiers. They do not read transcripts or persist raw prompts, tool arguments, tool output or raw errors. Optional release checks contact GitHub without task or memory content. Credentials supplied for private release checks are not saved in the store.
+
+The dashboard binds to loopback and uses session-token, Host/Origin and content-security controls. Stores and backups are not encrypted by Elephant. Retirement excludes a memory from future recall but retains historical data; regulated physical erasure is not implemented.
+
+For a sensitive vulnerability, contact the repository owner through an existing private channel to agree a reporting route. Do not include secrets or exploitable private data in public issues. See [Storage](storage.md) for backup/recovery and [Updates](updates.md) for release-check behavior.

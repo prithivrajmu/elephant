@@ -14,3 +14,4 @@
 - One most useful next improvement:
 
 Do not attach raw transcripts, private repository content or credentials. An unsupported/fabricated capture is a bug, not a success metric.
+

@@ -23,7 +23,8 @@ SolidCompression=yes
 UninstallDisplayIcon={app}\bin\elephant.exe
 [Files]
 Source: "{#ReleaseDir}\elephant.exe"; DestDir: "{app}\bin"; Flags: ignoreversion
-Source: "{#ReleaseDir}\*.md"; DestDir: "{app}\docs"
+Source: "{#ReleaseDir}\README.md"; DestDir: "{app}\docs"
+Source: "{#ReleaseDir}\docs\*"; DestDir: "{app}\docs\docs"; Flags: recursesubdirs createallsubdirs
 Source: "{#ReleaseDir}\LICENSE"; DestDir: "{app}\docs"
 [Icons]
 Name: "{group}\Elephant setup"; Filename: "{cmd}"; Parameters: "/k """"{app}\bin\elephant.exe"" setup --wizard"""; WorkingDir: "{userdocs}"

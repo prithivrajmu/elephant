@@ -12,7 +12,8 @@ with tempfile.TemporaryDirectory(prefix='elephant-native-package-') as tmp:
  if args.format=='deb':
   binary=stage/'usr/bin/elephant';binary.parent.mkdir(parents=True);shutil.copy2(release/'elephant',binary);binary.chmod(0o755)
   docs=stage/'usr/share/doc/elephant';docs.mkdir(parents=True)
-  for name in sorted(p.name for p in ROOT.glob('*.md'))+['LICENSE']:shutil.copy2(ROOT/name,docs/name)
+  for name in ['README.md','LICENSE']:shutil.copy2(ROOT/name,docs/name)
+  shutil.copytree(ROOT/'docs',docs/'docs')
   control=stage/'DEBIAN';control.mkdir()
   (control/'control').write_text(f'Package: elephant\nVersion: {DEBIAN_VERSION}\nSection: utils\nPriority: optional\nArchitecture: {args.arch}\nMaintainer: Elephant contributors\nDescription: Persistent experience for coding agents\n A local memory store, Recall engine, MCP server and Memory Palace.\n')
   subprocess.run(['dpkg-deb','--build','--root-owner-group',str(stage),str(ROOT/'dist'/f'elephant-{VERSION}-linux-{args.arch}.deb')],check=True)
@@ -20,5 +21,6 @@ with tempfile.TemporaryDirectory(prefix='elephant-native-package-') as tmp:
   if platform.system()!='Darwin':raise SystemExit('Build .pkg on macOS with pkgbuild. No Mac installer was built here.')
   binary=stage/'usr/local/bin/elephant';binary.parent.mkdir(parents=True);shutil.copy2(release/'elephant',binary);binary.chmod(0o755)
   docs=stage/'usr/local/share/doc/elephant';docs.mkdir(parents=True)
-  for name in sorted(p.name for p in ROOT.glob('*.md'))+['LICENSE']:shutil.copy2(ROOT/name,docs/name)
+  for name in ['README.md','LICENSE']:shutil.copy2(ROOT/name,docs/name)
+  shutil.copytree(ROOT/'docs',docs/'docs')
   subprocess.run(['pkgbuild','--root',str(stage),'--identifier','dev.elephant.experience','--version',NUMERIC_VERSION,'--install-location','/',str(ROOT/'dist'/f'elephant-{VERSION}-darwin-{args.arch}.pkg')],check=True)

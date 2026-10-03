@@ -1,6 +1,6 @@
 # Elephant: first user in ten minutes
 
-Elephant 0.6.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.25+. This release is for a small local pilot. Linux x86-64 package acceptance and macOS arm64 source-build acceptance have passed; other packages are cross-compiled. See [VALIDATION.md](VALIDATION.md) for the exact checks and limits.
+Elephant 0.6.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.25+. This release is for a small local pilot. Publication is gated on native Linux, macOS and Windows checks; six platform archives are cross-compiled. Native ARM installer and real model-driven host acceptance remain separate pilot checks. See [Validation](validation.md) for the exact checks and limits.
 
 ## 1. Install the package for your computer
 
@@ -39,7 +39,7 @@ go build -buildvcs=false -o elephant ./cmd/elephant
 ./elephant selftest
 ```
 
-The binary is created at `./elephant`. Use its absolute path in [CLIENTS.md](CLIENTS.md)'s registration commands. For the commands below, substitute `./elephant` for `elephant` when running from the repository root. Package-building scripts are included, but compiled binaries and release archives are not tracked in Git. Building and running the self-test on your OS is a separate check from the recorded Linux validation.
+The binary is created at `./elephant`. Use its absolute path in [Client integration](clients.md)'s registration commands. For the commands below, substitute `./elephant` for `elephant` when running from the repository root. Package-building scripts are included, but compiled binaries and release archives are not tracked in Git. Building and running the self-test on your OS is a separate check from the recorded Linux validation.
 
 ## 2. Initialize automatic memory
 
@@ -63,11 +63,11 @@ elephant experiences  # Inspect the latest event metadata
 
 An empty first recall is expected. Prompts, tool output and transcripts are not copied into the store. The writing target starts at 80%; use `elephant language --ste-target 100` for strict local checks. This is not a full-standard compliance score.
 
-Use `elephant automation --enabled=false` to pause and `--enabled=true` to resume. See [AUTOMATION.md](AUTOMATION.md) for the exact lifecycle, local files and unanchored conversations.
+Use `elephant automation --enabled=false` to pause and `--enabled=true` to resume. See [Automatic hooks](automation.md) for the exact lifecycle, local files and unanchored conversations.
 
-For other agents or Windows, use `elephant setup --wizard` and follow [CLIENTS.md](CLIENTS.md). That MCP route requires host registration and agent guidance. It does not install automatic hooks.
+For other agents or Windows, use `elephant setup --wizard` and follow [Client integration](clients.md). That MCP route requires host registration and agent guidance. It does not install automatic hooks.
 
-The default store is `~/.elephant/memories.sqlite`. Existing `events.jsonl` paths migrate in place on first access, with `<store>.jsonl-backup` preserving the original. Set a custom path with `elephant init --store /absolute/path/memories.sqlite`. Later project commands reuse it. See [STORAGE.md](STORAGE.md) for safe backup, restore and migration recovery.
+The default store is `~/.elephant/memories.sqlite`. Existing `events.jsonl` paths migrate in place on first access, with `<store>.jsonl-backup` preserving the original. Set a custom path with `elephant init --store /absolute/path/memories.sqlite`. Later project commands reuse it. See [Storage](storage.md) for safe backup, restore and migration recovery.
 
 ## 4. Confirm the memory survives and applies
 
@@ -86,7 +86,7 @@ You can use the CLI/UI without an MCP client. For CLI JSON, use `record --file l
 
 - No tools: check absolute executable path, client config format, server approval and restart. `doctor` proves local health, not client connection.
 - No recall: check task terms, known facts, scope and byte budget. Similar stack alone does not make task-specific recall eligible. Current retrieval uses lexical matching, not semantic embeddings.
-- Store busy: SQLite waits up to three seconds for a writer. Ordinary process crashes release SQLite locks; migration-only `.lock` recovery is documented in [STORAGE.md](STORAGE.md).
+- Store busy: SQLite waits up to three seconds for a writer. Ordinary process crashes release SQLite locks; migration-only `.lock` recovery is documented in [Storage](storage.md).
 - Corrupt store or legacy journal: preserve it and restore explicitly to a new path. Elephant does not silently discard history.
 - Wrong context: regenerate setup and restart the client. Server identity/project are fixed at startup.
 
@@ -95,4 +95,4 @@ No authenticated multi-user hosting or physical erasure is included. Start with 
 
 ## Release updates
 
-Use `elephant update --check` to check releases now, `--enabled=false` to disable checks, and `--dismiss` to dismiss a notice. Session-start checks are cached for 24 hours. The private repository needs an explicitly configured `ELEPHANT_GITHUB_TOKEN`; unavailable metadata does not mean your version is current. Memory Palace also has update controls. See [UPDATES.md](UPDATES.md).
+Use `elephant update --check` to check releases now, `--enabled=false` to disable checks, and `--dismiss` to dismiss a notice. Session-start checks are cached for 24 hours. The private repository needs an explicitly configured `ELEPHANT_GITHUB_TOKEN`; unavailable metadata does not mean your version is current. Memory Palace also has update controls. See [Update notifications](updates.md).
