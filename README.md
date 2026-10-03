@@ -24,6 +24,8 @@ elephant palace --root /path/to/project --project my-dashboard
 
 Merge the generated client config and agent instructions, restart the client, then confirm the tools are visible. See [CLIENTS.md](CLIENTS.md) and [PILOT_PLAN.md](PILOT_PLAN.md). The dashboard runs at http://127.0.0.1:7331. The first run is empty; lessons require observed evidence and an explicit record call.
 
+For exact Codex CLI/local app, Claude Code and Pi registration commands, see [CLIENTS.md](CLIENTS.md#direct-cli-registration). Source-checkout build steps are in [QUICKSTART.md](QUICKSTART.md#build-from-a-source-checkout).
+
 New installs use `~/.elephant/events.jsonl`; an existing legacy `~/.agent-memory/events.jsonl` is reused when no modern journal exists. Pass `--store /absolute/path/events.jsonl` consistently for another journal. All paths in generated setup are absolute. `--budget` counts UTF-8 bytes of returned experience text; only inject the `context` field from CLI JSON, not its match metadata.
 
 For source builds, install Go 1.22+ and run `go test ./...` then `go build -buildvcs=false -o elephant ./cmd/elephant`. No external Go modules are required.

@@ -1,6 +1,6 @@
 # Elephant: first user in ten minutes
 
-Elephant 0.4.0-pilot is a local Go binary with an embedded dashboard. It needs no Go installation, model key or cloud service. This release is for a small local pilot. Only Linux x86-64 has been executed in our acceptance environment; the other packages are cross-compiled.
+Elephant 0.4.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.22+. This release is for a small local pilot. Only Linux x86-64 has been executed in our acceptance environment; the other packages are cross-compiled.
 
 ## 1. Install the package for your computer
 
@@ -27,6 +27,19 @@ Windows PowerShell, from the extracted folder:
 If local script policy blocks the installer, use `Get-FileHash .\elephant.exe -Algorithm SHA256`, compare against `SHA256SUMS`, and run the executable directly. The installer does not change policy or PATH. Substitute your installed binary's full path for `elephant` below if it is not on PATH.
 
 `selftest` uses an isolated temporary store, runs seven checks, and removes it. It does not seed fabricated lessons into your real history. All checks must show `ok: true` before proceeding.
+
+### Build from a source checkout
+
+If you have the repository rather than a prebuilt package, install Go 1.22+ and run these commands from the repository root on macOS/Linux:
+
+```sh
+go test ./...
+go build -buildvcs=false -o elephant ./cmd/elephant
+./elephant version
+./elephant selftest
+```
+
+The binary is created at `./elephant`. Use its absolute path in [CLIENTS.md](CLIENTS.md)'s registration commands. For the commands below, substitute `./elephant` for `elephant` when running from the repository root. Package-building scripts are included, but compiled binaries and release archives are not tracked in Git. Building and running the self-test on your OS is a separate check from the recorded Linux validation.
 
 ## 2. Choose a real project and generate setup
 
@@ -55,7 +68,7 @@ The default journal is `~/.elephant/events.jsonl`. If only the previous `~/.agen
 
 ## 3. Connect your agent and teach it the workflow
 
-See `CLIENTS.md`. Merge the generated server entry into existing client configuration, add `AGENT_INSTRUCTIONS.md` to your agent's project guidance, then reload/restart the client. The setup command does not modify client settings automatically.
+See [CLIENTS.md](CLIENTS.md) for exact Codex, Claude Code and Pi registration commands, or merge the generated server entry into existing client configuration. Add `AGENT_INSTRUCTIONS.md` to your agent's project guidance, then reload/restart the client. The setup command does not modify client settings automatically.
 
 Confirm six tools are visible: `profile_memory`, `init_memory`, `recall_memory`, `record_memory`, `feedback_memory`, `forget_memory`. Two MCP prompts are also exposed: `initmemory` and `memory_review`. The client's slash-command presentation varies.
 
