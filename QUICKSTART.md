@@ -43,7 +43,7 @@ The binary is created at `./elephant`. Use its absolute path in [CLIENTS.md](CLI
 
 ## 2. Initialize automatic memory
 
-Build the current source for the new automatic workflow. Older 0.4 packages do not include it. From the project directory, run:
+Build the current source or use a 0.5 package built from it. Older 0.4 packages do not include the automatic workflow. From the project directory, run:
 
 ```sh
 elephant init
@@ -54,7 +54,7 @@ The default installs Codex and Claude Code hooks. Existing settings and instruct
 
 ## 3. Work normally
 
-Hooks recall useful experience before each task, record tool outcome metadata, and request one lesson review before the agent finishes. The agent records a lesson only when observed work justifies one. There is no extra model key and no need for a repeated “remember this” prompt.
+Hooks recall useful experience before each task, record tool outcome metadata, and request one lesson review before the agent finishes. The agent records a lesson only when observed work justifies one. There is no extra model key and no need for a repeated “remember this” prompt. After review, the agent reports one factual line such as `Elephant: recalled 2 memories · saved 1 lesson.`
 
 ```sh
 elephant automation   # Check installed settings and received events
@@ -91,3 +91,8 @@ You can use the CLI/UI without an MCP client. For CLI JSON, use `record --file l
 - Wrong context: regenerate setup and restart the client. Server identity/project are fixed at startup.
 
 No authenticated multi-user hosting or physical erasure is included. Start with non-sensitive local lessons. Token-avoidance figures are estimates against loading every eligible summary, not measured productivity or provider-billing savings.
+
+
+## Release updates
+
+Use `elephant update --check` to check releases now, `--enabled=false` to disable checks, and `--dismiss` to dismiss a notice. Session-start checks are cached for 24 hours. The private repository needs an explicitly configured `ELEPHANT_GITHUB_TOKEN`; unavailable metadata does not mean your version is current. Memory Palace also has update controls. See [UPDATES.md](UPDATES.md).

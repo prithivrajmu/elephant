@@ -17,7 +17,7 @@ After that, work normally. You do not need to ask for recall or remind the agent
 | Session start | Fingerprint the project and recall relevant project knowledge. |
 | Task submitted | Recall against the current task within a 4,000-byte default budget. |
 | Tool returns | Save an Experience with the tool name, status and explicit exit code when supplied. |
-| Agent finishes | Request one review of observed work. The agent can save zero to three useful lessons. |
+| Agent finishes | Request one review of observed work. The agent can save zero to three useful lessons, then emit one factual task-status line. |
 | Next related task | Recall the saved lesson if its scope, task terms and conditions match. |
 
 The finish hook continues the agent once to perform its review. It does not repeatedly block completion. It respects the host's `stop_hook_active` guard and also keeps a local per-session review guard. A new user task resets the guard. Hook errors report a warning and let the agent continue.
@@ -79,3 +79,8 @@ Hook contracts checked against official documentation on 2026-10-03:
 
 - [Codex hooks](https://learn.chatgpt.com/docs/hooks)
 - [Claude Code hooks](https://code.claude.com/docs/en/hooks)
+
+
+## User updates
+
+The review supplies task-specific record and `task-status` commands. Saved counts use journal receipts, and stale review commands fail instead of recording into a new task. Session-start hooks also check cached release availability and can show one update notice per version. See [UPDATES.md](UPDATES.md) for controls, privacy and native-test instructions.

@@ -24,6 +24,8 @@ type Experience struct {
 	Status   string    `json:"status"`
 	ExitCode *int      `json:"exit_code,omitempty"`
 	At       time.Time `json:"at"`
+	Task     string    `json:"task,omitempty"`
+	MemoryID string    `json:"memory_id,omitempty"`
 }
 
 type HookInput struct {
@@ -39,7 +41,12 @@ type HookInput struct {
 	AgentID    string          `json:"agent_id"`
 }
 type hookState struct {
-	Reviewed bool `json:"reviewed"`
+	Reviewed  bool     `json:"reviewed"`
+	Completed bool     `json:"completed,omitempty"`
+	Task      string   `json:"task,omitempty"`
+	Context   string   `json:"context,omitempty"`
+	Agent     string   `json:"agent,omitempty"`
+	Recalled  []string `json:"recalled,omitempty"`
 }
 
 func (s Store) observe(x Experience) error {
@@ -163,6 +170,12 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 				return nil, nil
 			}
 			state.Reviewed = true
+			if state.Task == "" {
+				state.Task = newID()
+				state.Context = taskContext(c)
+				state.Agent = agent
+			}
+			x.Task = state.Task
 			if e = safeParents(filepath.Dir(c.Store), statePath); e != nil {
 				return nil, e
 			}
@@ -183,6 +196,8 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		}
 		reason := reviewPrefix + " Review the observed work before you finish. Save zero to three useful lessons: a tested approach, a failure and its verified fix, or a confirmed convention. Use only observed evidence. Do not invent causes, outcomes or sources. Do not store secrets or transcripts. Skip recording if no durable lesson is justified. Use short, clear sentences. For each lesson, send JSON on stdin to this command:\n" + c.recordCommand() + "\nJSON fields: incident, lesson, source (actual test, review or tool evidence), class (win, lesson, warning or scar), scope (" + scope + " by default), features (signal names to string arrays). Add requires/excludes when a lesson depends on a condition. Use personal scope only for transferable lessons; do not promote to team scope. Report saved memory IDs or errors. A tool exit code alone is not a lesson. Do not mark recall helpful unless you applied it and observed the effect. When done, finish the user's response. This review runs once per task."
 		out["decision"] = "block"
+		reason = strings.Replace(reason, c.recordCommand(), c.recordCommand()+" --config "+shellQuote(configPath)+" --task-session "+shellQuote(sessionKey)+" --task-id "+shellQuote(x.Task), 1)
+		reason += " After reviewing, run this command and include its exact one-line output once in your final response:\n" + c.taskStatusCommand(sessionKey, x.Task) + "\nDo not invent counts. If status cannot be read, say Elephant: capture status unavailable. Do not confuse review requested with a saved lesson."
 		out["reason"] = reason
 		return out, nil
 	case "UserPromptSubmit":
@@ -190,7 +205,8 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 			if e := safeParents(filepath.Dir(c.Store), statePath); e != nil {
 				return nil, e
 			}
-			return nil, atomicLocalFile(statePath, []byte(`{"reviewed":false}`), 0600)
+			x.Task = newID()
+			return nil, writeTaskState(c, sessionKey, hookState{Task: x.Task, Context: taskContext(c), Agent: agent})
 		})
 		if err != nil {
 			return out, err
@@ -209,6 +225,25 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 	}
 	if result.Context != "" {
 		out["hookSpecificOutput"] = map[string]any{"hookEventName": h.Event, "additionalContext": result.Context}
+	}
+	if h.Event == "UserPromptSubmit" {
+		err = svc.Store.transact(func(_ []Memory, _ map[string]bool) (*Event, error) {
+			state, e := readTaskState(c, sessionKey)
+			if e != nil {
+				return nil, e
+			}
+			if state.Task != x.Task {
+				return nil, nil
+			}
+			state.Recalled = []string{}
+			for _, hit := range result.Hits {
+				state.Recalled = append(state.Recalled, hit.ID)
+			}
+			return nil, writeTaskState(c, sessionKey, state)
+		})
+		if err != nil {
+			return out, err
+		}
 	}
 	return out, nil
 }
