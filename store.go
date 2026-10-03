@@ -1,12 +1,9 @@
 package memory
 
 import (
-	"bufio"
+	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -23,127 +20,63 @@ type Event struct {
 }
 type Store struct{ Path string }
 
-func (s Store) load() ([]Memory, map[string]bool, error) {
-	f, err := os.Open(s.Path)
-	if errors.Is(err, os.ErrNotExist) {
-		return []Memory{}, map[string]bool{}, nil
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	defer f.Close()
-	memories := map[string]Memory{}
-	feedback := map[string]bool{}
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 4096), 2<<20)
-	line := 0
-	for scanner.Scan() {
-		line++
-		var e Event
-		if err := json.Unmarshal(scanner.Bytes(), &e); err != nil {
-			return nil, nil, fmt.Errorf("journal line %d: %w (restore or repair explicitly)", line, err)
-		}
-		switch e.Kind {
-		case "experience":
-			if e.Experience == nil || e.Experience.ID == "" || e.Experience.Identity.Tenant == "" || e.Experience.Identity.User == "" {
-				return nil, nil, fmt.Errorf("invalid experience at line %d", line)
-			}
-			feedback["experience:"+e.Experience.ID] = true
-		case "put":
-			if e.Memory == nil {
-				return nil, nil, fmt.Errorf("invalid put at line %d", line)
-			}
-			memories[e.Memory.ID] = *e.Memory
-		case "feedback":
-			m, ok := memories[e.ID]
-			if !ok {
-				return nil, nil, fmt.Errorf("feedback for unknown memory")
-			}
-			key := e.ID + ":" + e.FeedbackID
-			if feedback[key] {
-				continue
-			}
-			feedback[key] = true
-			if e.Helpful {
-				m.Helpful++
-			} else {
-				m.Unhelpful++
-			}
-			memories[e.ID] = m
-		case "retire":
-			m, ok := memories[e.ID]
-			if !ok {
-				return nil, nil, fmt.Errorf("retire for unknown memory")
-			}
-			m.Retired = true
-			memories[e.ID] = m
-		case "recall":
-			if e.Recall == nil {
-				return nil, nil, fmt.Errorf("invalid recall event")
-			}
-		default:
-			return nil, nil, fmt.Errorf("unknown event kind %q", e.Kind)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, nil, err
-	}
-	out := []Memory{}
-	for _, m := range memories {
-		out = append(out, m)
-	}
-	return out, feedback, nil
-}
 func (s Store) All() ([]Memory, error) {
-	var out []Memory
-	e := s.transact(func(m []Memory, _ map[string]bool) (*Event, error) { out = m; return nil, nil })
-	return out, e
+	db, err := s.database(false)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	return readMemories(db)
 }
 
-// Lock directories serialize independent CLI and MCP processes. Stale locks fail closed.
+// The callback runs once under SQLite's write transaction. It is never replayed
+// on a busy error, because hook callbacks can also update local task state.
 func (s Store) transact(fn func([]Memory, map[string]bool) (*Event, error)) error {
-	if err := os.MkdirAll(filepath.Dir(s.Path), 0700); err != nil {
-		return err
-	}
-	lock := s.Path + ".lock"
-	deadline := time.Now().Add(3 * time.Second)
-	for {
-		err := os.Mkdir(lock, 0700)
-		if err == nil {
-			break
-		}
-		if !errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("acquire memory lock: %w", err)
-		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("memory store busy after 3s; after a crashed writer verify it stopped before removing %s: %w", lock, err)
-		}
-		time.Sleep(15 * time.Millisecond)
-	}
-	defer os.Remove(lock)
-	all, seen, err := s.load()
+	return s.transactSQL(true, nil, func(_ *sql.Tx, all []Memory, seen map[string]bool) (*Event, error) { return fn(all, seen) })
+}
+func (s Store) transactState(fn func([]Memory, map[string]bool) (*Event, error)) error {
+	return s.transactSQL(false, nil, func(_ *sql.Tx, all []Memory, seen map[string]bool) (*Event, error) { return fn(all, seen) })
+}
+func (s Store) transactKeys(keys []string, fn func([]Memory, map[string]bool) (*Event, error)) error {
+	return s.transactSQL(true, keys, func(_ *sql.Tx, all []Memory, seen map[string]bool) (*Event, error) { return fn(all, seen) })
+}
+func (s Store) transactSQL(memories bool, keys []string, fn func(*sql.Tx, []Memory, map[string]bool) (*Event, error)) error {
+	db, err := s.database(true)
 	if err != nil {
 		return err
 	}
-	e, err := fn(all, seen)
-	if err != nil || e == nil {
-		return err
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("memory store busy or unavailable: %w", err)
 	}
-	e.At = time.Now().UTC()
-	data, err := json.Marshal(e)
+	defer tx.Rollback()
+	all := []Memory{}
+	if memories {
+		all, err = readMemories(tx)
+		if err != nil {
+			return err
+		}
+	}
+	seen := map[string]bool{}
+	for _, key := range keys {
+		var exists int
+		if err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM seen WHERE key=?)", key).Scan(&exists); err != nil {
+			return err
+		}
+		seen[key] = exists != 0
+	}
+	event, err := fn(tx, all, seen)
 	if err != nil {
 		return err
 	}
-	data = append(data, '\n')
-	f, err := os.OpenFile(s.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-	if err != nil {
-		return err
+	if event != nil {
+		event.At = time.Now().UTC()
+		if err = applyEvent(tx, *event); err != nil {
+			return err
+		}
 	}
-	defer f.Close()
-	if _, err = f.Write(data); err != nil {
-		return err
-	}
-	return f.Sync()
+	return tx.Commit()
 }
 func sameMemory(a, b Memory) bool {
 	// Compare complete immutable learning payload; evidence from separate projects stays independent.
@@ -220,11 +153,11 @@ func (s Store) Feedback(id Identity, project, memoryID, eventID string, helpful 
 	if strings.TrimSpace(eventID) == "" || len(eventID) > 256 {
 		return fmt.Errorf("feedback_id required, max 256 bytes; use a unique observed task/run ID")
 	}
-	return s.transact(func(all []Memory, seen map[string]bool) (*Event, error) {
+	parts, _ := json.Marshal([]string{id.User, eventID})
+	feedbackKey := string(parts)
+	return s.transactKeys([]string{memoryID + ":" + feedbackKey, memoryID + ":" + id.User + ":" + eventID}, func(all []Memory, seen map[string]bool) (*Event, error) {
 		for _, m := range all {
 			if m.ID == memoryID && visible(m, id, project, conversation...) {
-				parts, _ := json.Marshal([]string{id.User, eventID})
-				feedbackKey := string(parts)
 				key := memoryID + ":" + feedbackKey
 				if seen[key] || seen[memoryID+":"+id.User+":"+eventID] {
 					return nil, nil
@@ -258,4 +191,26 @@ func (s Store) Approve(id Identity, memoryID string) error {
 		}
 		return nil, fmt.Errorf("team draft not found or not owned")
 	})
+}
+
+// Read transactions retain a consistent snapshot and do not acquire a writer lock.
+func (s Store) readSQL(fn func(*sql.Tx, []Memory) error) error {
+	db, err := s.database(false)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	all, err := readMemories(tx)
+	if err != nil {
+		return err
+	}
+	if err = fn(tx, all); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

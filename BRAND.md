@@ -16,7 +16,7 @@ The goal is useful Recall. Elephant does not need to load whole conversations in
 | --- | --- | --- |
 | Elephant | The complete experience layer. | Local engine, CLI, MCP and UI. |
 | Experience | Evidence from an observed event. | Incident text and source on a Memory; no separate event table yet. |
-| Memory | A durable lesson from an Experience. | Stored in the journal. |
+| Memory | A durable lesson from an Experience. | Stored in SQLite with event audit history. |
 | Win | An approach that worked well. | Memory Class. |
 | Lesson | Useful knowledge with no strong outcome. | Memory Class. |
 | Warning | A risk under stated conditions. | Memory Class. |
@@ -64,7 +64,7 @@ elephant forget --id MEMORY_ID
 
 ## Data compatibility
 
-The default new journal is `~/.elephant/events.jsonl`. If only the old `~/.agent-memory/events.jsonl` exists, reuse it. Read `.elephant.json` first. Read `.agent-memory.json` only when the new project file is absent.
+The new default store is `~/.elephant/memories.sqlite`. Existing modern/legacy `events.jsonl` paths migrate in place with an original backup. Read `.elephant.json` first. Read `.agent-memory.json` only when the new project file is absent.
 
 Keep legacy commands `profile`, `record`, `list` and `ui` as aliases. Keep the six MCP tool names and existing JSON field names so clients and journals continue to work.
 
@@ -77,3 +77,4 @@ Current private scopes are personal, project and conversation. Team scope requir
 The retrieval math remains documented in DESIGN.md. A Scar still needs relevant task evidence and valid requirements. A severe label cannot bypass a scope rule or a Recall Budget.
 
 Do not show invented confidence, saves or time reductions. The current token baseline loads all eligible summaries. It does not represent the full historical conversations. Future historical-compression metrics need source lengths and tokenizer evidence.
+

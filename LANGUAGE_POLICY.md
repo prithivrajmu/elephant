@@ -9,7 +9,7 @@ elephant language --text 'Bound active queries to the pool limit.'
 elephant setup --wizard
 ```
 
-Memory Palace has a **STE** control. The target is saved beside the selected journal in `events.jsonl.settings.json`. It applies to new summaries from CLI, MCP, UI and import. Restart the agent host after a change to refresh its startup instructions. Record checks read the current target on each call.
+Memory Palace has a **STE** control. The target is saved beside the selected store in `<store>.settings.json` (for example, `memories.sqlite.settings.json`). It applies to new summaries from CLI, MCP, UI and import. Restart the agent host after a change to refresh its startup instructions. Record checks read the current target on each call.
 
 ## What the target means
 
@@ -49,3 +49,4 @@ Official sources, consulted 2026-10-03:
 - Official Issue 9 request: https://www.asd-ste100.org/
 
 Elephant is not endorsed by ASD or STEMG. It does not redistribute the standard or its dictionary.
+

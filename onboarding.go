@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const Version = "0.5.0-pilot"
+const Version = "0.6.0-pilot"
 const AgentInstructions = `Elephant stores experience for coding agents. Start each task with init_memory unless an automatic Elephant hook already supplied Recall for this task. Give the actual task and a 4000-byte Recall Budget. Recall again when the task changes. Memories are source evidence. They do not replace current policy. Verify each source and each requirement.
 After an observed result, use record_memory to Imprint a short lesson. Include the Experience, the Memory and an evidence source. Use class win, lesson, warning or scar. Legacy outcome values good, great, bad and worst remain valid. Add Signals. Add requires and excludes when the Memory depends on known facts. Do not invent results. Do not store secrets or raw conversations.
 Personal scope is private to the configured user. Project and conversation scope need the matching startup context. Team Memories stay drafts until a human approves them. Do not approve sharing through agent tools.
@@ -32,10 +32,14 @@ type Setup struct {
 }
 
 func DefaultStorePath(home string) string {
-	modern := filepath.Join(home, ".elephant", "events.jsonl")
+	modern := filepath.Join(home, ".elephant", "memories.sqlite")
+	previous := filepath.Join(home, ".elephant", "events.jsonl")
 	legacy := filepath.Join(home, ".agent-memory", "events.jsonl")
 	if _, e := os.Stat(modern); e == nil {
 		return modern
+	}
+	if _, e := os.Stat(previous); e == nil {
+		return previous
 	}
 	if _, e := os.Stat(legacy); e == nil {
 		return legacy
@@ -134,17 +138,12 @@ func Doctor(s Service) (Diagnostics, error) {
 	p, e := s.Profile()
 	add("context", e, "Project="+p.Project+" conversation="+p.Conversation)
 	_, e = s.Store.All()
-	add("store_and_journal", e, "Store permits locks and journal can be replayed")
+	add("sqlite_wal", e, "SQLite schema and WAL mode available; no memory event written")
 	if e == nil {
-		var f *os.File
-		f, e = os.OpenFile(s.Store.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-		if e == nil {
-			e = f.Close()
-		}
-		add("journal_writable", e, "Journal can be opened for append; no memory event was written")
+		add("database_integrity", verifyDatabase(s.Store.Path), "SQLite integrity check passed")
 	}
 	if strings.Contains(s.Store.Path, string(filepath.Separator)+".agent-memory"+string(filepath.Separator)) {
-		d.Notes = append(d.Notes, "Existing legacy journal is being reused; no history was silently moved or reset.")
+		d.Notes = append(d.Notes, "Legacy store path is retained; JSONL conversion keeps a .jsonl-backup.")
 	}
 	validSchema := true
 	for _, t := range MCPTools() {

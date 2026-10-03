@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version: '1.27.x'
           cache: false
       - uses: actions/setup-python@v5
         with:
@@ -31,6 +31,7 @@ jobs:
           go build -buildvcs=false -o elephant-test ./cmd/elephant
           ./elephant-test selftest
           python scripts/acceptance.py ./elephant-test
+          python scripts/storage_acceptance.py ./elephant-test
       - name: Automatic hook acceptance
         if: runner.os != 'Windows'
         run: python scripts/automation_acceptance.py ./elephant-test
@@ -40,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version: '1.27.x'
           cache: false
       - uses: actions/setup-python@v5
         with:

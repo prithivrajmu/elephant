@@ -1,6 +1,6 @@
 # Elephant: first user in ten minutes
 
-Elephant 0.5.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.22+. This release is for a small local pilot. Linux x86-64 package acceptance and macOS arm64 source-build acceptance have passed; other packages are cross-compiled. See [VALIDATION.md](VALIDATION.md) for the exact checks and limits.
+Elephant 0.6.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.25+. This release is for a small local pilot. Linux x86-64 package acceptance and macOS arm64 source-build acceptance have passed; other packages are cross-compiled. See [VALIDATION.md](VALIDATION.md) for the exact checks and limits.
 
 ## 1. Install the package for your computer
 
@@ -30,7 +30,7 @@ If local script policy blocks the installer, use `Get-FileHash .\elephant.exe -A
 
 ### Build from a source checkout
 
-If you have the repository rather than a prebuilt package, install Go 1.22+ and run these commands from the repository root on macOS/Linux:
+If you have the repository rather than a prebuilt package, install Go 1.25+ and run these commands from the repository root on macOS/Linux:
 
 ```sh
 go test ./...
@@ -43,7 +43,7 @@ The binary is created at `./elephant`. Use its absolute path in [CLIENTS.md](CLI
 
 ## 2. Initialize automatic memory
 
-Build the current source or use a 0.5 package built from it. Older 0.4 packages do not include the automatic workflow. From the project directory, run:
+Build the current source or use a 0.6 package built from it. Older 0.4 packages do not include the automatic workflow. From the project directory, run:
 
 ```sh
 elephant init
@@ -67,7 +67,7 @@ Use `elephant automation --enabled=false` to pause and `--enabled=true` to resum
 
 For other agents or Windows, use `elephant setup --wizard` and follow [CLIENTS.md](CLIENTS.md). That MCP route requires host registration and agent guidance. It does not install automatic hooks.
 
-The default journal is `~/.elephant/events.jsonl`. An existing legacy journal is reused when no modern journal exists. Set a custom path with `elephant init --store /absolute/path/events.jsonl`; later commands in this project reuse it. A stable `--project` ID lets multiple checkouts refer to one project.
+The default store is `~/.elephant/memories.sqlite`. Existing `events.jsonl` paths migrate in place on first access, with `<store>.jsonl-backup` preserving the original. Set a custom path with `elephant init --store /absolute/path/memories.sqlite`. Later project commands reuse it. See [STORAGE.md](STORAGE.md) for safe backup, restore and migration recovery.
 
 ## 4. Confirm the memory survives and applies
 
@@ -86,8 +86,8 @@ You can use the CLI/UI without an MCP client. For CLI JSON, use `record --file l
 
 - No tools: check absolute executable path, client config format, server approval and restart. `doctor` proves local health, not client connection.
 - No recall: check task terms, known facts, scope and byte budget. Similar stack alone does not make task-specific recall eligible. Current retrieval uses lexical matching, not semantic embeddings.
-- Store busy: Elephant retries for three seconds. After a crashed process, verify all users of that store have stopped before removing the journal's `.lock` directory. Never remove a live process's lock.
-- Corrupt journal: keep a copy and restore/repair explicitly. Elephant fails closed; it does not discard history.
+- Store busy: SQLite waits up to three seconds for a writer. Ordinary process crashes release SQLite locks; migration-only `.lock` recovery is documented in [STORAGE.md](STORAGE.md).
+- Corrupt store or legacy journal: preserve it and restore explicitly to a new path. Elephant does not silently discard history.
 - Wrong context: regenerate setup and restart the client. Server identity/project are fixed at startup.
 
 No authenticated multi-user hosting or physical erasure is included. Start with non-sensitive local lessons. Token-avoidance figures are estimates against loading every eligible summary, not measured productivity or provider-billing savings.
