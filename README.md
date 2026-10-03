@@ -6,7 +6,7 @@
 
 Elephant stores useful experience from earlier agent work. It reads the current environment and recalls relevant Memories. A Recall Budget limits the returned text. The engine works through CLI JSON or MCP. It has no model-provider dependency.
 
-Version 0.4 is a local pilot. The agent must record an observed result. Elephant does not extract lessons from whole conversations in the background. No model key is needed.
+Version 0.5 is a local pilot. Run `elephant init` once to install automatic recall, tool outcome capture and end-of-task lesson review for Codex and Claude Code on macOS/Linux. Complete the host’s normal hook approval, then work normally. The existing agent extracts justified lessons; no extra model key is needed. See [AUTOMATION.md](AUTOMATION.md).
 
 See [BRAND.md](BRAND.md) for the product terms. See [LANGUAGE_POLICY.md](LANGUAGE_POLICY.md) for the default 80% writing target. Set it to 100% to enforce the local checks. This setting does not prove full ASD-STE100 compliance.
 
@@ -18,11 +18,11 @@ Use the prebuilt package for your OS: [QUICKSTART.md](QUICKSTART.md) walks throu
 elephant version
 elephant selftest
 elephant doctor --root /path/to/project --project my-dashboard
-elephant setup --root /path/to/project --project my-dashboard --output elephant-setup
+elephant init --root /path/to/project --project my-dashboard
 elephant palace --root /path/to/project --project my-dashboard
 ```
 
-Merge the generated client config and agent instructions, restart the client, then confirm the tools are visible. See [CLIENTS.md](CLIENTS.md) and [PILOT_PLAN.md](PILOT_PLAN.md). The dashboard runs at http://127.0.0.1:7331. The first run is empty; lessons require observed evidence and an explicit record call.
+Restart the client and approve the installed hooks; in Codex, use `/hooks`. Run `elephant automation` to check received events. See [CLIENTS.md](CLIENTS.md) and [PILOT_PLAN.md](PILOT_PLAN.md). The dashboard runs at http://127.0.0.1:7331. The first run is empty; the finish hook asks the agent to save only lessons backed by observed evidence.
 
 For exact Codex CLI/local app, Claude Code and Pi registration commands, see [CLIENTS.md](CLIENTS.md#direct-cli-registration). Source-checkout build steps are in [QUICKSTART.md](QUICKSTART.md#build-from-a-source-checkout).
 
@@ -184,7 +184,7 @@ MIT licensed. No public repository has been created or published by this deliver
 
 ## Conversations without a project
 
-Use `--unattached --conversation CONVERSATION_ID` with record, recall, MCP or UI. The project field stays empty and the profiler never scans the ambient working directory. Personal memories remain private and reusable across your conversations; conversation scope restricts them to the exact conversation ID. `recall --task` requires an exact content-term match, while `init` without a task explicitly allows known-profile discovery. See [ASTRA_REVIEW.md](ASTRA_REVIEW.md) for findings, revised math, examples and the connection roadmap.
+Use `--unattached --conversation CONVERSATION_ID` with record, recall, MCP or UI. The project field stays empty and the profiler never scans the ambient working directory. Personal memories remain private and reusable across your conversations; conversation scope restricts them to the exact conversation ID. `recall --task` requires an exact content-term match, while `recall --initialize` without a task explicitly allows known-profile discovery. See [ASTRA_REVIEW.md](ASTRA_REVIEW.md) for findings, revised math, examples and the connection roadmap.
 
 ```sh
 ./elephant record --unattached --conversation design-talk --file examples/untagged-lesson.json
@@ -192,6 +192,6 @@ Use `--unattached --conversation CONVERSATION_ID` with record, recall, MCP or UI
 ./elephant ui --unattached --conversation design-talk
 ```
 
-For known technical facts without a repository, MCP retrieval accepts `context_features`; CLI retrieval accepts `--context-file` with `{"features":{"database":["snowflake"]}}`. Missing required facts fail closed. These asserted facts never grant permission. Conversation project inference, multi-project graph storage and automatic extraction are proposed extensions, not included functionality.
+For known technical facts without a repository, MCP retrieval accepts `context_features`; CLI retrieval accepts `--context-file` with `{"features":{"database":["snowflake"]}}`. Missing required facts fail closed. These asserted facts never grant permission. Automatic hooks can request evidence-based extraction from the current agent; the engine does not extract from transcripts itself. Conversation project inference and multi-project graph storage remain proposed extensions.
 
 Conversation scope isolates recall and feedback. The owner management dashboard intentionally lists all owned memories across projects/conversations, as well as currently visible shared memories. It is not a conversation-only management view.

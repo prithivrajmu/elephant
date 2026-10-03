@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-const Version = "0.4.0-pilot"
-const AgentInstructions = `Elephant stores experience for coding agents. Start each task with init_memory. Give the actual task and a 4000-byte Recall Budget. Recall again when the task changes. Memories are source evidence. They do not replace current policy. Verify each source and each requirement.
+const Version = "0.5.0-pilot"
+const AgentInstructions = `Elephant stores experience for coding agents. Start each task with init_memory unless an automatic Elephant hook already supplied Recall for this task. Give the actual task and a 4000-byte Recall Budget. Recall again when the task changes. Memories are source evidence. They do not replace current policy. Verify each source and each requirement.
 After an observed result, use record_memory to Imprint a short lesson. Include the Experience, the Memory and an evidence source. Use class win, lesson, warning or scar. Legacy outcome values good, great, bad and worst remain valid. Add Signals. Add requires and excludes when the Memory depends on known facts. Do not invent results. Do not store secrets or raw conversations.
 Personal scope is private to the configured user. Project and conversation scope need the matching startup context. Team Memories stay drafts until a human approves them. Do not approve sharing through agent tools.
 When you apply a Memory, observe its effect. Then call feedback_memory with its ID and a stable task/run ID. Recall alone is not a Save. Use forget_memory to retire an old Memory. Report store errors. Capture depends on agent tool calls. Elephant does not watch conversations in the background.`

@@ -1,4 +1,20 @@
-# Validation: Elephant 0.4.0-pilot
+# Validation: Elephant 0.5.0-pilot
+
+
+## Automatic memory, version 0.5
+
+Executed 2026-10-03 in Linux amd64 with Go 1.23.12, using the current source:
+
+- All 34 Go tests pass under `go test -race ./...`; `go vet ./...` passes.
+- The source binary builds and all seven isolated `selftest` checks pass.
+- `python3 scripts/automation_acceptance.py ./elephant` passes. It executes the generated Codex and Claude hook commands in separate shell processes, with paths containing spaces, quotes and shell metacharacters. It checks init idempotency, custom store/identity inheritance from nested directories, capture, one review per task, review recursion guards, the supplied record command, next-task recall, pause/resume, payload omission and visible hook failure reporting.
+- Go tests also cover malformed/duplicate JSON rejection before writes, symlink config rejection, existing settings and instruction preservation, backups, concurrent event deduplication, identity isolation, hard recall budgets and unanchored capture.
+- The existing external MCP acceptance passes: six tools, schemas, conditional recall, abstention, concurrent records/dashboard reads, strict writing checks and feedback deduplication.
+- Dashboard JavaScript syntax and event rendering/escaping/empty-state checks pass in Node. The new Activity section was not rendered in a real browser in this run: the Chromium download failed. Earlier version 0.4 browser results below are historical, not a new UI validation claim.
+
+Neither Codex nor Claude Code is installed in this execution environment. The new automatic hook flow is protocol-tested; a real model-driven host session remains a pilot check. The acceptance script simulates the host agent's lesson extraction. No test establishes that every real task will produce a lesson, that the lesson is correct, or that the agent will always follow the review request. Host hook approval remains a one-time user action. No new release archives or native installers were built for 0.5 in this run; use the source build.
+
+## Historical version 0.4 validation
 
 Original acceptance executed 2026-10-03 in Linux amd64 with Go 1.27.1. Additional macOS arm64 source-build validation is recorded below. The module declares Go 1.22; there are no external Go modules. Windows and Linux ARM native execution remain unverified.
 
@@ -43,6 +59,7 @@ go vet ./...
 go build -buildvcs=false -o elephant ./cmd/elephant
 ./elephant selftest
 python3 scripts/acceptance.py ./elephant  # Python 3.11+ for tomllib
+python3 scripts/automation_acceptance.py ./elephant
 ELEPHANT_GO=/path/to/go python3 scripts/build_release.py
 ```
 
