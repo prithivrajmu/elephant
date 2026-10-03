@@ -19,7 +19,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore> [flags]; see QUICKSTART.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore> [flags]; see docs/quickstart.md")
 	}
 	command := os.Args[1]
 	if command == "version" {

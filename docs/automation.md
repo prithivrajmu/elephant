@@ -51,7 +51,7 @@ A configured hook does not prove the host has loaded it. Received events establi
 
 Existing changed files receive content-addressed backups beside them. Repeating init is idempotent. Invalid JSON or symlink config paths stop installation. `init` can add another adapter without removing installed ones. Remove Elephant's command entries from the host hook file and its marked guidance block to uninstall an adapter. Do not remove other hooks or policies.
 
-The SQLite WAL store holds Experience metadata and compact Memories. Prompts are used for retrieval but are not stored. Hooks do not open transcript paths or retain tool arguments, tool output, the last assistant message or raw error text. Session IDs are hashed. Review guards live beside the configured store in its `.sessions` directory. This is local trusted storage, not an authenticated enterprise service. Version 0.6 migrates JSONL stores with a preserved backup; older binaries reject the SQLite format. See [STORAGE.md](STORAGE.md).
+The SQLite WAL store holds Experience metadata and compact Memories. Prompts are used for retrieval but are not stored. Hooks do not open transcript paths or retain tool arguments, tool output, the last assistant message or raw error text. Session IDs are hashed. Review guards live beside the configured store in its `.sessions` directory. This is local trusted storage, not an authenticated enterprise service. Version 0.6 migrates JSONL stores with a preserved backup; older binaries reject the SQLite format. See [Storage](storage.md).
 
 ## Conversations without a project
 
@@ -73,7 +73,7 @@ Hook adapters use the same engine and store as CLI/MCP. No agent-specific retrie
 
 ## Validation
 
-Run `go test -race ./...` and `python3 scripts/automation_acceptance.py ./elephant`. The subprocess check executes the exact generated hook and record commands, including paths with spaces, quotes and shell metacharacters. It simulates the host agent's extraction step. See [VALIDATION.md](VALIDATION.md) for native-host validation limits.
+Run `go test -race ./...` and `python3 scripts/automation_acceptance.py ./elephant`. The subprocess check executes the exact generated hook and record commands, including paths with spaces, quotes and shell metacharacters. It simulates the host agent's extraction step. See [Validation](validation.md) for native-host validation limits.
 
 Hook contracts checked against official documentation on 2026-10-03:
 
@@ -83,4 +83,4 @@ Hook contracts checked against official documentation on 2026-10-03:
 
 ## User updates
 
-The review supplies task-specific record and `task-status` commands. Saved counts use transactional SQLite receipts, and stale review commands fail instead of recording into a new task. Session-start hooks also check cached release availability and can show one update notice per version. See [UPDATES.md](UPDATES.md) for controls, privacy and native-test instructions.
+The review supplies task-specific record and `task-status` commands. Saved counts use transactional SQLite receipts, and stale review commands fail instead of recording into a new task. Session-start hooks also check cached release availability and can show one update notice per version. See [Update notifications](updates.md) for controls, privacy and native-test instructions.

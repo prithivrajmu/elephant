@@ -80,4 +80,5 @@ GPT-6 Astra performed a second read-only implementation review. No new concrete 
 
 The initial identified blockers are now addressed: valid MCP required arrays, three-second bounded lock retries, prebuilt platform packages and checksum installers, setup/doctor/selftest, complete Elephant branding with legacy-store discovery, and an isolated first-use test. Small onboarding UI improvements expose conditions, facts, unavailable scopes and stable feedback IDs.
 
-See PILOT_PLAN.md for the ordered full-product backlog and VALIDATION.md for executed checks. Native macOS/Windows and actual client-host interoperability remain pilot tasks; source review and cross-compilation do not prove them.
+See [Roadmap](../roadmap.md) for the ordered full-product backlog and [Validation](../validation.md) for executed checks. Native macOS/Windows and actual client-host interoperability remain pilot tasks; source review and cross-compilation do not prove them.
+

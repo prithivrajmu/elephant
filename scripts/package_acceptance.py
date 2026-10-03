@@ -1,6 +1,8 @@
 """Verify archive versions, checksums/docs and native Linux package execution."""
 import hashlib
 import pathlib
+import posixpath
+import os
 import re
 import subprocess
 import tempfile
@@ -17,12 +19,13 @@ for archive in archives:
         for row in sums:
             checksum, name = row.split('  ', 1)
             assert hashlib.sha256(z.read(folder + '/' + name)).hexdigest() == checksum
-        for name in ['README.md', 'AUTOMATION.md', 'AGENT_INTEGRATION.md', 'UPDATES.md', 'STORAGE.md', 'version.iss']:
+        for name in ['README.md', 'docs/automation.md', 'docs/agent-integration.md', 'docs/updates.md', 'docs/storage.md', f'docs/releases/v{VERSION}.md', 'version.iss']:
             assert folder + '/' + name in z.namelist(), name
         for name in [n for n in z.namelist() if n.endswith('.md')]:
             for target in re.findall(r'\]\(([^)]+)\)', z.read(name).decode()):
-                if re.match(r'https?://', target): continue
-                assert folder + '/' + target.split('#', 1)[0] in z.namelist(), (name, target)
+                if re.match(r'[a-zA-Z][a-zA-Z0-9+.-]*:', target) or target.startswith('#'): continue
+                resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target.split('#', 1)[0]))
+                assert resolved.startswith(folder + '/') and resolved in z.namelist(), (name, target)
         if archive.name.endswith('-linux-amd64.zip'):
             with tempfile.TemporaryDirectory(prefix='elephant-package-check-') as tmp:
                 z.extractall(tmp)
@@ -31,4 +34,9 @@ for archive in archives:
                 assert subprocess.check_output([str(p/'elephant'), 'version'], text=True).strip() == 'Elephant '+VERSION
                 subprocess.run([str(p/'elephant'), 'selftest'], check=True, capture_output=True)
                 subprocess.run(['python3',str(ROOT/'scripts/automation_acceptance.py'),str(p/'elephant')],check=True)
+                install_dir = pathlib.Path(tmp)/'installed'
+                env = dict(os.environ, ELEPHANT_INSTALL_DIR=str(install_dir))
+                subprocess.run(['sh', str(p/'install.sh')], env=env, check=True, capture_output=True)
+                subprocess.run([str(install_dir/'elephant'), 'selftest'], check=True, capture_output=True)
+                subprocess.run(['sh', str(p/'install.sh')], env=env, check=True, capture_output=True)
 print('Six archive versions/checksums/docs and Linux amd64 execution passed.')
