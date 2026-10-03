@@ -1,5 +1,7 @@
 # Client connection recipes
 
+For automatic Codex or Claude Code memory on macOS/Linux, use `elephant init`, restart the agent and approve its hooks. See [AUTOMATION.md](AUTOMATION.md). The MCP recipes below remain available for other hosts and explicit tool access.
+
 Run `elephant setup` to generate configuration, or use the direct registration commands below. Setup emits absolute command/argument paths with the selected journal and context. Preserve other server entries when merging config. These recipes are checked against the official documentation below. The pilot's Linux acceptance environment validated the protocol with a separate subprocess MCP client. Native Codex tool discovery has also passed on macOS; see [VALIDATION.md](VALIDATION.md). Registration syntax was checked against installed Codex, Claude Code and Pi CLI help. Model-driven capture and real Claude Code, Pi and Cursor connections remain unverified.
 
 | Client | Generated content | Where to merge |
@@ -9,7 +11,7 @@ Run `elephant setup` to generate configuration, or use the direct registration c
 | Pi with built-in MCP support | `mcp.json` | Project `.pi/mcp.json` or user-level `~/.pi/agent/mcp.json` under `mcpServers`. |
 | Cursor | `mcp.json` | Project `.cursor/mcp.json` under `mcpServers`, or the global `~/.cursor/mcp.json`. |
 | Other MCP host | `mcp.json` | The host's local stdio server settings; translate format if needed. |
-| Custom harness | CLI JSON | Run `init`/`recall`, inject `context`, call `record` and `feedback` after observed outcomes. |
+| Custom harness | CLI JSON | Run `recall --initialize`/`recall`, inject `context`, call `record` and `feedback` after observed outcomes. |
 
 Add the emitted `AGENT_INSTRUCTIONS.md` content to the project's existing agent guidance (for example AGENTS.md or CLAUDE.md, as appropriate). Keep existing policies. The generated text tells the agent when to recall, record evidence and give observed feedback; current policy takes precedence over remembered lessons.
 

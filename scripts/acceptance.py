@@ -91,4 +91,4 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     assert cli('map')['trails']
     assert cli('status')['language']['target_percent']==100
     assert cli('stats')['memories']==22
-    print(json.dumps({'version':'0.4.0-pilot','external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
+    print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))

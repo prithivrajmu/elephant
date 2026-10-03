@@ -24,7 +24,7 @@ Every required dimension must match at least one authored value. Unknown require
 
 For an explicit task, tokenize Unicode letters/digits, deduplicate, remove the documented small English stopword/boilerplate set in `memory.go`, and require at least one remaining exact term in incident, lesson or subject. If there are no content terms, abstain. Project similarity cannot rescue an unrelated task. This is lexical admission, not semantic understanding.
 
-An explicitly requested `init`/`init_memory` with a blank task permits profile discovery with agreement-times-coverage >= 0.15. Plain `recall` does not silently browse. Initialization with no task and no known features returns no memories.
+An explicitly requested `recall --initialize`/`init_memory` with a blank task permits profile discovery with agreement-times-coverage >= 0.15. Plain `recall` does not silently browse. Initialization with no task and no known features returns no memories.
 
 ### 2. Known agreement and coverage
 

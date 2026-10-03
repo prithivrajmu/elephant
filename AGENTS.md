@@ -1,6 +1,8 @@
 # Elephant memory workflow
 
-When the Elephant MCP server is available, start each task with `init_memory`.
+When automatic hooks have already supplied Recall for this task, do not repeat
+the routine initialization call. Otherwise, when the Elephant MCP server is
+available, start each task with `init_memory`.
 Supply the actual task and `byte_budget: 4000`. Call `recall_memory` again when
 the task changes materially or a specific decision needs prior experience.
 
@@ -21,6 +23,7 @@ alone is not helpful feedback. Use `forget_memory` to retire an obsolete owned
 lesson; retirement does not physically erase the journal.
 
 Report recorded memory IDs and store errors. If no lesson is justified, say so.
-If the MCP server is unavailable, report that and continue the task. Elephant does
-not capture conversations in the background. See `AGENT_INTEGRATION.md` and
-`CLIENTS.md` for the portable workflow and connection instructions.
+If both hooks and the MCP server are unavailable, report that and continue.
+Automatic hooks record tool metadata and request a bounded lesson review. They
+do not read transcripts. See `AUTOMATION.md`, `AGENT_INTEGRATION.md` and
+`CLIENTS.md` for the workflow and connection instructions.

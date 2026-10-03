@@ -41,7 +41,7 @@ CLI examples:
 
 For technical applicability without a repository, use MCP `context_features` or CLI `--context-file` containing `{"features":{"database":["snowflake"]}}`. These are asserted task facts, not automatically verified architecture. Unknown required facts reject a lesson. Setting context facts never alters permissions.
 
-`init` / `init_memory` without a task explicitly allows profile-based discovery. Without both a task and known features, it returns no memories. `recall` / `recall_memory` require a meaningful task and do not silently browse or load all general memories.
+`recall --initialize` / `init_memory` without a task explicitly allows profile-based discovery. Without both a task and known features, it returns no memories. `recall` / `recall_memory` require a meaningful task and do not silently browse or load all general memories.
 
 ## Graph design visualized, not yet a graph database
 

@@ -18,7 +18,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import> [flags]; see QUICKSTART.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import> [flags]; see QUICKSTART.md")
 	}
 	command := os.Args[1]
 	if command == "version" {
@@ -26,7 +26,7 @@ func run() error {
 		return nil
 	}
 	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant selftest; elephant setup --root /path/to/project --project my-project\nUse elephant <command> --help for flags.")
+		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
 		return nil
 	}
 	originalCommand := command
@@ -35,6 +35,10 @@ func run() error {
 		command = alias
 	}
 	f := flag.NewFlagSet(command, flag.ContinueOnError)
+	agent := f.String("agent", "both", "automatic adapter: codex, claude or both")
+	configPath := f.String("config", "", "automation config path (hook command)")
+	enabled := f.Bool("enabled", true, "pause or resume installed automatic memory")
+	initialize := f.Bool("initialize", false, "include project conventions in an explicit recall")
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -73,6 +77,46 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	seenFlags := map[string]bool{}
+	f.Visit(func(v *flag.Flag) { seenFlags[v.Name] = true })
+	if command == "hook" {
+		out, e := memory.RunHook(*configPath, *agent, os.Stdin)
+		if e != nil {
+			fmt.Fprintln(os.Stderr, "Elephant automatic memory:", e)
+			out = map[string]any{"systemMessage": "Elephant automatic memory failed. Run elephant automation and elephant doctor. See hook stderr for details."}
+		}
+		return json.NewEncoder(os.Stdout).Encode(out)
+	}
+	if resolved, e := filepath.EvalSymlinks(abs); e == nil {
+		abs = resolved
+	}
+	if c, found, e := memory.ConfigForRoot(abs); e != nil {
+		return e
+	} else if found && (command != "init" || c.Root == abs) {
+		abs = c.Root
+		if !seenFlags["store"] {
+			*db = c.Store
+		}
+		if !seenFlags["tenant"] {
+			*tenant = c.Identity.Tenant
+		}
+		if !seenFlags["user"] {
+			*user = c.Identity.User
+		}
+		if !seenFlags["team"] {
+			*team = c.Identity.Team
+		}
+		if !seenFlags["project"] && !seenFlags["unattached"] {
+			*project = c.Project
+			*unattached = c.Unattached
+		}
+		if !seenFlags["conversation"] {
+			*conversation = c.Conversation
+		}
+		if !seenFlags["budget"] {
+			*budget = c.Budget
+		}
+	}
 	if *unattached && *project != "" {
 		return fmt.Errorf("--unattached and --project are mutually exclusive")
 	}
@@ -105,6 +149,36 @@ func run() error {
 		return data, e
 	}
 	switch command {
+	case "init":
+		binary, e := os.Executable()
+		if e != nil {
+			return e
+		}
+		r, e := memory.InitAutomation(svc, binary, *agent, *budget)
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
+	case "automation":
+		var change *bool
+		if seenFlags["enabled"] {
+			change = enabled
+		}
+		r, e := memory.Automation(abs, change)
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
+	case "experiences":
+		p, e := svc.Profile()
+		if e != nil {
+			return e
+		}
+		d, e := svc.Store.Dashboard(svc.Identity, p)
+		if e != nil {
+			return e
+		}
+		return printJSON(map[string]any{"total": d.ExperienceCount, "recent": d.Experiences})
 	case "language":
 		policy, e := svc.Store.LanguagePolicy()
 		if e != nil {
@@ -196,7 +270,7 @@ func run() error {
 			return e
 		}
 		return printJSON(p)
-	case "init", "recall":
+	case "recall":
 		if originalCommand == "why" && *task == "" {
 			return fmt.Errorf("why requires --task; it explains Recall for the current task")
 		}
@@ -225,7 +299,7 @@ func run() error {
 				p.Features[k] = v
 			}
 		}
-		r, e := svc.Store.Recall(svc.Identity, memory.Request{Profile: p, Task: *task, ByteBudget: *budget, Limit: *limit, Initialize: command == "init"})
+		r, e := svc.Store.Recall(svc.Identity, memory.Request{Profile: p, Task: *task, ByteBudget: *budget, Limit: *limit, Initialize: *initialize})
 		if e != nil {
 			return e
 		}
