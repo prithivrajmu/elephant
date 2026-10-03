@@ -51,7 +51,7 @@ A configured hook does not prove the host has loaded it. Received events establi
 
 Existing changed files receive content-addressed backups beside them. Repeating init is idempotent. Invalid JSON or symlink config paths stop installation. `init` can add another adapter without removing installed ones. Remove Elephant's command entries from the host hook file and its marked guidance block to uninstall an adapter. Do not remove other hooks or policies.
 
-The append-only store holds Experience metadata and compact Memories. Prompts are used for retrieval but are not stored. Hooks do not open transcript paths or retain tool arguments, tool output, the last assistant message or raw error text. Session IDs are hashed. Review guards live beside the journal in its `.sessions` directory. This is local trusted storage, not an authenticated enterprise service. Version 0.5 introduces `experience` journal events; older binaries will reject a journal containing these new events.
+The SQLite WAL store holds Experience metadata and compact Memories. Prompts are used for retrieval but are not stored. Hooks do not open transcript paths or retain tool arguments, tool output, the last assistant message or raw error text. Session IDs are hashed. Review guards live beside the configured store in its `.sessions` directory. This is local trusted storage, not an authenticated enterprise service. Version 0.6 migrates JSONL stores with a preserved backup; older binaries reject the SQLite format. See [STORAGE.md](STORAGE.md).
 
 ## Conversations without a project
 
@@ -69,7 +69,7 @@ Automatic installation currently supports macOS/Linux Codex and Claude Code host
 
 The CLI `init` command now installs automation. Scripts that used the old discovery-only command must use `elephant recall --initialize`. The MCP `init_memory` tool is unchanged. If hooks already supplied Recall, agent guidance asks the agent not to repeat its routine `init_memory` call. Manual MCP calls remain available.
 
-Hook adapters use the same engine and store as CLI/MCP. No agent-specific retrieval rules are added. Current retrieval uses task terms, fingerprint matches and applicability gates, not embeddings. Tool metadata increases journal size; large-history replay and automatic retention need further work.
+Hook adapters use the same engine and store as CLI/MCP. No agent-specific retrieval rules are added. Current retrieval uses task terms, fingerprint matches and applicability gates, not embeddings. Tool metadata increases database size. Current state and indexed receipts avoid historical replay; automatic retention remains future work.
 
 ## Validation
 
@@ -83,4 +83,4 @@ Hook contracts checked against official documentation on 2026-10-03:
 
 ## User updates
 
-The review supplies task-specific record and `task-status` commands. Saved counts use journal receipts, and stale review commands fail instead of recording into a new task. Session-start hooks also check cached release availability and can show one update notice per version. See [UPDATES.md](UPDATES.md) for controls, privacy and native-test instructions.
+The review supplies task-specific record and `task-status` commands. Saved counts use transactional SQLite receipts, and stale review commands fail instead of recording into a new task. Session-start hooks also check cached release availability and can show one update notice per version. See [UPDATES.md](UPDATES.md) for controls, privacy and native-test instructions.

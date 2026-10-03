@@ -1,4 +1,23 @@
-# Validation: Elephant 0.5.0-pilot
+# Validation: Elephant 0.6.0-pilot
+
+## SQLite WAL, version 0.6
+
+Executed on 2026-10-03 UTC (2026-10-04 in India), Linux amd64 with Go 1.27.1:
+
+- 48 Go test entry points, including a child-process helper, pass with race detection; vet and source build pass. New cases cover schema/WAL/FULL settings, SQLite 3.51.3, complete JSONL conversion, original-byte backup, duplicate feedback/receipt preservation, corruption and mismatching-backup rejection, interrupted conversion retry, transaction rollback, bounded busy waits without callback replay, unsupported-schema preservation, readers and backup during a write, and killed writers both before and after commit.
+- Seven-check selftest, external MCP acceptance with simultaneous clients/dashboard polling, generated Codex/Claude hook commands, CLI backup/restore/doctor and the isolated synthetic demo pass. These are protocol/engine checks; native model-driven host acceptance remains as documented below.
+- Backup includes acknowledged data still in WAL and excludes uncommitted writes. Restore preserves the backup bytes and refuses to replace an existing destination. No physical power-loss simulation was performed.
+- Six portable archives cross-compile without CGo. Six-archive version/checksum/document checks pass. The extracted Linux amd64 binary passes selftest and generated hook/task-status acceptance. Native macOS/Windows execution is delegated to CI; cross-compilation is not native acceptance.
+
+The fixed-inventory benchmark uses one stored memory and 1,000/10,000/100,000 synthetic recall events. The JSONL baseline decodes every historical event; SQLite opens the database and reads current memory state. Median results from three 10-iteration runs on AMD EPYC 9V74 (shared execution environment):
+
+| Historical events | JSONL replay | SQLite state read |
+| --- | ---: | ---: |
+| 1,000 | 2.43 ms | 0.61 ms |
+| 10,000 | 24.22 ms | 0.60 ms |
+| 100,000 | 216.30 ms | 1.34 ms |
+
+These are short storage microbenchmarks with scheduling noise, not end-to-end recall or hook guarantees. Current-memory scans, alternative-advice work, usage history and model calls are outside this comparison. Reproduce with `go test -run '^$' -bench BenchmarkSQLiteHistory -benchtime=10x -count=3`.
 
 
 ## User updates and packaging checks
@@ -32,7 +51,7 @@ Neither Codex nor Claude Code is installed in this execution environment. The ne
 
 ## Historical version 0.4 validation
 
-Original acceptance executed 2026-10-03 in Linux amd64 with Go 1.27.1. Additional macOS arm64 source-build validation is recorded below. The module declares Go 1.22; there are no external Go modules. Windows and Linux ARM native execution remain unverified.
+Original acceptance executed 2026-10-03 in Linux amd64 with Go 1.27.1. Additional macOS arm64 source-build validation is recorded below. At that historical revision the module declared Go 1.22 without external modules. The current SQLite branch requires Go 1.25+ and a pinned SQLite driver. Windows and Linux ARM native execution remain unverified.
 
 ## macOS arm64 source-build and Codex setup
 
@@ -65,7 +84,7 @@ The original Linux acceptance environment did not have Codex, Claude Code or Cur
 
 No evidence yet establishes real coding-agent quality improvement, autonomous capture reliability, exact provider token savings, billing reduction or enterprise readiness. No public repository or hosted service was published. The STE target is not a compliance score; local checks do not validate the full standard. The dashboard's byte/4 estimate compares against naive loading of all eligible summaries; it does not measure savings relative to no memory or an optimized alternative.
 
-Storage replays an append-only journal; large-history scalability and robust crash recovery require further work. Feedback observations are supplied evidence, not independent causal measurements. Retirement preserves historical journal content and is not physical erasure. Local identity labels are trusted configuration rather than enterprise authentication.
+The historical implementation replayed JSONL. The SQLite branch removes replay and adds transactional recovery; current-memory ranking and dashboard history remain scaling limits. Feedback observations are supplied evidence, not independent causal measurements. Retirement preserves historical journal content and is not physical erasure. Local identity labels are trusted configuration rather than enterprise authentication.
 
 ## Reproduce from source
 

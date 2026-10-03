@@ -134,7 +134,7 @@ Use a narrow initial team pilot and measure whether recurrence/rework declines b
 
 ## Language decision
 
-Go is a practical first choice for a small local binary, subprocess/MCP interfaces and a future concurrent service. It has a simple standard library and deployment model. The implementation needs no third-party package downloads. Rust is a good option if you prefer its ownership model or later build a demanding retrieval engine; no measured requirement in this MVP justifies a rewrite. Python is useful for reflection experiments and evaluation scripts; TypeScript fits a rich UI/plugin ecosystem. None changes retrieval quality by itself. Choose based on integration and team fluency, then benchmark.
+Go is a practical first choice for a small local binary, subprocess/MCP interfaces and a future concurrent service. It has a simple standard library and deployment model. The SQLite WAL implementation pins a Go SQLite driver and its transitive modules, without requiring a C compiler. Rust is a good option if you prefer its ownership model or later build a demanding retrieval engine; no measured requirement in this MVP justifies a rewrite. Python is useful for reflection experiments and evaluation scripts; TypeScript fits a rich UI/plugin ecosystem. None changes retrieval quality by itself. Choose based on integration and team fluency, then benchmark.
 
 ## Primary references checked while building
 
@@ -145,3 +145,4 @@ Go is a practical first choice for a small local binary, subprocess/MCP interfac
 - Letta docs, an existing agent-memory approach: https://docs.letta.com/
 
 This concept overlaps existing memory systems. The proposed distinction is explicit incident/outcome/applicability/usefulness tracking with transparent context budgets and evidence. It is not a claim that agent memory is a new category or that this MVP surpasses existing products.
+

@@ -19,7 +19,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import> [flags]; see QUICKSTART.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore> [flags]; see QUICKSTART.md")
 	}
 	command := os.Args[1]
 	if command == "version" {
@@ -27,7 +27,7 @@ func run() error {
 		return nil
 	}
 	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
+		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
 		return nil
 	}
 	originalCommand := command
@@ -50,7 +50,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	db := f.String("store", memory.DefaultStorePath(home), "journal path (existing legacy store is reused)")
+	db := f.String("store", memory.DefaultStorePath(home), "SQLite store path (existing JSONL is migrated with backup)")
 	steTarget := f.Int("ste-target", 0, "STE writing target, 80 to 100; default 80. This is not a compliance score")
 	text := f.String("text", "", "summary for local language checks")
 	output := f.String("output", "", "setup directory (default: ./elephant-setup); existing files are preserved")
@@ -189,6 +189,22 @@ func run() error {
 		return data, e
 	}
 	switch command {
+	case "backup":
+		if *output == "" {
+			return fmt.Errorf("backup requires --output /path/to/new-backup.sqlite")
+		}
+		if e := svc.Store.Backup(*output); e != nil {
+			return e
+		}
+		return printJSON(map[string]string{"backup": *output})
+	case "restore":
+		if *file == "-" || *output == "" {
+			return fmt.Errorf("restore requires --file backup.sqlite --output NEW-store.sqlite")
+		}
+		if e := memory.RestoreStore(*file, *output); e != nil {
+			return e
+		}
+		return printJSON(map[string]string{"restored_store": *output, "next_step": "Use --store with this new path; existing store was preserved."})
 	case "update":
 		var change *bool
 		if seenFlags["enabled"] {

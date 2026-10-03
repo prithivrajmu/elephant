@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import pathlib
 import subprocess
+import sqlite3
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--binary', default='./elephant')
@@ -12,7 +13,7 @@ args = parser.parse_args()
 binary = str(pathlib.Path(args.binary).resolve())
 demo = pathlib.Path(args.dir).resolve()
 root = demo / 'project'
-store = demo / 'events.jsonl'
+store = demo / 'memories.sqlite'
 if store.exists():
     raise SystemExit('Demo already exists; delete that isolated directory explicitly to reset it.')
 root.mkdir(parents=True, exist_ok=True)
@@ -49,17 +50,19 @@ for i, (outcome, incident, lesson, subject) in enumerate(lessons):
     if i == 10:
         run('approve', ['--id', record['id']])
 
-# Backdate synthetic creations only, to demonstrate growth. Never edit a real journal this way.
-events = [json.loads(line) for line in store.read_text().splitlines()]
+# Backdate only this newly created, isolated synthetic database for the chart.
 now = dt.datetime.now(dt.timezone.utc)
-for event in events:
-    if event['kind'] == 'put':
-        i = ids.index(event['memory']['id'])
-        created = (now - dt.timedelta(days=13-i)).isoformat().replace('+00:00', 'Z')
-        event['memory']['created'] = created
-        event['memory']['updated'] = created
-        event['at'] = created
-store.write_text(''.join(json.dumps(e) + '\n' for e in events))
+with sqlite3.connect(store) as db:
+    for memory_id, data in db.execute('SELECT id,data FROM memories').fetchall():
+        memory = json.loads(data)
+        created = (now - dt.timedelta(days=13-ids.index(memory_id))).isoformat().replace('+00:00', 'Z')
+        memory['created'] = memory['updated'] = created
+        db.execute('UPDATE memories SET data=? WHERE id=?', (json.dumps(memory), memory_id))
+    for seq, data in db.execute("SELECT seq,data FROM events WHERE kind='put'").fetchall():
+        event = json.loads(data)
+        created = (now - dt.timedelta(days=13-ids.index(event['memory']['id']))).isoformat().replace('+00:00', 'Z')
+        event['memory']['created'] = event['memory']['updated'] = event['at'] = created
+        db.execute('UPDATE events SET data=? WHERE seq=?', (json.dumps(event), seq))
 for i in range(7):
     run('recall', ['--task', ['query concurrency connections', 'cache filter authorization', 'performance review tests'][i % 3],
                    '--budget', '1600', '--limit', '3'])
@@ -67,3 +70,4 @@ for i in range(6):
     run('feedback', ['--id', ids[i], '--feedback-id', f'synthetic-task-{i}', '--helpful=' + ('false' if i == 5 else 'true')])
 print('SYNTHETIC DEMO created. Invented data; not an effectiveness benchmark.')
 print(f'{binary} ui --root {root} --project demo-dashboard --store {store} --team demo-platform')
+
