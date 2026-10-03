@@ -4,31 +4,74 @@
 
 **Agents forget. Elephants don’t.**
 
-Elephant stores useful experience from earlier agent work. It reads the current environment and recalls relevant Memories. A Recall Budget limits the returned text. The engine works through CLI JSON or MCP. It has no model-provider dependency.
+Elephant is a local, repository-aware experience layer for coding agents. It recalls relevant lessons before work, records tool-event metadata during work, and asks the current agent to save useful lessons from observed results. CLI JSON and MCP share one engine and journal. No extra model key or model-provider dependency is required.
 
-Version 0.5 is a local pilot. Run `elephant init` once to install automatic recall, tool outcome capture and end-of-task lesson review for Codex and Claude Code on macOS/Linux. Complete the host’s normal hook approval, then work normally. The existing agent extracts justified lessons; no extra model key is needed. See [AUTOMATION.md](AUTOMATION.md).
+## Product goal
 
-See [BRAND.md](BRAND.md) for the product terms. See [LANGUAGE_POLICY.md](LANGUAGE_POLICY.md) for the default 80% writing target. Set it to 100% to enforce the local checks. This setting does not prove full ASD-STE100 compliance.
+Run `elephant init` once in a project, complete the host's normal hook approval, then work normally. Recall and recording should happen without repeated “remember this” prompts.
+
+An **Experience** records an observed event. A **Memory** contains a reusable lesson with source evidence and applicability conditions. Automatic event capture and successful learning are separate:
+
+| Stage | Current behavior |
+| --- | --- |
+| Initialize | Install project-local Codex and Claude Code hooks, preserve existing settings, and add agent guidance. |
+| Recall | Use project Fingerprint, task terms, scope and conditions to select lessons within a default 4,000-byte Recall Budget. |
+| Observe | Append tool name, event, status and structured exit code when available. Keep prompts, tool arguments, output and transcripts out of the journal. |
+| Review | Request one end-of-task review. The current agent can save zero to three evidence-backed lessons. Zero is valid when nothing reusable was learned. |
+| Reuse | Retrieve the saved lesson on a related task. Record usefulness only after applying it and observing its effect. |
+
+Project scope is the default for automatic lesson review. Personal scope is for transferable experience; team lessons require human review. Recalled Memories are evidence to check against the current task and instructions.
+
+## Current state
+
+**Version: `0.5.0-pilot`. Automatic-memory implementation is merged into `main` through [PR #1](https://github.com/prithivrajmu/elephant/pull/1).**
+
+| Area | Status |
+| --- | --- |
+| Local engine, CLI, MCP and Memory Palace | Implemented; six MCP tools, scoped recall, feedback, retirement and local reviewed export/import. |
+| Automatic Codex and Claude Code adapters | Implemented for macOS/Linux; generated hook commands pass subprocess acceptance. Real model-driven automatic sessions remain unverified. |
+| Validation | [Recorded 0.5 checks](VALIDATION.md#automatic-memory-version-05): 34 Go tests with race checks, vet, isolated self-test, MCP acceptance and simulated hook lifecycle. |
+| Native client evidence | Historical 0.4 macOS source-build and Codex MCP discovery passed. This does not validate the new 0.5 automatic loop. |
+| Distribution | Source build is the current 0.5 path. No GitHub release is published; archive and installer scripts still contain 0.4 versions. |
+| Storage | Append-only JSONL with lock retries and corruption detection. Indexed storage, retention and automated recovery remain planned. |
+
+Use [AUTOMATION.md](AUTOMATION.md) for hook behavior and compatibility, [VALIDATION.md](VALIDATION.md) for executed checks, and [BRAND.md](BRAND.md) for the product vocabulary.
 
 ## Start today
 
-Use the prebuilt package for your OS: [QUICKSTART.md](QUICKSTART.md) walks through installation, an isolated self-test, connecting your agent, and recording/retrieving the first real lesson. No Go installation is required for these packages.
+Build the current source with Go 1.22+ from the repository root. There are no external Go modules.
 
 ```sh
-elephant version
-elephant selftest
-elephant doctor --root /path/to/project --project my-dashboard
-elephant init --root /path/to/project --project my-dashboard
-elephant palace --root /path/to/project --project my-dashboard
+go test ./...
+go build -buildvcs=false -o elephant ./cmd/elephant
+./elephant version
+./elephant selftest
+./elephant doctor --root /absolute/path/project --project my-project
+./elephant init --root /absolute/path/project --project my-project
 ```
 
-Restart the client and approve the installed hooks; in Codex, use `/hooks`. Run `elephant automation` to check received events. See [CLIENTS.md](CLIENTS.md) and [PILOT_PLAN.md](PILOT_PLAN.md). The dashboard runs at http://127.0.0.1:7331. The first run is empty; the finish hook asks the agent to save only lessons backed by observed evidence.
+Keep the binary at a stable absolute path: installed hooks refer to it. The default installs both adapters; add `--agent codex` or `--agent claude` to choose one. Restart your agent in the target project and complete its normal hook approval. In Codex, use `/hooks`. This route does not require separate MCP registration.
 
-For exact Codex CLI/local app, Claude Code and Pi registration commands, see [CLIENTS.md](CLIENTS.md#direct-cli-registration). Source-checkout build steps are in [QUICKSTART.md](QUICKSTART.md#build-from-a-source-checkout).
+After a real task, inspect the same project's events and Memories:
 
-New installs use `~/.elephant/events.jsonl`; an existing legacy `~/.agent-memory/events.jsonl` is reused when no modern journal exists. Pass `--store /absolute/path/events.jsonl` consistently for another journal. All paths in generated setup are absolute. `--budget` counts UTF-8 bytes of returned experience text; only inject the `context` field from CLI JSON, not its match metadata.
+```sh
+./elephant automation --root /absolute/path/project
+./elephant experiences --root /absolute/path/project
+./elephant status --root /absolute/path/project
+./elephant palace --root /absolute/path/project
+```
 
-For source builds, install Go 1.22+ and run `go test ./...` then `go build -buildvcs=false -o elephant ./cmd/elephant`. No external Go modules are required.
+The Memory Palace runs at http://127.0.0.1:7331. An empty first recall is expected. Received events prove that hooks ran; `review_requested` proves only that review was requested. Inspect a saved Memory ID and source, restart the client, then confirm recall on a related task and abstention on an unrelated task.
+
+Pause with `automation --root /absolute/path/project --enabled=false`; resume with `--enabled=true`. Windows and other agents use `setup --wizard` plus MCP registration or CLI JSON. That route relies on agent guidance for capture. See [QUICKSTART.md](QUICKSTART.md) and [CLIENTS.md](CLIENTS.md).
+
+New installs use `~/.elephant/events.jsonl`; an existing legacy `~/.agent-memory/events.jsonl` is reused when no modern journal exists. Set a custom journal during init with `--store /absolute/path/events.jsonl`. Later commands from the installed project or with its `--root` reuse that config. Use a stable project ID across checkouts.
+
+**0.5 compatibility:** CLI `init` now installs automation. Replace old discovery-only scripts with `recall --initialize`; MCP `init_memory` is unchanged. Older binaries reject journals containing the new `experience` events, so preserve a backup before upgrading and do not reuse that journal with an older binary.
+
+`--budget` counts UTF-8 bytes of returned experience text. For CLI JSON, inject only the `context` field; match metadata and tool wrappers are outside that budget. Current retrieval is lexical, with applicability gates; semantic embeddings are not implemented.
+
+Memory summaries use an 80% writing target by default. Set 100% for strict local checks. This is a product setting, not a measured compliance score; see [LANGUAGE_POLICY.md](LANGUAGE_POLICY.md).
 
 ### Record a real lesson
 
@@ -169,6 +212,22 @@ python3 examples/demo.py --binary ./elephant
 
 All demo incidents and outcomes are invented and marked **SYNTHETIC DEMO**. They demonstrate the UI, not actual product effectiveness. The demo is isolated from your real store. Delete `.demo` to reset it. The ZIP does not include a compiled platform-specific binary; build for your machine.
 
+## Next steps and acceptance criteria
+
+The next milestone is a **verified automatic local pilot**. Prioritize a complete init → recall → observe → review → save → reuse loop.
+
+| Priority | Work | Acceptance criterion |
+| --- | --- | --- |
+| 1. Native automatic loop | Run real Codex and Claude Code tasks on macOS/Linux. Record host/model versions and hook approval steps. Test no-lesson tasks, failures, restart, pause/resume and custom stores. | Without a repeated memory prompt, a justified lesson is saved with an ID and actual evidence, survives restart and appears on a related task. Unrelated or inapplicable tasks abstain; review does not loop. |
+| 2. Reproducible 0.5 distribution | Align binary, archive, installer and package versions; ship automation and referenced integration docs. Add CI for Go/race/vet, MCP and hook acceptance, plus release checksums. | Build a clean 0.5 package, install it on each claimed platform, and complete its supported workflow. Record native acceptance separately from cross-compilation before publishing a release. |
+| 3. Capture reliability and storage | Make review requested, Memory saved, no lesson justified and capture failed distinguishable. Cover interrupted review/write and safe retry. Benchmark growing event histories, then migrate to indexed SQLite with versioned migration, backup/restore and retention. | Restart/fault checks preserve every acknowledged Memory, retries avoid duplicate evidence, and recovery never silently discards history. Publish end-to-end hook and recall latency as history grows. |
+| 4. Memory quality and retrieval | Add evidence revisions, reviewed supersession and stale-condition handling. Build a versioned relevance set with related, unrelated, unknown-condition and false-transfer cases. | Report capture misses, unsupported lessons, relevance/abstention judgments and budget-quality tradeoffs against the lexical baseline. Feedback from one task must not become multiple independent votes. |
+| 5. Developer pilot and measured value | Test with 3–5 developers across two projects and an unattached conversation. Use [PILOT_FEEDBACK.md](PILOT_FEEDBACK.md); compare paired tasks with and without memory after lifecycle acceptance. | Report setup success, time to first real Memory, persistence, capture reliability, observed usefulness, actual token usage where available, latency and rework. Include review/retrieval overhead. |
+
+The existing [PILOT_PLAN.md](PILOT_PLAN.md) gives broader evaluation and product priorities. Its prebuilt-package readiness describes earlier pilot work; use the 0.5 state and release gates above for current automation.
+
+Keep richer Memory Map connections, semantic/hybrid retrieval, authenticated Herd sharing and hosted service work after local reliability and retrieval evidence. A synthetic demo and estimated tokens avoided do not establish productivity or billing savings.
+
 ## Validation
 
 ```sh
@@ -180,7 +239,7 @@ go test -run '^$' -bench BenchmarkRecall1000 -benchmem ./...
 
 Tests cover scope/tenant isolation, applicability, budgets, ranking, conflicts, feedback deduplication, persistence, corruption/locks, manifest extraction, MCP lifecycle, UI boundaries and peer review. See [DESIGN.md](DESIGN.md) for math, growth strategy, evaluation and enterprise requirements.
 
-MIT licensed. No public repository has been created or published by this deliverable.
+MIT licensed. The repository is currently private; no hosted service is included.
 
 ## Conversations without a project
 
