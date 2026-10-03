@@ -44,7 +44,8 @@ Use these terms in the product. Keep internal types clear: Memory, Signal, Finge
 ## Commands
 
 ```sh
-elephant init --task 'Bound query concurrency'
+elephant init
+elephant recall --task 'Bound query concurrency'
 elephant status
 elephant remember --file lesson.json
 elephant imprint --file lesson.json

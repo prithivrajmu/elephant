@@ -12,13 +12,14 @@ import (
 )
 
 type Event struct {
-	Kind       string    `json:"kind"`
-	Memory     *Memory   `json:"memory,omitempty"`
-	Recall     *Usage    `json:"recall,omitempty"`
-	ID         string    `json:"id,omitempty"`
-	FeedbackID string    `json:"feedback_id,omitempty"`
-	Helpful    bool      `json:"helpful,omitempty"`
-	At         time.Time `json:"at"`
+	Experience *Experience `json:"experience,omitempty"`
+	Kind       string      `json:"kind"`
+	Memory     *Memory     `json:"memory,omitempty"`
+	Recall     *Usage      `json:"recall,omitempty"`
+	ID         string      `json:"id,omitempty"`
+	FeedbackID string      `json:"feedback_id,omitempty"`
+	Helpful    bool        `json:"helpful,omitempty"`
+	At         time.Time   `json:"at"`
 }
 type Store struct{ Path string }
 
@@ -43,6 +44,11 @@ func (s Store) load() ([]Memory, map[string]bool, error) {
 			return nil, nil, fmt.Errorf("journal line %d: %w (restore or repair explicitly)", line, err)
 		}
 		switch e.Kind {
+		case "experience":
+			if e.Experience == nil || e.Experience.ID == "" || e.Experience.Identity.Tenant == "" || e.Experience.Identity.User == "" {
+				return nil, nil, fmt.Errorf("invalid experience at line %d", line)
+			}
+			feedback["experience:"+e.Experience.ID] = true
 		case "put":
 			if e.Memory == nil {
 				return nil, nil, fmt.Errorf("invalid put at line %d", line)

@@ -19,6 +19,8 @@ type Usage struct {
 	LatencyMS     float64   `json:"latency_ms"`
 }
 type Dashboard struct {
+	Experiences            []Experience   `json:"experiences"`
+	ExperienceCount        int            `json:"experience_count"`
 	Identity               Identity       `json:"identity"`
 	Language               LanguagePolicy `json:"language"`
 	Version                string         `json:"version"`
@@ -72,7 +74,7 @@ func (s Store) Dashboard(id Identity, p Profile) (Dashboard, error) {
 	if e != nil {
 		return Dashboard{}, e
 	}
-	d := Dashboard{Memories: []Memory{}, Usage: []Usage{}, Profile: p, Identity: id, Version: Version, Language: policy}
+	d := Dashboard{Experiences: []Experience{}, Memories: []Memory{}, Usage: []Usage{}, Profile: p, Identity: id, Version: Version, Language: policy}
 	latencies := []float64{}
 	err := s.transact(func(all []Memory, _ map[string]bool) (*Event, error) {
 		for _, m := range all {
@@ -96,6 +98,13 @@ func (s Store) Dashboard(id Identity, p Profile) (Dashboard, error) {
 			var ev Event
 			if e = json.Unmarshal(scanner.Bytes(), &ev); e != nil {
 				return nil, e
+			}
+			if x := ev.Experience; x != nil && x.Identity.Tenant == id.Tenant && x.Identity.User == id.User && x.Project == p.Project {
+				d.ExperienceCount++
+				d.Experiences = append(d.Experiences, *x)
+				if len(d.Experiences) > 100 {
+					d.Experiences = d.Experiences[1:]
+				}
 			}
 			u := ev.Recall
 			if u == nil || u.Identity.Tenant != id.Tenant || u.Identity.User != id.User {

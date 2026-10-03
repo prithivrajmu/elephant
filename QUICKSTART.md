@@ -1,6 +1,6 @@
 # Elephant: first user in ten minutes
 
-Elephant 0.4.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.22+. This release is for a small local pilot. Linux x86-64 package acceptance and macOS arm64 source-build acceptance have passed; other packages are cross-compiled. See [VALIDATION.md](VALIDATION.md) for the exact checks and limits.
+Elephant 0.5.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.22+. This release is for a small local pilot. Linux x86-64 package acceptance and macOS arm64 source-build acceptance have passed; other packages are cross-compiled. See [VALIDATION.md](VALIDATION.md) for the exact checks and limits.
 
 ## 1. Install the package for your computer
 
@@ -41,42 +41,33 @@ go build -buildvcs=false -o elephant ./cmd/elephant
 
 The binary is created at `./elephant`. Use its absolute path in [CLIENTS.md](CLIENTS.md)'s registration commands. For the commands below, substitute `./elephant` for `elephant` when running from the repository root. Package-building scripts are included, but compiled binaries and release archives are not tracked in Git. Building and running the self-test on your OS is a separate check from the recorded Linux validation.
 
-## 2. Choose a real project and generate setup
+## 2. Initialize automatic memory
 
-For guided steps, run `elephant setup --wizard`. On macOS, `Setup.command` installs Elephant and starts the wizard. On Windows, use `Setup.ps1`. See `INSTALLERS.md` for native package routes.
-
-The writing target starts at 80%. Use `elephant language --ste-target 100` for strict local checks. This is not a full-standard compliance score. See `LANGUAGE_POLICY.md`.
+Build the current source for the new automatic workflow. Older 0.4 packages do not include it. From the project directory, run:
 
 ```sh
-elephant doctor --root /absolute/path/project --project my-project
-elephant setup --root /absolute/path/project --project my-project \
-  --output /absolute/path/elephant-setup
+elephant init
+# Or: elephant init --agent codex --project my-project
 ```
 
-Use a stable project ID. Setup creates JSON/TOML connection config, agent instructions and a first-task prompt. It preserves existing files; use a new output folder when changing context. The binary, root and journal paths in the config are absolute, including paths with spaces.
+The default installs Codex and Claude Code hooks. Existing settings and instructions are preserved. Restart the agent and complete its normal trust prompts. In Codex, open `/hooks` and approve the Elephant hooks. `init` does not bypass host approval. Automatic installation currently supports macOS/Linux.
 
-For a conversation without a project:
+## 3. Work normally
+
+Hooks recall useful experience before each task, record tool outcome metadata, and request one lesson review before the agent finishes. The agent records a lesson only when observed work justifies one. There is no extra model key and no need for a repeated “remember this” prompt.
 
 ```sh
-elephant doctor --unattached --conversation research-001
-elephant setup --unattached --conversation research-001 --output elephant-research-setup
+elephant automation   # Check installed settings and received events
+elephant experiences  # Inspect the latest event metadata
 ```
 
-This skips working-directory manifests. Personal lessons can transfer; conversation lessons require the same conversation ID. Supply known technical facts in `context_features` for conditional lessons. Unknown requirements block retrieval.
+An empty first recall is expected. Prompts, tool output and transcripts are not copied into the store. The writing target starts at 80%; use `elephant language --ste-target 100` for strict local checks. This is not a full-standard compliance score.
 
-The default journal is `~/.elephant/events.jsonl`. If only the previous `~/.agent-memory/events.jsonl` exists, Elephant reuses it. Nothing is moved. When both exist, the Elephant path wins. Use `--store /absolute/path/events.jsonl` consistently to select a different journal.
+Use `elephant automation --enabled=false` to pause and `--enabled=true` to resume. See [AUTOMATION.md](AUTOMATION.md) for the exact lifecycle, local files and unanchored conversations.
 
-## 3. Connect your agent and teach it the workflow
+For other agents or Windows, use `elephant setup --wizard` and follow [CLIENTS.md](CLIENTS.md). That MCP route requires host registration and agent guidance. It does not install automatic hooks.
 
-See [CLIENTS.md](CLIENTS.md) for exact Codex, Claude Code and Pi registration commands, or merge the generated server entry into existing client configuration. Add `AGENT_INSTRUCTIONS.md` to your agent's project guidance, then reload/restart the client. The setup command does not modify client settings automatically.
-
-Confirm six tools are visible: `profile_memory`, `init_memory`, `recall_memory`, `record_memory`, `feedback_memory`, `forget_memory`. Two MCP prompts are also exposed: `initmemory` and `memory_review`. The client's slash-command presentation varies.
-
-Ask the agent:
-
-> Use Elephant to recall experience for this task before starting. After the task, inspect actual tests/review outcomes and capture one reusable lesson with its source if justified. Report the stored memory ID. If a retrieved lesson was applied, submit feedback only after observing its effect, with a stable run ID.
-
-Give it a real task. An empty first recall is expected. There is no background transcript watcher: capture depends on the agent calling the tool. Ask `memory_review` at task end if capture was missed.
+The default journal is `~/.elephant/events.jsonl`. An existing legacy journal is reused when no modern journal exists. Set a custom path with `elephant init --store /absolute/path/events.jsonl`; later commands in this project reuse it. A stable `--project` ID lets multiple checkouts refer to one project.
 
 ## 4. Confirm the memory survives and applies
 
@@ -91,8 +82,10 @@ You can use the CLI/UI without an MCP client. For CLI JSON, use `record --file l
 
 ## Troubleshooting
 
+- No automatic events: run `elephant automation`, check the binary path, restart the host and inspect its hook approval/settings. `init` proves installation, not host execution.
+
 - No tools: check absolute executable path, client config format, server approval and restart. `doctor` proves local health, not client connection.
-- No recall: check task terms, known facts, scope and byte budget. Similar stack alone does not make task-specific recall eligible. V0.3 uses lexical matching, not semantic embeddings.
+- No recall: check task terms, known facts, scope and byte budget. Similar stack alone does not make task-specific recall eligible. Current retrieval uses lexical matching, not semantic embeddings.
 - Store busy: Elephant retries for three seconds. After a crashed process, verify all users of that store have stopped before removing the journal's `.lock` directory. Never remove a live process's lock.
 - Corrupt journal: keep a copy and restore/repair explicitly. Elephant fails closed; it does not discard history.
 - Wrong context: regenerate setup and restart the client. Server identity/project are fixed at startup.
