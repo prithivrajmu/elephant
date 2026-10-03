@@ -13,7 +13,7 @@ import (
 
 func TestLegacyStoreAndSafeSetup(t *testing.T) {
 	home := t.TempDir()
-	modern := filepath.Join(home, ".elephant", "events.jsonl")
+	modern := filepath.Join(home, ".elephant", "memories.sqlite")
 	legacy := filepath.Join(home, ".agent-memory", "events.jsonl")
 	if DefaultStorePath(home) != modern {
 		t.Fatal("new store")
@@ -51,7 +51,7 @@ func TestLegacyStoreAndSafeSetup(t *testing.T) {
 	if err != nil || !d.OK {
 		t.Fatal(d, err)
 	}
-	contents, _ := os.ReadFile(legacy)
+	contents, _ := os.ReadFile(legacy + ".jsonl-backup")
 	if len(contents) != 0 {
 		t.Fatal("doctor wrote memory")
 	}

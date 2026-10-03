@@ -1,10 +1,9 @@
 package memory
 
 import (
-	"bufio"
+	"database/sql"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -77,7 +76,7 @@ func CaptureForTask(configPath, session string, taskID ...string) (AutomationCon
 		return c, nil, err
 	}
 	var capture *TaskCapture
-	err = c.Service().Store.transact(func(_ []Memory, _ map[string]bool) (*Event, error) {
+	err = c.Service().Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
 		state, e := readTaskState(c, session)
 		if e != nil {
 			return nil, e
@@ -110,7 +109,7 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 		return d, nil
 	}
 	s := c.Service().Store
-	err = s.transact(func(all []Memory, _ map[string]bool) (*Event, error) {
+	err = s.transactSQL(true, nil, func(tx *sql.Tx, all []Memory, _ map[string]bool) (*Event, error) {
 		state, e := readTaskState(c, session)
 		if e != nil {
 			return nil, e
@@ -136,34 +135,30 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 		}
 		seen := map[string]bool{}
 		failed := false
-		f, e := os.Open(s.Path)
-		if e != nil && !os.IsNotExist(e) {
+		rows, e := tx.Query("SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq", c.Identity.Tenant, c.Identity.User, session, state.Task)
+		if e != nil {
 			return nil, e
 		}
-		if e == nil {
-			defer f.Close()
-			scanner := bufio.NewScanner(f)
-			scanner.Buffer(make([]byte, 4096), 2<<20)
-			for scanner.Scan() {
-				var ev Event
-				if e = json.Unmarshal(scanner.Bytes(), &ev); e != nil {
-					return nil, e
-				}
-				x := ev.Experience
-				if x == nil || x.Session != session || x.Task != state.Task || x.Identity.Tenant != c.Identity.Tenant || x.Identity.User != c.Identity.User {
-					continue
-				}
-				if x.Status == "capture_failed" {
-					failed = true
-				}
-				if x.Status == "memory_saved" && ownedIDs[x.MemoryID] && !seen[x.MemoryID] {
-					seen[x.MemoryID] = true
-					d.MemoryIDs = append(d.MemoryIDs, x.MemoryID)
-				}
-			}
-			if e = scanner.Err(); e != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var data string
+			var x Experience
+			if e = rows.Scan(&data); e != nil {
 				return nil, e
 			}
+			if e = json.Unmarshal([]byte(data), &x); e != nil {
+				return nil, e
+			}
+			if x.Status == "capture_failed" {
+				failed = true
+			}
+			if x.Status == "memory_saved" && ownedIDs[x.MemoryID] && !seen[x.MemoryID] {
+				seen[x.MemoryID] = true
+				d.MemoryIDs = append(d.MemoryIDs, x.MemoryID)
+			}
+		}
+		if e = rows.Err(); e != nil {
+			return nil, e
 		}
 		d.Saved = len(d.MemoryIDs)
 		switch {

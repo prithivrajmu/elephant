@@ -70,7 +70,7 @@ func (s Store) SetLanguagePolicy(target int) (LanguagePolicy, error) {
 	if err != nil {
 		return p, err
 	}
-	err = s.transact(func(_ []Memory, _ map[string]bool) (*Event, error) {
+	err = s.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
 		data, _ := json.MarshalIndent(map[string]int{"ste_target": target}, "", "  ")
 		f, e := os.CreateTemp(filepath.Dir(s.Path), ".elephant-settings-")
 		if e != nil {

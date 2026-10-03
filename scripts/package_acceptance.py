@@ -17,7 +17,7 @@ for archive in archives:
         for row in sums:
             checksum, name = row.split('  ', 1)
             assert hashlib.sha256(z.read(folder + '/' + name)).hexdigest() == checksum
-        for name in ['README.md', 'AUTOMATION.md', 'AGENT_INTEGRATION.md', 'UPDATES.md', 'version.iss']:
+        for name in ['README.md', 'AUTOMATION.md', 'AGENT_INTEGRATION.md', 'UPDATES.md', 'STORAGE.md', 'version.iss']:
             assert folder + '/' + name in z.namelist(), name
         for name in [n for n in z.namelist() if n.endswith('.md')]:
             for target in re.findall(r'\]\(([^)]+)\)', z.read(name).decode()):

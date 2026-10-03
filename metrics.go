@@ -1,9 +1,8 @@
 package memory
 
 import (
-	"bufio"
+	"database/sql"
 	"encoding/json"
-	"os"
 	"sort"
 	"time"
 )
@@ -76,7 +75,7 @@ func (s Store) Dashboard(id Identity, p Profile) (Dashboard, error) {
 	}
 	d := Dashboard{Experiences: []Experience{}, Memories: []Memory{}, Usage: []Usage{}, Profile: p, Identity: id, Version: Version, Language: policy}
 	latencies := []float64{}
-	err := s.transact(func(all []Memory, _ map[string]bool) (*Event, error) {
+	err := s.readSQL(func(tx *sql.Tx, all []Memory) error {
 		for _, m := range all {
 			if visible(m, id, p.Project, p.Conversation) || owned(m, id) {
 				d.Memories = append(d.Memories, m)
@@ -84,38 +83,51 @@ func (s Store) Dashboard(id Identity, p Profile) (Dashboard, error) {
 				d.Unhelpful += m.Unhelpful
 			}
 		}
-		f, e := os.Open(s.Path)
-		if os.IsNotExist(e) {
-			return nil, nil
+		if err := tx.QueryRow("SELECT count(*) FROM experiences WHERE tenant=? AND user=? AND project=?", id.Tenant, id.User, p.Project).Scan(&d.ExperienceCount); err != nil {
+			return err
 		}
-		if e != nil {
-			return nil, e
+		rows, err := tx.Query("SELECT data FROM (SELECT seq,data FROM experiences WHERE tenant=? AND user=? AND project=? ORDER BY seq DESC LIMIT 100) ORDER BY seq", id.Tenant, id.User, p.Project)
+		if err != nil {
+			return err
 		}
-		defer f.Close()
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 4096), 2<<20)
-		for scanner.Scan() {
-			var ev Event
-			if e = json.Unmarshal(scanner.Bytes(), &ev); e != nil {
-				return nil, e
+		for rows.Next() {
+			var data string
+			var x Experience
+			if err = rows.Scan(&data); err != nil {
+				rows.Close()
+				return err
 			}
-			if x := ev.Experience; x != nil && x.Identity.Tenant == id.Tenant && x.Identity.User == id.User && x.Project == p.Project {
-				d.ExperienceCount++
-				d.Experiences = append(d.Experiences, *x)
-				if len(d.Experiences) > 100 {
-					d.Experiences = d.Experiences[1:]
-				}
+			if err = json.Unmarshal([]byte(data), &x); err != nil {
+				rows.Close()
+				return err
 			}
-			u := ev.Recall
-			if u == nil || u.Identity.Tenant != id.Tenant || u.Identity.User != id.User {
-				continue
+			d.Experiences = append(d.Experiences, x)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+		rows, err = tx.Query("SELECT data FROM usage WHERE tenant=? AND user=? ORDER BY seq", id.Tenant, id.User)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var data string
+			var u Usage
+			if err = rows.Scan(&data); err != nil {
+				return err
 			}
-			d.Usage = append(d.Usage, *u)
+			if err = json.Unmarshal([]byte(data), &u); err != nil {
+				return err
+			}
+			d.Usage = append(d.Usage, u)
 			d.BaselineTokens += (u.BaselineBytes + 3) / 4
 			d.InjectedTokens += (u.InjectedBytes + 3) / 4
 			latencies = append(latencies, u.LatencyMS)
 		}
-		return nil, scanner.Err()
+		return rows.Err()
 	})
 	sort.Slice(d.Memories, func(i, j int) bool { return d.Memories[i].Created.After(d.Memories[j].Created) })
 	sort.Float64s(latencies)

@@ -105,7 +105,7 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
     assert hook("codex", "Stop") == {}
     assert before == store.read_bytes()
     cli("automation", "--enabled=true")
-    journal = store.read_text()
+    journal = store.read_bytes().decode("utf-8", errors="replace")
     for secret in ("SECRET_COMMAND", "SECRET_OUTPUT", "SECRET_TRANSCRIPT", "Repair the query connection pool"):
         assert secret not in journal
     assert not (project / "injected").exists()
