@@ -167,7 +167,7 @@ func sameMemory(a, b Memory) bool {
 	y, _ := json.Marshal(b)
 	return string(x) == string(y)
 }
-func (s Store) Record(m Memory) (Memory, error) {
+func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	if m.Outcome == "" {
 		m.Outcome = OutcomeForClass(m.Class)
 	}
@@ -193,13 +193,25 @@ func (s Store) Record(m Memory) (Memory, error) {
 			return nil, fmt.Errorf("STE target 100: %s Revise the summary. Source evidence stays unchanged.", writing.Issues[0].Message)
 		}
 		m.Writing = &writing
+		var receipt *Experience
+		if len(task) > 0 && task[0] != nil {
+			t := task[0]
+			receipt = &Experience{ID: newID(), Identity: Identity{Tenant: m.Tenant, User: m.Owner}, Project: m.Project, Agent: t.Agent, Session: t.Session, Task: t.Task, Event: "LessonReview", Status: "memory_saved", At: time.Now().UTC()}
+		}
 		for _, old := range all {
 			if !old.Retired && sameMemory(old, m) {
 				m = old
+				if receipt != nil {
+					receipt.MemoryID = m.ID
+					return &Event{Kind: "experience", Experience: receipt}, nil
+				}
 				return nil, nil
 			}
 		}
-		return &Event{Kind: "put", Memory: &m}, nil
+		if receipt != nil {
+			receipt.MemoryID = m.ID
+		}
+		return &Event{Kind: "put", Memory: &m, Experience: receipt}, nil
 	})
 	return m, err
 }

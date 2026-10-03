@@ -12,6 +12,7 @@ type Service struct {
 	Project      string
 	Conversation string
 	Unattached   bool
+	Task         *TaskCapture
 }
 
 func (s Service) Profile() (Profile, error) {
@@ -73,7 +74,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 			}
 			m.Features = p.Features
 		}
-		return s.Store.Record(m)
+		return s.Store.Record(m, s.Task)
 	case "feedback_memory":
 		var a struct {
 			ID         string `json:"id"`

@@ -49,3 +49,8 @@ The next release should automate native tests, signing and publication. Choose t
 - WinGet manifests: https://learn.microsoft.com/en-us/windows/package-manager/package/manifest
 - macOS distribution: https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution
 - Inno Setup destination selection: https://jrsoftware.org/ishelp/topic_setup_defaultdirname.htm
+
+
+## Version source and acceptance
+
+Archive names, Debian and macOS package versions derive from `onboarding.go` via `scripts/release_version.py`. Windows release folders include `version.iss`; the Inno recipe reads it instead of hardcoding a version. All root Markdown docs are packaged. Run `python3 scripts/package_acceptance.py` after archive creation to verify all six archives and native Linux execution. `.github/workflows/validate.yml` adds native-platform checks and archive artifacts; it does not publish a release.
