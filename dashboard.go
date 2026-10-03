@@ -43,7 +43,20 @@ func DashboardHandler(s Service, host, token string) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		var v any
 		var err error
-		if r.URL.Path == "/api/dashboard" && r.Method == "GET" {
+		if r.URL.Path == "/api/update" && r.Method == "GET" {
+			v, err = s.Store.CachedUpdate()
+		} else if r.URL.Path == "/api/update" && r.Method == "POST" {
+			r.Body = http.MaxBytesReader(w, r.Body, 4096)
+			var a struct {
+				Check   bool  `json:"check"`
+				Dismiss bool  `json:"dismiss"`
+				Enabled *bool `json:"enabled"`
+			}
+			err = json.NewDecoder(r.Body).Decode(&a)
+			if err == nil {
+				v, err = s.Store.Updates(UpdateOptions{Check: a.Check, Force: a.Check, Dismiss: a.Dismiss, Enabled: a.Enabled})
+			}
+		} else if r.URL.Path == "/api/dashboard" && r.Method == "GET" {
 			var p Profile
 			p, err = s.Profile()
 			if err == nil {

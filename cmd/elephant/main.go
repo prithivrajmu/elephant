@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	memory "example.com/elephant"
 	"flag"
@@ -18,7 +19,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import> [flags]; see QUICKSTART.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import> [flags]; see QUICKSTART.md")
 	}
 	command := os.Args[1]
 	if command == "version" {
@@ -26,7 +27,7 @@ func run() error {
 		return nil
 	}
 	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
+		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
 		return nil
 	}
 	originalCommand := command
@@ -38,6 +39,12 @@ func run() error {
 	agent := f.String("agent", "both", "automatic adapter: codex, claude or both")
 	configPath := f.String("config", "", "automation config path (hook command)")
 	enabled := f.Bool("enabled", true, "pause or resume installed automatic memory")
+	taskSession := f.String("task-session", "", "hashed task session supplied by a hook")
+	taskID := f.String("task-id", "", "task receipt ID supplied by a hook")
+	reviewComplete := f.Bool("review-complete", false, "acknowledge that the requested lesson review completed")
+	jsonOutput := f.Bool("json", false, "structured task/update status instead of one line")
+	updateCheck := f.Bool("check", false, "check published releases now")
+	updateDismiss := f.Bool("dismiss", false, "dismiss the current release notice")
 	initialize := f.Bool("initialize", false, "include project conventions in an explicit recall")
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -80,12 +87,37 @@ func run() error {
 	seenFlags := map[string]bool{}
 	f.Visit(func(v *flag.Flag) { seenFlags[v.Name] = true })
 	if command == "hook" {
-		out, e := memory.RunHook(*configPath, *agent, os.Stdin)
+		payload, e := io.ReadAll(io.LimitReader(os.Stdin, (1<<20)+1))
+		if e != nil {
+			return e
+		}
+		out, e := memory.RunHook(*configPath, *agent, bytes.NewReader(payload))
 		if e != nil {
 			fmt.Fprintln(os.Stderr, "Elephant automatic memory:", e)
 			out = map[string]any{"systemMessage": "Elephant automatic memory failed. Run elephant automation and elephant doctor. See hook stderr for details."}
 		}
+		if e == nil {
+			var h memory.HookInput
+			if json.Unmarshal(payload, &h) == nil && h.Event == "SessionStart" && h.AgentID == "" {
+				if c, err := memory.ReadAutomation(*configPath); err == nil && c.Enabled {
+					if u, err := c.Service().Store.Updates(memory.UpdateOptions{Check: true, Notify: true}); err == nil && u.State == "available" && u.Line != "" {
+						out["systemMessage"] = u.Line
+					}
+				}
+			}
+		}
 		return json.NewEncoder(os.Stdout).Encode(out)
+	}
+	if command == "task-status" {
+		r, e := memory.TaskSummary(*configPath, *taskSession, *reviewComplete, *taskID)
+		if e != nil {
+			return e
+		}
+		if *jsonOutput {
+			return json.NewEncoder(os.Stdout).Encode(r)
+		}
+		fmt.Println(r.Line)
+		return nil
 	}
 	if resolved, e := filepath.EvalSymlinks(abs); e == nil {
 		abs = resolved
@@ -132,6 +164,14 @@ func run() error {
 		return e
 	}
 	svc.Store.Path = storeAbs
+	if command == "record" && *taskSession != "" {
+		c, capture, e := memory.CaptureForTask(*configPath, *taskSession, *taskID)
+		if e != nil {
+			return e
+		}
+		svc = c.Service()
+		svc.Task = capture
+	}
 	if *steTarget != 0 {
 		if _, e := svc.Store.SetLanguagePolicy(*steTarget); e != nil {
 			return e
@@ -149,6 +189,24 @@ func run() error {
 		return data, e
 	}
 	switch command {
+	case "update":
+		var change *bool
+		if seenFlags["enabled"] {
+			change = enabled
+		}
+		r, e := svc.Store.Updates(memory.UpdateOptions{Check: *updateCheck, Force: *updateCheck, Notify: true, Dismiss: *updateDismiss, Enabled: change})
+		if e != nil {
+			return e
+		}
+		if *jsonOutput {
+			return printJSON(r)
+		}
+		if r.Line != "" {
+			fmt.Println(r.Line)
+		} else {
+			fmt.Printf("Elephant: update status %s.\n", r.State)
+		}
+		return nil
 	case "init":
 		binary, e := os.Executable()
 		if e != nil {
@@ -315,10 +373,17 @@ func run() error {
 	case "record":
 		b, e := input()
 		if e != nil {
+			if svc.Task != nil {
+				_ = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, svc.Task)
+			}
 			return e
 		}
 		v, e := svc.Call("record_memory", b)
 		if e != nil {
+			if svc.Task != nil {
+				t := svc.Task
+				_ = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, t)
+			}
 			return e
 		}
 		return printJSON(v)

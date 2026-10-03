@@ -13,6 +13,8 @@ import subprocess
 import sys
 import tempfile
 
+os.environ["ELEPHANT_UPDATE_CHECKS"] = "0"
+
 with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
     root = pathlib.Path(tmp)
     binary = root / "elephant ' binary"
@@ -65,11 +67,31 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
         p = subprocess.run(shlex.split(command), input=json.dumps(lesson), text=True,
                            capture_output=True, check=True, cwd=project)
         memory = json.loads(p.stdout)
+        status_command = review["reason"].split("output once in your final response:\n", 1)[1].split("\nDo not invent counts", 1)[0]
+        status_args = shlex.split(status_command)
+        incomplete = subprocess.run(status_args[:-1] + ["--json"], capture_output=True, text=True, check=True)
+        assert json.loads(incomplete.stdout)["state"] == "review_incomplete"
+        summary = subprocess.run(status_args, capture_output=True, text=True, check=True)
+        assert summary.stdout.strip().startswith("Elephant: recalled ") and summary.stdout.strip().endswith(" · saved 1 lesson."), summary.stdout
+        assert len(summary.stdout.splitlines()) == 1
         assert memory["project"] == "pool-app" and memory["owner"] == "tester"
         recalled = hook(agent, "UserPromptSubmit", prompt="Change query concurrency in the connection pool")
         context = recalled["hookSpecificOutput"]["additionalContext"]
         assert "Limit query concurrency" in context and len(context.encode()) <= 4000
-        assert hook(agent, "Stop")["decision"] == "block"
+        next_review = hook(agent, "Stop")
+        assert next_review["decision"] == "block"
+        status_args = shlex.split(next_review["reason"].split("output once in your final response:\n", 1)[1].split("\nDo not invent counts", 1)[0])
+        summary = subprocess.run(status_args + ["--json"], capture_output=True, text=True, check=True)
+        summary = json.loads(summary.stdout)
+        assert summary["recalled"] == 1 and summary["saved"] == 0 and summary["state"] == "no_lesson"
+        hook(agent, "UserPromptSubmit", prompt="Task with invalid lesson")
+        failed_review = hook(agent, "Stop")
+        failed_command = failed_review["reason"].split("this command:\n", 1)[1].split("\nJSON fields:", 1)[0]
+        failed = subprocess.run(shlex.split(failed_command), input='{}', capture_output=True, text=True)
+        assert failed.returncode != 0
+        status_args = shlex.split(failed_review["reason"].split("output once in your final response:\n", 1)[1].split("\nDo not invent counts", 1)[0])
+        failed_status = subprocess.run(status_args + ["--json"], capture_output=True, text=True, check=True)
+        assert json.loads(failed_status.stdout)["state"] == "capture_failed"
     status = cli("automation")
     assert status["experiences"] > 0
     assert len(cli("status")["memories"]) == 1  # Independent identical saves deduplicate.
@@ -95,4 +117,6 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
                       "automatic_event_capture": True, "one_review_per_task": True,
                       "agent_record_command": True, "recall_next_task": True,
                       "config_inheritance": True, "pause_resume": True,
-                      "sensitive_payloads_omitted": True, "native_host_model_run": False}))
+                      "sensitive_payloads_omitted": True, "task_status_acknowledged_saves": True, "no_lesson_and_capture_failure": True,
+                      "native_host_model_run": False}))
+
