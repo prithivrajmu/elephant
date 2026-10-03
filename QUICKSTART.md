@@ -1,6 +1,6 @@
 # Elephant: first user in ten minutes
 
-Elephant 0.4.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.22+. This release is for a small local pilot. Only Linux x86-64 has been executed in our acceptance environment; the other packages are cross-compiled.
+Elephant 0.4.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.22+. This release is for a small local pilot. Linux x86-64 package acceptance and macOS arm64 source-build acceptance have passed; other packages are cross-compiled. See [VALIDATION.md](VALIDATION.md) for the exact checks and limits.
 
 ## 1. Install the package for your computer
 

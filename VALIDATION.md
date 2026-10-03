@@ -1,6 +1,20 @@
 # Validation: Elephant 0.4.0-pilot
 
-Executed 2026-10-03 in Linux amd64 with Go 1.27.1. The module declares Go 1.22; there are no external Go modules. This release has not been natively run on macOS, Windows or Linux ARM.
+Original acceptance executed 2026-10-03 in Linux amd64 with Go 1.27.1. Additional macOS arm64 source-build validation is recorded below. The module declares Go 1.22; there are no external Go modules. Windows and Linux ARM native execution remain unverified.
+
+## macOS arm64 source-build and Codex setup
+
+Executed 2026-10-03 with Homebrew Go 1.27.1:
+
+- `go test -race ./...` and `go vet ./...` pass.
+- `go build -buildvcs=false -o elephant ./cmd/elephant` succeeds, and the native binary reports `0.4.0-pilot`.
+- `./elephant selftest` passes all seven checks with an isolated temporary store.
+- `python3 scripts/acceptance.py ./elephant` passes, including external MCP discovery, applicability and abstention, restart persistence, concurrent writes/dashboard reads, strict language checks, and feedback deduplication. This check needs local loopback access; the restricted shell could not run its dashboard, and the check passed outside that sandbox.
+- `codex mcp add elephant -- /absolute/path/elephant mcp --root /absolute/path/project --project elephant` registers the binary in user-level Codex configuration. `codex mcp get elephant --json` confirms the enabled stdio entry.
+- A native `codex app-server` session initializes and calls `mcpServerStatus/list` for Elephant. It discovers exactly `profile_memory`, `init_memory`, `recall_memory`, `record_memory`, `feedback_memory`, and `forget_memory`. This verifies native Codex tool discovery without making a model request; it does not establish autonomous lesson capture or a completed model-driven task.
+- The repository now includes `AGENTS.md` with recall, evidence-backed capture and observed-feedback instructions. Existing Codex sessions need a restart to load the new connection.
+
+These checks use a source-built macOS binary. They do not validate a macOS release archive, installer, signing or notarization. Claude Code, Pi and Cursor connections remain unverified.
 
 ## Executed checks
 
@@ -15,7 +29,7 @@ Executed 2026-10-03 in Linux amd64 with Go 1.27.1. The module declares Go 1.22; 
 
 ## Limits
 
-Codex, Claude Code and Cursor are not installed in this environment. Their recipes were checked against current official documentation, but an actual native client connection remains a pilot acceptance task. Cross-compilation proves a build, not native execution, OS trust approval or installer behavior on that OS. The Windows PowerShell installer has not been executed here. macOS binaries are unsigned/not notarized.
+The original Linux acceptance environment did not have Codex, Claude Code or Cursor installed. Native Codex tool discovery has since passed on macOS as recorded above; model-driven use and other client connections remain pilot acceptance tasks. Cross-compilation proves a build, not native execution, OS trust approval or installer behavior on that OS. The Windows PowerShell installer has not been executed here. macOS binaries are unsigned/not notarized.
 
 No evidence yet establishes real coding-agent quality improvement, autonomous capture reliability, exact provider token savings, billing reduction or enterprise readiness. No public repository or hosted service was published. The STE target is not a compliance score; local checks do not validate the full standard. The dashboard's byte/4 estimate compares against naive loading of all eligible summaries; it does not measure savings relative to no memory or an optimized alternative.
 

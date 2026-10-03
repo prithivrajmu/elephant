@@ -1,6 +1,6 @@
 # Client connection recipes
 
-Run `elephant setup` to generate configuration, or use the direct registration commands below. Setup emits absolute command/argument paths with the selected journal and context. Preserve other server entries when merging config. These recipes are checked against the official documentation below. The pilot's Linux acceptance environment validated the protocol with a separate subprocess MCP client; it did not run Codex, Claude Code, Pi or Cursor as real clients. Registration syntax was also checked against the installed Codex, Claude Code and Pi CLI help on macOS. This does not establish a working client connection.
+Run `elephant setup` to generate configuration, or use the direct registration commands below. Setup emits absolute command/argument paths with the selected journal and context. Preserve other server entries when merging config. These recipes are checked against the official documentation below. The pilot's Linux acceptance environment validated the protocol with a separate subprocess MCP client. Native Codex tool discovery has also passed on macOS; see [VALIDATION.md](VALIDATION.md). Registration syntax was checked against installed Codex, Claude Code and Pi CLI help. Model-driven capture and real Claude Code, Pi and Cursor connections remain unverified.
 
 | Client | Generated content | Where to merge |
 | --- | --- | --- |
