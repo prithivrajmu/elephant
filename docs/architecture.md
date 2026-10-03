@@ -146,3 +146,24 @@ Go is a practical first choice for a small local binary, subprocess/MCP interfac
 
 This concept overlaps existing memory systems. The proposed distinction is explicit incident/outcome/applicability/usefulness tracking with transparent context budgets and evidence. It is not a claim that agent memory is a new category or that this MVP surpasses existing products.
 
+
+## Fingerprint and Signals
+
+The profiler reads bounded regular files from the project root: `package.json`, `tsconfig.json`, `go.mod`, `Cargo.toml`, `pyproject.toml`, and `.elephant.json`. It recognizes common JavaScript frameworks, language markers, AWS/Azure SDK dependencies, SQL/NoSQL drivers, and records manifest evidence. Dependency presence indicates a candidate identifier, not proof of actual production architecture.
+
+It does not traverse all source files or infer people from Git history. Put project intent, database configuration, workflow policy, working style, reviewers and contributors in explicit labels:
+
+```json
+{
+  "features": {
+    "app": ["analytics-dashboard"],
+    "database": ["snowflake"],
+    "cloud": ["aws"],
+    "workflow": ["stacked-prs", "review-required"],
+    "style": ["small-prs", "tests-before-merge"],
+    "reviewer": ["technical-lead"]
+  }
+}
+```
+
+Save this as `.elephant.json` in your project. Identifiers are case normalized; other aliases are not inferred. An optional future agent extraction step can propose labels and applicability conditions. Keep identifiers broad enough to retrieve, and use `requires`/`excludes` to prevent unsafe transfer. Each required dimension must match at least one listed value; an excluded match blocks retrieval. A missing required identifier blocks retrieval. Similar language alone is not sufficient evidence that advice is safe.

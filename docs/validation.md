@@ -1,10 +1,16 @@
 # Validation: Elephant 0.6.0-pilot
 
+## Release gates
+
+Publication of v0.6.0-pilot requires the [validation workflow](https://github.com/prithivrajmu/elephant/actions/workflows/validate.yml) to pass native Linux/macOS/Windows race tests, vet, selftest, external MCP and storage acceptance, plus macOS/Linux hook acceptance and six-archive package checks. The release job verifies uploaded downloads before publishing. This distinguishes native binary/protocol checks from real agent-host usage and ARM installer tests.
+
+The release preparation fixes Windows drive-letter SQLite URIs and makes the Windows test step fail immediately when tests fail. Local Linux checks additionally execute the extracted installer twice and verify the installed binary.
+
 ## SQLite WAL, version 0.6
 
 Executed on 2026-10-03 UTC (2026-10-04 in India), Linux amd64 with Go 1.27.1:
 
-- 48 Go test entry points, including a child-process helper, pass with race detection; vet and source build pass. New cases cover schema/WAL/FULL settings, SQLite 3.51.3, complete JSONL conversion, original-byte backup, duplicate feedback/receipt preservation, corruption and mismatching-backup rejection, interrupted conversion retry, transaction rollback, bounded busy waits without callback replay, unsupported-schema preservation, readers and backup during a write, and killed writers both before and after commit.
+- 49 Go test entry points, including a child-process helper, pass with race detection; vet and source build pass. New cases cover schema/WAL/FULL settings, SQLite 3.51.3, complete JSONL conversion, original-byte backup, duplicate feedback/receipt preservation, corruption and mismatching-backup rejection, interrupted conversion retry, transaction rollback, bounded busy waits without callback replay, unsupported-schema preservation, readers and backup during a write, and killed writers both before and after commit.
 - Seven-check selftest, external MCP acceptance with simultaneous clients/dashboard polling, generated Codex/Claude hook commands, CLI backup/restore/doctor and the isolated synthetic demo pass. These are protocol/engine checks; native model-driven host acceptance remains as documented below.
 - Backup includes acknowledged data still in WAL and excludes uncommitted writes. Restore preserves the backup bytes and refuses to replace an existing destination. No physical power-loss simulation was performed.
 - Six portable archives cross-compile without CGo. Six-archive version/checksum/document checks pass. The extracted Linux amd64 binary passes selftest and generated hook/task-status acceptance. Native macOS/Windows execution is delegated to CI; cross-compilation is not native acceptance.
@@ -20,7 +26,7 @@ The fixed-inventory benchmark uses one stored memory and 1,000/10,000/100,000 sy
 These are short storage microbenchmarks with scheduling noise, not end-to-end recall or hook guarantees. Current-memory scans, alternative-advice work, usage history and model calls are outside this comparison. Reproduce with `go test -run '^$' -bench BenchmarkSQLiteHistory -benchtime=10x -count=3`.
 
 
-## User updates and packaging checks
+## Historical user updates and packaging checks
 
 Executed 2026-10-03 on Linux amd64 with Go 1.23.12:
 
@@ -31,10 +37,10 @@ Executed 2026-10-03 on Linux amd64 with Go 1.23.12:
 - Archive, Debian/macOS and Inno version inputs derive from the Go binary version constant. Windows/macOS native installers were not built or executed here. The CI workflow defines native OS checks and portable archive artifacts; its remote results are not claimed before it runs.
 - A normal native Codex 0.159.2 attempt timed out without completing a task. A follow-up probe reports HTTP 401 with an authentication-token parsing error. No hook trust or host permissions were bypassed. Claude Code is not installed. Native autonomous capture and final-line compliance remain unverified; use `scripts/native_host_acceptance.py` after restoring host login and normal hook trust.
 
-No GitHub release or hosted service was published. Update notices require published
+At that revision, no GitHub release or hosted service was published. Update notices require published
 release metadata and the matching platform archive. Private release access requires
 an explicitly supplied token. Release selection is not a data-format compatibility
-proof. See [UPDATES.md](UPDATES.md).
+proof. See [Update notifications](updates.md).
 
 ## Automatic memory, version 0.5
 
