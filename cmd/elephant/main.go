@@ -373,6 +373,9 @@ func run() error {
 	case "record":
 		b, e := input()
 		if e != nil {
+			if svc.Task != nil {
+				_ = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, svc.Task)
+			}
 			return e
 		}
 		v, e := svc.Call("record_memory", b)
