@@ -1,6 +1,22 @@
 # Validation: Elephant 0.5.0-pilot
 
 
+## User updates and packaging checks
+
+Executed 2026-10-03 on Linux amd64 with Go 1.23.12:
+
+- All 40 Go tests pass with race detection; vet passes. New checks cover task-specific journal receipts, deduplicated counts, incomplete review, failed capture, pause, identity isolation, stale review commands, cached release checks, one notice per version, dismissal/disable, incompatible or unsafe metadata, timeout and response bounds.
+- External MCP acceptance and generated Codex/Claude hook acceptance pass. Hook acceptance executes real record/status commands and verifies one-line output, no-lesson and failed-capture states. Host-agent extraction is still simulated in this check.
+- Dashboard JavaScript syntax and the actual update-notice renderer pass Node checks for text rendering, dismissal, disabled state and unsafe links. A browser download failed with a truncated/invalid archive, so the new notice has not been visually verified in a real browser.
+- Six portable archives build with version 0.5.0-pilot. Archive checksum, bundled-document link and version checks pass. The extracted Linux amd64 binary passes selftest and hook/task-status acceptance. Linux amd64 .deb creation, extraction, binary version and bundled update docs pass. System-wide installation was not performed.
+- Archive, Debian/macOS and Inno version inputs derive from the Go binary version constant. Windows/macOS native installers were not built or executed here. The CI workflow defines native OS checks and portable archive artifacts; its remote results are not claimed before it runs.
+- A normal native Codex 0.159.2 attempt timed out without completing a task. A follow-up probe reports HTTP 401 with an authentication-token parsing error. No hook trust or host permissions were bypassed. Claude Code is not installed. Native autonomous capture and final-line compliance remain unverified; use `scripts/native_host_acceptance.py` after restoring host login and normal hook trust.
+
+No GitHub release or hosted service was published. Update notices require published
+release metadata and the matching platform archive. Private release access requires
+an explicitly supplied token. Release selection is not a data-format compatibility
+proof. See [UPDATES.md](UPDATES.md).
+
 ## Automatic memory, version 0.5
 
 Executed 2026-10-03 in Linux amd64 with Go 1.23.12, using the current source:
@@ -64,3 +80,4 @@ ELEPHANT_GO=/path/to/go python3 scripts/build_release.py
 ```
 
 Browser QA additionally uses Playwright/Chromium in the build environment. Synthetic UI data can be reproduced separately with `python3 examples/demo.py --binary ./elephant --dir /tmp/elephant-demo`; do not import this fabricated data into real user memory.
+

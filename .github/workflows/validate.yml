@@ -1,0 +1,56 @@
+name: Validate Elephant
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Tests and vet
+        run: |
+          go test -race ./...
+          go vet ./...
+      - name: Native binary and self-test
+        shell: bash
+        run: |
+          go build -buildvcs=false -o elephant-test ./cmd/elephant
+          ./elephant-test selftest
+          python scripts/acceptance.py ./elephant-test
+      - name: Automatic hook acceptance
+        if: runner.os != 'Windows'
+        run: python scripts/automation_acceptance.py ./elephant-test
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python scripts/build_release.py
+      - run: node scripts/dashboard_update_check.js
+      - run: python scripts/package_acceptance.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elephant-packages
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS

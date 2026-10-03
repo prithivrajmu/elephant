@@ -28,11 +28,12 @@ Project scope is the default for automatic lesson review. Personal scope is for 
 
 | Area | Status |
 | --- | --- |
+| Task status and release notices | Implemented: task-specific save receipts, one-line review output, cached/dismissible release notices, CLI and dashboard controls. See [UPDATES.md](UPDATES.md). |
 | Local engine, CLI, MCP and Memory Palace | Implemented; six MCP tools, scoped recall, feedback, retirement and local reviewed export/import. |
 | Automatic Codex and Claude Code adapters | Implemented for macOS/Linux; generated hook commands pass subprocess acceptance. Real model-driven automatic sessions remain unverified. |
-| Validation | [Recorded 0.5 checks](VALIDATION.md#automatic-memory-version-05): 34 Go tests with race checks, vet, isolated self-test, MCP acceptance and simulated hook lifecycle. |
-| Native client evidence | Historical 0.4 macOS source-build and Codex MCP discovery passed. This does not validate the new 0.5 automatic loop. |
-| Distribution | Source build is the current 0.5 path. No GitHub release is published; archive and installer scripts still contain 0.4 versions. |
+| Validation | [Recorded 0.5 checks](VALIDATION.md#automatic-memory-version-05): 40 Go tests with race checks, vet, isolated self-test, MCP acceptance and simulated hook lifecycle. |
+| Native client evidence | Historical 0.4 macOS source-build and Codex MCP discovery passed. The new Codex attempt is blocked by host authentication; Claude Code is unavailable here. The automatic loop remains a native acceptance gate. |
+| Distribution | Source build is the current 0.5 path. Archive and installer versions derive from the binary version; six archives and native Linux packaging are checked. No GitHub release is published. |
 | Storage | Append-only JSONL with lock retries and corruption detection. Indexed storage, retention and automated recovery remain planned. |
 
 Use [AUTOMATION.md](AUTOMATION.md) for hook behavior and compatibility, [VALIDATION.md](VALIDATION.md) for executed checks, and [BRAND.md](BRAND.md) for the product vocabulary.
@@ -218,23 +219,23 @@ The next milestone is **clear user updates, followed by a verified automatic loc
 
 | Priority | Work | Acceptance criterion |
 | --- | --- | --- |
-| 1. User updates and notifications | Add one end-of-task memory status line and a release-version check with a concise upgrade notice. Implement local status first; release notices depend on consistent versions and published release metadata. | Status uses actual recall results and acknowledged Memory writes. A newer published compatible release produces one notice per version, with version, brief change summary and upgrade link. Disabled/offline checks never block agent work or claim the installed version is current. |
+| 1. User updates and notifications | Task status and release checks are implemented. Validate the final one-line output in native hosts; release availability still needs a published release and assets. | Status uses actual recall results and acknowledged Memory writes. A newer published compatible release produces one notice per version, with version, brief change summary and upgrade link. Disabled/offline checks never block agent work or claim the installed version is current. |
 | 2. Native automatic loop | Run real Codex and Claude Code tasks on macOS/Linux. Record host/model versions and hook approval steps. Test no-lesson tasks, failures, restart, pause/resume and custom stores. | Without a repeated memory prompt, a justified lesson is saved with an ID and actual evidence, survives restart and appears on a related task. Unrelated or inapplicable tasks abstain; review does not loop. |
-| 3. Reproducible 0.5 distribution | Align binary, archive, installer and package versions; ship automation and referenced integration docs. Add CI for Go/race/vet, MCP and hook acceptance, plus release checksums. | Build a clean 0.5 package, install it on each claimed platform, and complete its supported workflow. Record native acceptance separately from cross-compilation before publishing a release. |
+| 3. Reproducible 0.5 distribution | Single-source versions, complete package docs, checksum checks and validation CI are implemented. Run the native-platform matrix and publish a release after acceptance. | Build a clean 0.5 package, install it on each claimed platform, and complete its supported workflow. Record native acceptance separately from cross-compilation before publishing a release. |
 | 4. Capture reliability and storage | Make review requested, Memory saved, no lesson justified and capture failed distinguishable. Cover interrupted review/write and safe retry. Benchmark growing event histories, then migrate to indexed SQLite with versioned migration, backup/restore and retention. | Restart/fault checks preserve every acknowledged Memory, retries avoid duplicate evidence, and recovery never silently discards history. Publish end-to-end hook and recall latency as history grows. |
 | 5. Memory quality and retrieval | Add evidence revisions, reviewed supersession and stale-condition handling. Build a versioned relevance set with related, unrelated, unknown-condition and false-transfer cases. | Report capture misses, unsupported lessons, relevance/abstention judgments and budget-quality tradeoffs against the lexical baseline. Feedback from one task must not become multiple independent votes. |
 | 6. Developer pilot and measured value | Test with 3–5 developers across two projects and an unattached conversation. Use [PILOT_FEEDBACK.md](PILOT_FEEDBACK.md); compare paired tasks with and without memory after lifecycle acceptance. | Report setup success, time to first real Memory, persistence, capture reliability, observed usefulness, actual token usage where available, latency and rework. Include review/retrieval overhead. |
 
 ### Priority 1: concise user updates
 
-These are planned features; the current binary does not yet provide this notification workflow.
+Implemented in the current source. Re-run `elephant init`, restart the host and approve the updated hooks to load the new review instructions. See [UPDATES.md](UPDATES.md) for commands and validation limits.
 
 - **Task status:** show one line at task completion, using actual results: `Elephant: recalled 2 memories · saved 1 lesson.` A review request alone must never count as a saved lesson.
 - **No lesson:** say `Elephant: recalled 0 memories · no reusable lesson found.` only after review completed. Distinguish review incomplete, capture failed and automation paused.
 - **New release:** show `Elephant update: VERSION available — CHANGE SUMMARY. Upgrade: LINK` only after verifying published release metadata. Notify once per new version and allow dismissal or disabling checks.
 - **Delivery:** use CLI output and the coding agent's final status line; show update availability in Memory Palace. Keep recurring task output to one line; show a release notice separately when needed.
 - **Checks:** use a bounded, cached version lookup. Private repository release checks must use authorized access. Do not send task text or Memories with the request. Do not automatically install an update.
-- **Order:** implement factual task status first; align packaging versions and provide release metadata before enabling release notifications. Test duplicate suppression, unavailable metadata, offline operation, disabled checks and failed Memory writes.
+- **Order:** task status and version alignment are implemented; publish release metadata and platform assets before expecting release notifications. Test duplicate suppression, unavailable metadata, offline operation, disabled checks and failed Memory writes.
 
 The existing [PILOT_PLAN.md](PILOT_PLAN.md) gives broader evaluation and product priorities. Its prebuilt-package readiness describes earlier pilot work; use the 0.5 state and release gates above for current automation.
 
