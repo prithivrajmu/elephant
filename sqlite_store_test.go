@@ -230,6 +230,12 @@ func TestSQLiteBusyTimeoutDoesNotReplayCallback(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
+	// A cold probe must not release locks held by an existing SQL connection.
+	abs, err := filepath.Abs(s.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storeInitialization.Delete(abs)
 	called := 0
 	start := time.Now()
 	err = s.transact(func([]Memory, map[string]bool) (*Event, error) { called++; return nil, nil })

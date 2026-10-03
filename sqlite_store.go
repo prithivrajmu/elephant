@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
+	sqlite "modernc.org/sqlite"
 )
 
 // Never probe an established database with os.Open: closing an unrelated file
@@ -94,7 +94,7 @@ func (s Store) database(write bool) (*sql.DB, error) {
 	init := value.(*storeInit)
 	init.mu.Lock()
 	if !init.ready {
-		ready, e := isSQLite(s.Path)
+		ready, e := probeSQLite(s.Path)
 		if e == nil && !ready {
 			var unlock func()
 			unlock, e = migrationLock(s.Path)
@@ -171,6 +171,32 @@ func isSQLite(path string) (bool, error) {
 	return n == len(b) && string(b) == sqliteHeader, nil
 }
 
+// Let SQLite read its own header. It manages shared descriptors and locks;
+// a generic os.Open/Close probe could release another connection's POSIX locks.
+func probeSQLite(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if info.Size() == 0 {
+		return false, nil
+	}
+	db, err := openSQLiteMode(path, false, true)
+	if err == nil {
+		var version int
+		err = db.QueryRow("PRAGMA user_version").Scan(&version)
+		db.Close()
+	}
+	var sqliteError *sqlite.Error
+	if errors.As(err, &sqliteError) && sqliteError.Code() == 26 {
+		return false, nil
+	} // SQLITE_NOTADB
+	return err == nil, err
+}
+
 func migrationLock(path string) (func(), error) {
 	lock := path + ".lock"
 	deadline := time.Now().Add(3 * time.Second)
@@ -190,7 +216,7 @@ func migrationLock(path string) (func(), error) {
 }
 
 func (s Store) prepareSQLite() error {
-	ready, err := isSQLite(s.Path)
+	ready, err := probeSQLite(s.Path)
 	if err != nil || ready {
 		return err
 	}
