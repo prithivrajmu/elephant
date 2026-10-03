@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +51,7 @@ type hookState struct {
 }
 
 func (s Store) observe(x Experience) error {
-	return s.transact(func(_ []Memory, seen map[string]bool) (*Event, error) {
+	return s.transactSQL(false, []string{"experience:" + x.ID}, func(_ *sql.Tx, _ []Memory, seen map[string]bool) (*Event, error) {
 		if seen["experience:"+x.ID] {
 			return nil, nil
 		}
@@ -155,7 +156,7 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 			return out, nil
 		}
 		review := false
-		err = svc.Store.transact(func(_ []Memory, _ map[string]bool) (*Event, error) {
+		err = svc.Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
 			var state hookState
 			b, e := readConfigFile(statePath)
 			if e != nil {
@@ -201,7 +202,7 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		out["reason"] = reason
 		return out, nil
 	case "UserPromptSubmit":
-		err = svc.Store.transact(func(_ []Memory, _ map[string]bool) (*Event, error) {
+		err = svc.Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
 			if e := safeParents(filepath.Dir(c.Store), statePath); e != nil {
 				return nil, e
 			}
@@ -227,7 +228,7 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		out["hookSpecificOutput"] = map[string]any{"hookEventName": h.Event, "additionalContext": result.Context}
 	}
 	if h.Event == "UserPromptSubmit" {
-		err = svc.Store.transact(func(_ []Memory, _ map[string]bool) (*Event, error) {
+		err = svc.Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
 			state, e := readTaskState(c, sessionKey)
 			if e != nil {
 				return nil, e
