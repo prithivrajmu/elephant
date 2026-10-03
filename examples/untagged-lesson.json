@@ -1,0 +1,9 @@
+{
+  "scope": "personal",
+  "outcome": "good",
+  "incident": "EXAMPLE ONLY: a reviewer could verify a proposal after reproducible validation evidence was attached.",
+  "lesson": "Attach reproducible validation evidence to a proposal so reviewers can check the claimed outcome.",
+  "source": "EXAMPLE: replace with a conversation/message reference or review record",
+  "subject": "review-evidence",
+  "features": {"topic": ["reviews", "validation-evidence"]}
+}

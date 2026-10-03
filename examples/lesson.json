@@ -1,0 +1,15 @@
+{
+  "scope": "personal",
+  "outcome": "worst",
+  "incident": "EXAMPLE ONLY: unbounded parallel warehouse queries exhausted the connection pool.",
+  "lesson": "Bound query concurrency to available pool capacity and measure queue wait time before increasing the limit.",
+  "source": "EXAMPLE: replace with an actual incident report or test run",
+  "subject": "warehouse-concurrency",
+  "features": {
+    "language": ["typescript"],
+    "framework": ["nextjs"],
+    "app": ["analytics-dashboard"],
+    "database": ["snowflake"]
+  },
+  "requires": {"database": ["snowflake"]}
+}
