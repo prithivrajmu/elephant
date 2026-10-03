@@ -25,5 +25,6 @@ lesson; retirement does not physically erase the journal.
 Report recorded memory IDs and store errors. If no lesson is justified, say so.
 If both hooks and the MCP server are unavailable, report that and continue.
 Automatic hooks record tool metadata and request a bounded lesson review. They
-do not read transcripts. See `AUTOMATION.md`, `AGENT_INTEGRATION.md` and
-`CLIENTS.md` for the workflow and connection instructions.
+do not read transcripts. See `docs/automation.md`, `docs/agent-integration.md` and
+`docs/clients.md` for the workflow and connection instructions.
+

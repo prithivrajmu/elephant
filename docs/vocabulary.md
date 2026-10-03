@@ -74,7 +74,7 @@ Current private scopes are personal, project and conversation. Team scope requir
 
 ## Recall and metrics
 
-The retrieval math remains documented in DESIGN.md. A Scar still needs relevant task evidence and valid requirements. A severe label cannot bypass a scope rule or a Recall Budget.
+The retrieval math remains documented in [Architecture](architecture.md). A Scar still needs relevant task evidence and valid requirements. A severe label cannot bypass a scope rule or a Recall Budget.
 
 Do not show invented confidence, saves or time reductions. The current token baseline loads all eligible summaries. It does not represent the full historical conversations. Future historical-compression metrics need source lengths and tokenizer evidence.
 

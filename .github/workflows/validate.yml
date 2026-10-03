@@ -22,6 +22,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Tests and vet
+        shell: bash
         run: |
           go test -race ./...
           go vet ./...
@@ -55,3 +56,25 @@ jobs:
           path: |
             dist/*.zip
             dist/SHA256SUMS
+  publish:
+    needs: [native, packages]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: elephant-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: elephant-packages
+          path: dist
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/publish_release.py

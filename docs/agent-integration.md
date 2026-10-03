@@ -1,6 +1,6 @@
 # Portable agent instructions
 
-For Codex and Claude Code automatic hooks, use `elephant init` and [AUTOMATION.md](AUTOMATION.md). The guidance below is for MCP or custom harness integration.
+For Codex and Claude Code automatic hooks, use `elephant init` and [Automatic hooks](automation.md). The guidance below is for MCP or custom harness integration.
 
 Copy the following instruction into your preferred agent's project guidance or map your harness's `/initmemory` command to the `init_memory` MCP tool. This file is a sample; it has not been installed into another harness.
 
@@ -15,3 +15,4 @@ Use project scope for local policy and reviewer preferences. Use personal scope 
 If you apply a retrieved lesson and observe whether it helped, call `feedback_memory` with the memory ID, a stable task/run observation ID and helpful=true/false. Retrieval alone is not a helpful outcome. After a condition changes or evidence disproves a lesson, retire an owned memory with `forget_memory` and record the corrected lesson with its evidence.
 
 When using the CLI rather than MCP, run the corresponding `recall --initialize`, `recall`, `record` and `feedback` commands. Parse CLI JSON and inject only the bounded `context` field, not the full result object. Allocate space for current instructions, tools and model responses separately.
+

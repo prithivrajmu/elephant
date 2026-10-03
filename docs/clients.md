@@ -1,8 +1,8 @@
 # Client connection recipes
 
-For automatic Codex or Claude Code memory on macOS/Linux, use `elephant init`, restart the agent and approve its hooks. See [AUTOMATION.md](AUTOMATION.md). The MCP recipes below remain available for other hosts and explicit tool access.
+For automatic Codex or Claude Code memory on macOS/Linux, use `elephant init`, restart the agent and approve its hooks. See [Automatic hooks](automation.md). The MCP recipes below remain available for other hosts and explicit tool access.
 
-Run `elephant setup` to generate configuration, or use the direct registration commands below. Setup emits absolute command/argument paths with the selected store and context. Preserve other server entries when merging config. These recipes are checked against the official documentation below. The pilot's Linux acceptance environment validated the protocol with a separate subprocess MCP client. Native Codex tool discovery has also passed on macOS; see [VALIDATION.md](VALIDATION.md). Registration syntax was checked against installed Codex, Claude Code and Pi CLI help. Model-driven capture and real Claude Code, Pi and Cursor connections remain unverified.
+Run `elephant setup` to generate configuration, or use the direct registration commands below. Setup emits absolute command/argument paths with the selected store and context. Preserve other server entries when merging config. These recipes are checked against the official documentation below. The pilot's Linux acceptance environment validated the protocol with a separate subprocess MCP client. Native Codex tool discovery has also passed on macOS; see [Validation](validation.md). Registration syntax was checked against installed Codex, Claude Code and Pi CLI help. Model-driven capture and real Claude Code, Pi and Cursor connections remain unverified.
 
 | Client | Generated content | Where to merge |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Reload the client, approve the server if requested, and confirm all six tools. T
 
 ## Direct CLI registration
 
-Build or install Elephant first; see [QUICKSTART.md](QUICKSTART.md). In macOS/Linux shells, set these values to your executable, target project and stable project ID:
+Build or install Elephant first; see [Quick start](quickstart.md). In macOS/Linux shells, set these values to your executable, target project and stable project ID:
 
 ```sh
 ELEPHANT_BIN="/absolute/path/to/elephant"
@@ -64,9 +64,9 @@ This writes `.pi/mcp.json`; Pi reads project configuration after project trust i
 
 ## Workflow and shared memory
 
-Merge the generated `AGENT_INSTRUCTIONS.md`, or the portable guidance in [AGENT_INTEGRATION.md](AGENT_INTEGRATION.md), into the target project's `AGENTS.md` for Codex/Pi or `CLAUDE.md` for Claude. Connecting the server makes tools available; these instructions tell the agent when to use them. Elephant does not watch conversations in the background.
+Merge the generated `AGENT_INSTRUCTIONS.md`, or the portable guidance in [Agent integration](agent-integration.md), into the target project's `AGENTS.md` for Codex/Pi or `CLAUDE.md` for Claude. Connecting the server makes tools available; these instructions tell the agent when to use them. Elephant does not watch conversations in the background.
 
-All clients can share the default `~/.elephant/memories.sqlite` store under the same configured identity. An existing legacy journal migrates with a preserved backup and can be reused as described in [QUICKSTART.md](QUICKSTART.md). For a custom store, pass the same absolute `--store` path to each registration, CLI call and dashboard session.
+All clients can share the default `~/.elephant/memories.sqlite` store under the same configured identity. An existing legacy journal migrates with a preserved backup and can be reused as described in [Quick start](quickstart.md). For a custom store, pass the same absolute `--store` path to each registration, CLI call and dashboard session.
 
 The root and project ID are fixed when each server process starts. A global registration with a fixed root continues to refer to that project even when the client opens another directory. Use project-scoped configurations for different projects, with the correct root and stable ID in each. Personal lessons can transfer through the shared store; project lessons remain scoped to their project ID.
 
