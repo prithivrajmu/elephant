@@ -1,7 +1,11 @@
 package memory
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -127,5 +131,118 @@ func TestUpdateTimeoutAndPayloadBound(t *testing.T) {
 	defer server.Close()
 	if _, e = fetchRelease(server.Client(), server.URL); e == nil {
 		t.Fatal("oversized metadata accepted")
+	}
+}
+
+func TestUpdateFailureDiagnosticsAndRecovery(t *testing.T) {
+	t.Setenv("ELEPHANT_UPDATE_CHECKS", "")
+	for _, tc := range []struct {
+		name, token, reason string
+		status              int
+		rate                bool
+	}{
+		{"private without token", "", "access_required", 404, false},
+		{"private with token", "private-token", "not_found", 404, false},
+		{"invalid token", "private-token", "credentials_rejected", 401, false},
+		{"forbidden", "private-token", "access_denied", 403, false},
+		{"primary rate limit", "", "rate_limited", 403, true},
+		{"rate limit", "", "rate_limited", 429, false},
+		{"server error", "", "server_error", 503, false},
+		{"bad metadata", "", "invalid_metadata", 200, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("ELEPHANT_GITHUB_TOKEN", tc.token)
+			var recovered bool
+			var requests int
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests++
+				if recovered {
+					w.Write([]byte("[]"))
+					return
+				}
+				if tc.rate {
+					w.Header().Set("X-RateLimit-Remaining", "0")
+				}
+				w.WriteHeader(tc.status)
+				w.Write([]byte("private-token secret-server-body"))
+			}))
+			defer server.Close()
+			s := Store{Path: filepath.Join(t.TempDir(), "events.jsonl")}
+			now := time.Now().UTC()
+			d, e := s.updates(UpdateOptions{Check: true, Force: true}, server.Client(), server.URL, now)
+			if e != nil || d.State != "unavailable" || d.Reason != tc.reason || d.Message != updateFailureMessage(tc.reason) || !strings.Contains(d.Line, d.Message) {
+				t.Fatal(d, e)
+			}
+			cached, e := s.CachedUpdate()
+			if e != nil || cached.Message != d.Message || cached.Reason != d.Reason {
+				t.Fatal(cached, e)
+			}
+			b, _ := os.ReadFile(s.Path + ".updates.json")
+			if strings.Contains(string(b), "private-token") || strings.Contains(string(b), "secret-server-body") {
+				t.Fatal("sensitive diagnostic persisted")
+			}
+			recovered = true
+			d, e = s.updates(UpdateOptions{Check: true, Force: true}, server.Client(), server.URL, now.Add(time.Second))
+			if e != nil || d.State != "current" || d.Reason != "" || requests != 2 {
+				t.Fatal(d, e, requests)
+			}
+		})
+	}
+}
+
+type updateRoundTrip func(*http.Request) (*http.Response, error)
+
+func (f updateRoundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestUpdateNetworkDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		reason string
+		err    error
+	}{
+		{"network", fmt.Errorf("sensitive-network-details")},
+		{"timeout", context.DeadlineExceeded},
+	} {
+		client := &http.Client{Transport: updateRoundTrip(func(*http.Request) (*http.Response, error) { return nil, tc.err })}
+		_, e := fetchRelease(client, "https://example.test")
+		var failure *updateCheckError
+		if !errors.As(e, &failure) || failure.reason != tc.reason || strings.Contains(e.Error(), "sensitive") {
+			t.Fatal(e)
+		}
+	}
+}
+
+func TestDashboardUpdateClickForcesCheckAndPollingDoesNot(t *testing.T) {
+	t.Setenv("ELEPHANT_UPDATE_CHECKS", "")
+	t.Setenv("ELEPHANT_GITHUB_TOKEN", "")
+	old := http.DefaultTransport
+	t.Cleanup(func() { http.DefaultTransport = old })
+	requests := 0
+	http.DefaultTransport = updateRoundTrip(func(r *http.Request) (*http.Response, error) {
+		requests++
+		if r.URL.String() != releaseAPI || r.Method != "GET" {
+			t.Errorf("unexpected release request: %s %s", r.Method, r.URL)
+		}
+		return &http.Response{StatusCode: 404, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("private response"))}, nil
+	})
+	s := Store{Path: filepath.Join(t.TempDir(), "events.jsonl")}
+	h := DashboardHandler(Service{Store: s}, "localhost:8788", "dashboard-token")
+	for _, method := range []string{"GET", "POST", "GET", "POST"} {
+		req := httptest.NewRequest(method, "http://localhost:8788/api/update", strings.NewReader(`{"check":true}`))
+		req.Header.Set("Authorization", "Bearer dashboard-token")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if w.Code != 200 {
+			t.Fatal(w.Code, w.Body.String())
+		}
+		var d UpdateStatus
+		if e := json.Unmarshal(w.Body.Bytes(), &d); e != nil {
+			t.Fatal(e)
+		}
+		if requests > 0 && (d.Reason != "access_required" || !strings.Contains(d.Message, "ELEPHANT_GITHUB_TOKEN")) {
+			t.Fatal(d)
+		}
+	}
+	if requests != 2 {
+		t.Fatalf("two clicks must make two checks, GET polling none; got %d", requests)
 	}
 }
