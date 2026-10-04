@@ -40,6 +40,8 @@ export function syncOperation(sql:SqlStorage,principal:Principal,input:unknown) 
   const row=sql.exec<{data:string;revision:number}>("SELECT m.data,s.revision FROM memories m JOIN sync_state s ON s.id=m.id WHERE m.id=?",a.memory.id).toArray()[0];
   if((row?.revision??0)!==a.expected_revision) throw new Error("revision conflict; pull and review before retrying");
   const old=row?JSON.parse(row.data) as Memory:undefined;
+  if(old&&(old.scope!==a.memory.scope||old.project!==(a.memory.project_id??"")||old.conversation!==(a.memory.conversation_id??"")))
+    throw new Error("scope/context conflict; use a new memory ID");
   if(old?.retired&&!a.memory.retired) throw new Error("retired memory cannot be resurrected");
   const withdrawal=!!old&&!old.retired&&a.memory.retired;
   if(count>=MAX_RECEIPTS&&(!withdrawal||count>=MAX_RECEIPTS+MAX_MEMORIES)) throw new Error("Hosted pilot receipt limit reached");

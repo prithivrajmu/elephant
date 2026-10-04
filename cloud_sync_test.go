@@ -166,3 +166,31 @@ func TestCloudSyncRequiresOptInAndRejectsRedirects(t *testing.T) {
 		t.Fatal("redirect forwarded token")
 	}
 }
+
+func TestCloudSyncKeepsUnselectedLocalScope(t *testing.T) {
+	id, _, m := fixture()
+	m.Scope = "project"
+	m.Project = "private"
+	m.Requires = nil
+	s := Store{Path: filepath.Join(t.TempDir(), "m.sqlite")}
+	saved, e := s.Record(m)
+	if e != nil {
+		t.Fatal(e)
+	}
+	remote := saved
+	remote.Scope = "personal"
+	remote.Tenant = "hosted"
+	remote.Owner = "alice"
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(cloudResponse{Version: 1, Cursor: 1, Items: []cloudItem{{Revision: 1, Memory: remote}}})
+	}))
+	defer server.Close()
+	_, e = s.SyncCloud(id, CloudSyncOptions{Endpoint: server.URL, Token: "token", Remote: Identity{Tenant: "hosted", User: "alice"}, Scopes: []string{"personal"}, Client: server.Client()})
+	if e == nil || !strings.Contains(e.Error(), "unselected") {
+		t.Fatalf("unselected scope overwritten: %v", e)
+	}
+	all, _ := s.All()
+	if len(all) != 1 || all[0].Scope != "project" {
+		t.Fatal("local scope changed")
+	}
+}
