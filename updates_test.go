@@ -17,6 +17,15 @@ import (
 	"time"
 )
 
+// Keep candidate fixtures newer when the shipped version advances.
+func futureReleaseTag(offset int) string {
+	current, ok := parseReleaseVersion(Version)
+	if !ok {
+		panic("invalid installed version in test")
+	}
+	return fmt.Sprintf("v%d.%d.0-pilot", current.parts[0], current.parts[1]+offset)
+}
+
 func testRelease(tag string) githubRelease {
 	r := githubRelease{Tag: tag, Name: "Smaller memory status\nNew release", URL: "https://github.com/" + releaseRepository + "/releases/tag/" + tag, Prerelease: true}
 	r.Assets = append(r.Assets, struct {
@@ -33,14 +42,14 @@ func TestUpdateCachingNotificationsAndControls(t *testing.T) {
 		if r.Method != "GET" || r.Header.Get("Authorization") != "Bearer test-token" || r.ContentLength > 0 {
 			t.Error("unexpected update request")
 		}
-		json.NewEncoder(w).Encode([]githubRelease{testRelease("v0.7.0-pilot")})
+		json.NewEncoder(w).Encode([]githubRelease{testRelease(futureReleaseTag(1))})
 	}))
 	defer server.Close()
 	s := Store{Path: filepath.Join(t.TempDir(), "events.jsonl")}
 	now := time.Now().UTC()
 	for i := 0; i < 2; i++ {
 		d, e := s.updates(UpdateOptions{Check: true, Notify: true}, server.Client(), server.URL, now)
-		if e != nil || d.State != "available" || d.Latest.Version != "0.7.0-pilot" {
+		if e != nil || d.State != "available" || d.Latest.Version != strings.TrimPrefix(futureReleaseTag(1), "v") {
 			t.Fatal(d, e)
 		}
 		if (i == 0) != (d.Line != "") {
@@ -57,7 +66,7 @@ func TestUpdateCachingNotificationsAndControls(t *testing.T) {
 		t.Fatal("cached notice repeated", cached, e)
 	}
 	d, e := s.updates(UpdateOptions{Dismiss: true}, server.Client(), server.URL, now)
-	if e != nil || d.Dismissed != "0.7.0-pilot" {
+	if e != nil || d.Dismissed != strings.TrimPrefix(futureReleaseTag(1), "v") {
 		t.Fatal(d, e)
 	}
 	no := false
@@ -89,16 +98,16 @@ func TestUpdateRejectsUnpublishedIncompatibleAndUnsafeMetadata(t *testing.T) {
 		func(r *githubRelease) { r.Draft = true }, func(r *githubRelease) { r.Tag = "v1.0.0" }, func(r *githubRelease) { r.Tag = "v0.7.0-rc.1" },
 		func(r *githubRelease) { r.Assets = nil }, func(r *githubRelease) { r.URL = "javascript:alert(1)" }, func(r *githubRelease) { r.URL = "https://github.com.evil.test/releases" },
 	} {
-		r := testRelease("v0.7.0-pilot")
+		r := testRelease(futureReleaseTag(1))
 		change(&r)
 		if d, e := selectRelease([]githubRelease{r}); e != nil || d != nil {
 			t.Fatal(d, e)
 		}
 	}
 	old := testRelease("v0.4.0-pilot")
-	newest := testRelease("v0.8.0-pilot")
-	d, e := selectRelease([]githubRelease{newest, old, testRelease("v0.7.0-pilot")})
-	if e != nil || d.Version != "0.8.0-pilot" {
+	newest := testRelease(futureReleaseTag(2))
+	d, e := selectRelease([]githubRelease{newest, old, testRelease(futureReleaseTag(1))})
+	if e != nil || d.Version != strings.TrimPrefix(futureReleaseTag(2), "v") {
 		t.Fatal(d, e)
 	}
 }

@@ -4,7 +4,7 @@
 
 `onboarding.go` is the version source. `scripts/release_version.py` derives archive names and native package versions. Add notes at `docs/releases/vVERSION.md`, update the README's release link and validate installation instructions for each supported platform. Pilot versions publish as prereleases.
 
-The validation workflow tests Linux, macOS and Windows natively, builds six portable ZIPs, checks every packaged file checksum and documentation link, and exercises the Linux installer. A push to `main` publishes a new version only after all native and package jobs succeed. Pull requests build and validate without publishing.
+The validation workflow tests Linux, macOS and Windows natively, builds six portable ZIPs, checks every packaged file checksum and documentation link, and exercises the Linux installer. A push to `main` publishes a new version only after all native, package and Cloudflare check/test/dry-run jobs succeed. Pull requests build and validate without publishing.
 
 Publication targets the exact main commit tested by that workflow. `scripts/publish_release.py` creates a draft release, uploads six ZIPs plus `SHA256SUMS`, downloads and verifies the assets, then publishes the draft. An existing published version is left unchanged. A rerun may resume a draft only when it targets the same commit. For a subsequent release, change the version and add its notes in a pull request before merging.
 

@@ -75,7 +75,7 @@ jobs:
             dist/*.zip
             dist/SHA256SUMS
   publish:
-    needs: [native, packages]
+    needs: [native, packages, cloudflare]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

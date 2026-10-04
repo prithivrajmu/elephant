@@ -11,11 +11,12 @@ Elephant stores source-backed lessons from development work and recalls relevant
 - Automatic task hooks with evidence-based lesson review and a factual one-line status.
 - SQLite WAL storage, transactional receipts, legacy migration, and verified backup/restore.
 - A local dashboard and optional, cached release notifications.
-- No separate model key, database service, or cloud account required.
+- No separate model key, database service, or cloud account required for local use.
+- Optional authenticated Cloudflare hosting, explicit cloud sync, reviewed team sharing, and MCP evidence connectors.
 
 ## Installation
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. The current `0.6.0-pilot` release is a prerelease. Repository access is required while this repository is private.
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. The current `0.7.0-pilot` release is a prerelease. Repository access is required while this repository is private.
 
 | Computer | Archive platform |
 | --- | --- |
@@ -67,8 +68,8 @@ Open the local dashboard with `elephant palace`. For Windows, other MCP clients,
 - [Storage, migration, and recovery](docs/storage.md)
 - [Update notifications](docs/updates.md)
 - [Architecture](docs/architecture.md), [validation](docs/validation.md), and [roadmap](docs/roadmap.md)
-- [Release notes](docs/releases/v0.6.0-pilot.md)
-- [Optional Cloudflare MCP pilot](docs/cloudflare.md)
+- [Release notes](docs/releases/v0.7.0-pilot.md)
+- [Optional Cloudflare MCP pilot](docs/cloudflare.md), [sync and sharing](docs/cloud-sync.md), and [evidence connectors](docs/mcp-evidence.md)
 
 ## Security and privacy
 
