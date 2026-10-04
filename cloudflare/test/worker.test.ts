@@ -80,11 +80,13 @@ describe("authenticated hosted lifecycle", () => {
     const id=(await execute(cfg,"record_memory",lesson,alice)).data.result.id;
     const call=async(a:unknown,t=alice)=>{const r=await request(cfg,"/v1/team",a,t);return {status:r.status,data:await r.json() as any}};
     const proposal={action:"propose",operation_id:"proposal-1",team:"platform",memory_id:id};
+    expect((await call(proposal,await token("alice","memory:write"))).status).toBe(403);
     const first=await call(proposal);expect(first.status).toBe(200);expect(first.data.proposal.approved).toBe(false);
     expect((await call(proposal)).data.proposal.id).toBe(first.data.proposal.id);
     expect((await call({...proposal,team:"other"})).status).toBe(403);
     const p=first.data.proposal;
     const review={action:"review",operation_id:"review-1",team:"platform",id:p.id,expected_revision:1,digest:p.digest,approve:true};
+    expect((await call(review,await token("bob","memory:review"))).status).toBe(403);
     expect((await call(review)).status).toBe(403);
     expect((await call(review,await token("bob"))).status).toBe(403);
     expect((await call({...review,digest:"0".repeat(64)},bob)).status).toBe(409);

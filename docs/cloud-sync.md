@@ -46,7 +46,9 @@ Configure the `TEAM` Durable Object and the optional `TEAM_MEMBERS` secret:
 ```
 
 The issuer must grant reviewers `memory:review`. Membership comes from server
-configuration, never tool arguments or token team claims. Keep review authority
+configuration. All team operations also require `memory:read`, because their
+responses contain lesson snapshots. Membership is never derived from tool
+arguments or token team claims. Keep review authority
 out of ordinary coding-agent credentials. Review is an operator action through
 the CLI/HTTP API; it is not an exposed MCP tool. The server enforces a different
 reviewer from the author, exact revision and exact snapshot digest. It cannot
