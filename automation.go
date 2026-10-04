@@ -188,7 +188,7 @@ func InitAutomation(s Service, binary, agent string, budget int) (InitResult, er
 		}
 		originals[p] = old
 		command := shellQuote(binary) + " hook --config " + shellQuote(r.Config) + " --agent " + a
-		merged, e := mergeHooks(old, command, events, r.Config)
+		merged, e := mergeHooks(old, command, events, r.Config, a)
 		if e != nil {
 			return r, fmt.Errorf("%s: %w", p, e)
 		}
@@ -298,7 +298,7 @@ func strictJSONObject(data []byte) (map[string]json.RawMessage, error) {
 	return out, nil
 }
 
-func mergeHooks(old []byte, command string, events []string, configPath string) ([]byte, error) {
+func mergeHooks(old []byte, command string, events []string, configPath, agent string) ([]byte, error) {
 	obj, err := strictJSONObject(old)
 	if err != nil {
 		return nil, err
@@ -344,7 +344,18 @@ func mergeHooks(old []byte, command string, events []string, configPath string) 
 				kept = append(kept, group)
 			}
 		}
-		handler, _ := json.Marshal([]map[string]any{{"type": "command", "command": command, "timeout": 10}})
+		entry := map[string]any{"type": "command", "command": command, "timeout": 10}
+		if agent == "codex" {
+			switch event {
+			case "SessionStart", "UserPromptSubmit":
+				entry["statusMessage"] = "Elephant: recalling memory"
+			case "PostToolUse":
+				entry["statusMessage"] = "Elephant: recording tool outcome"
+			case "Stop":
+				entry["statusMessage"] = "Elephant: reviewing lessons"
+			}
+		}
+		handler, _ := json.Marshal([]map[string]any{entry})
 		kept = append(kept, map[string]json.RawMessage{"hooks": handler})
 		hooks[event], _ = json.Marshal(kept)
 	}
