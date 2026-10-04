@@ -45,14 +45,25 @@ elephant update --enabled=true
 
 Memory Palace shows cached availability, the last check time, an upgrade link,
 and Check, Dismiss and Enable/Disable controls. Dashboard polling does not make
-network requests. Explicit Check requests can perform a lookup.
+network requests. Each explicit Check forces a fresh lookup (unless checks are disabled), even within the 24-hour cache window. The button shows Checking while the request is pending and prevents duplicate clicks.
 
 The request is a GET to the Elephant repository's GitHub releases endpoint. It
 has a two-second timeout and a 256 KiB response limit; redirects are rejected.
 No task text, prompts, project paths or Memories are sent. An optional
 `ELEPHANT_GITHUB_TOKEN` environment variable supplies authorized access for the
 currently private repository. Credentials are not stored or logged. Without
-access, status is unavailable. Empty successful release results mean no newer
+access, the check cannot determine whether an update exists. The UI and CLI report
+a specific, actionable reason for missing access, rejected credentials, rate limits,
+timeouts, network failures and unreadable release metadata. Diagnostics survive
+dashboard polling and restarts; credentials and remote error bodies are never saved.
+The displayed timestamp is the last attempt, not proof of a successful check.
+
+For the private pilot, provide `ELEPHANT_GITHUB_TOKEN` to the process that launches
+Elephant (including Memory Palace), using a token authorized to read this repository.
+Restart that process after changing its environment, then click Check again. Signing
+in to GitHub in a browser does not authenticate Elephant. Do not paste a token into
+the dashboard, a Memory, or a committed configuration file. An old cached failure
+without a reason asks for a fresh check. Empty successful release results mean no newer
 matching release was found; offline/auth failures never mean the installation
 is current. Set `ELEPHANT_UPDATE_CHECKS=0` to disable checks for a process.
 
