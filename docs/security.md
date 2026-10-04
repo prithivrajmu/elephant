@@ -12,4 +12,4 @@ For a sensitive vulnerability, contact the repository owner through an existing 
 
 ## Optional hosted service
 
-The `cloudflare/` pilot derives ownership from verified access tokens and rejects team scope. It does not upload local stores. Configure a dedicated issuer/audience, pinned public verification keys and an explicit subject allowlist before exposing tools. See [Cloudflare deployment and limits](../cloudflare/README.md). Retired records and idempotency receipts remain stored; retirement is not physical erasure.
+The `cloudflare/` pilot derives ownership from verified access tokens and rejects team scope. Uploads require an explicit scope-selected sync command. Reviewed team sharing uses separate membership and review authority; see [cloud sync](cloud-sync.md). Configure a dedicated issuer/audience, pinned public verification keys and an explicit subject allowlist before exposing tools. See [Cloudflare deployment and limits](../cloudflare/README.md). Retired records and idempotency receipts remain stored; retirement is not physical erasure.

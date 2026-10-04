@@ -35,6 +35,7 @@ type Memory struct {
 	Outcome      string              `json:"outcome"`
 	Class        string              `json:"class,omitempty"`
 	Writing      *LanguageReport     `json:"writing,omitempty"`
+	Sharing      *TeamProvenance     `json:"sharing,omitempty"`
 	Incident     string              `json:"incident"`
 	Lesson       string              `json:"lesson"`
 	Source       string              `json:"source"`

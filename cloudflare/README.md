@@ -87,3 +87,5 @@ The deploy command is explicit. Missing auth configuration fails closed. Keep th
 - Local hooks, local-to-cloud sync, shared team approval, external MCP connectors and a hosted dashboard are follow-up work. Installing this package does not change `elephant init` or upload existing memories.
 
 See [Cloudflare architecture and budget](../docs/cloudflare.md).
+
+Opt-in [local sync and reviewed team sharing](../docs/cloud-sync.md) are available through the CLI and versioned HTTP APIs. Team scope remains excluded from MCP record/recall. Configure `TEAM_MEMBERS` and reviewer scopes separately.
