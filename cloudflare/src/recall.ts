@@ -5,6 +5,7 @@ export const words = (s: string) => s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? 
 export const contentWords = (s: string) => words(s).filter(t => !stopwords.has(t));
 const values = (s: string[] = []) => new Set(s.map(t => t.trim().toLowerCase()).filter(Boolean));
 const overlap = (a: string[], b: string[]) => [...values(a)].some(t => values(b).has(t));
+const labels = (map:Labels,key:string):string[] => Object.hasOwn(map,key) ? map[key] : [];
 export function visible(m: Memory, id: Principal, q: RecallArgs): boolean {
   if (m.tenant !== id.tenant || m.owner !== id.user || m.retired) return false;
   if (m.scope === "project" && (!q.project_id || m.project !== q.project_id)) return false;
@@ -15,8 +16,8 @@ export function visible(m: Memory, id: Principal, q: RecallArgs): boolean {
 export function eligible(m: Memory, id: Principal, q: RecallArgs): boolean {
   if (!visible(m, id, q)) return false;
   const facts = q.context_features ?? {};
-  return Object.entries(m.requires).every(([k, v]) => overlap(v, facts[k] ?? [])) &&
-    Object.entries(m.excludes).every(([k, v]) => !overlap(v, facts[k] ?? []));
+  return Object.entries(m.requires).every(([k, v]) => overlap(v, labels(facts,k))) &&
+    Object.entries(m.excludes).every(([k, v]) => !overlap(v, labels(facts,k)));
 }
 const weights: Record<string, number> = { language: 1, framework: 2, app: 2, cloud: 1.5, database: 2.5,
   data_model: 1, workflow: 1.5, style: 1, reviewer: 0.5, contributor: 0.5 };
@@ -24,7 +25,7 @@ function similarity(a: Labels, b: Labels) {
   let total = 0, comparable = 0, matched = 0;
   const explain: string[] = [];
   for (const k of Object.keys(a).sort()) {
-    const x = values(a[k]), y = values(b[k]), w = weights[k] ?? 1;
+    const x = values(a[k]), y = values(labels(b,k)), w = Object.hasOwn(weights,k) ? weights[k] : 1;
     if (!x.size) continue;
     total += w;
     if (!y.size) continue;

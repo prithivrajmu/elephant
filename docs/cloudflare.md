@@ -71,7 +71,7 @@ Deployment is not part of the package build. There is no automatic upload, accou
 Validation recorded on 2026-10-04:
 
 - Go 1.25.8: `go test -race ./...`, `go vet ./...`, binary build, self-test, CLI/MCP acceptance and automatic-hook acceptance passed. The hook acceptance is a synthetic harness, not a native agent/model session.
-- Node 24.19.0: TypeScript checks, 28 local Workers-runtime tests and the Wrangler dry-run build passed. The compressed Worker bundle was 373.69 KiB. CI targets Node 22 separately.
+- Node 24.19.0: TypeScript checks, 30 local Workers-runtime tests and the Wrangler dry-run build passed. The compressed Worker bundle was 373.69 KiB. CI targets Node 22 separately.
 - The local token generator ran successfully. Standalone `wrangler dev` could not start in this execution workspace because network-interface inspection failed with `uv_interface_addresses`. No standalone socket test or Cloudflare deployment is claimed. The hosted integration tests exercised the actual Workers runtime through its test runner.
 
 SDK sources:

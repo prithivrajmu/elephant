@@ -503,7 +503,7 @@
           "class": "lesson",
           "outcome": "good",
           "incident": "Redis cache failed.",
-          "lesson": "Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். ",
+          "lesson": "Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. Redis \u0ba8\u0bbf\u0ba9\u0bc8\u0bb5\u0b95\u0bae\u0bcd. ",
           "source": "test:redis",
           "subject": "redis limits",
           "features": {
@@ -542,6 +542,120 @@
       "initialize": false,
       "now": "2026-10-04T00:00:00Z",
       "expected_ids": []
+    },
+    {
+      "name": "Unknown custom requirement is absent even for an inherited-looking name",
+      "memories": [
+        {
+          "tenant": "t",
+          "owner": "u",
+          "project": "p",
+          "conversation": "",
+          "scope": "project",
+          "approved": false,
+          "retired": false,
+          "class": "lesson",
+          "outcome": "good",
+          "incident": "Redis Redis Redis Redis cache failed.",
+          "lesson": "Use Redis cache limits.",
+          "source": "test:redis",
+          "subject": "redis limits",
+          "features": {
+            "constructor": [
+              "reviewed"
+            ]
+          },
+          "requires": {
+            "constructor": [
+              "reviewed"
+            ]
+          },
+          "excludes": {},
+          "created": "2026-10-01T00:00:00Z",
+          "updated": "2026-10-01T00:00:00Z",
+          "helpful": 0,
+          "unhelpful": 0,
+          "id": "custom-dimension"
+        }
+      ],
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {}
+        },
+        "task": "redis",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": []
+    },
+    {
+      "name": "Explicit custom facts permit initialization without inherited weights",
+      "memories": [
+        {
+          "tenant": "t",
+          "owner": "u",
+          "project": "p",
+          "conversation": "",
+          "scope": "project",
+          "approved": false,
+          "retired": false,
+          "class": "lesson",
+          "outcome": "good",
+          "incident": "Redis Redis Redis Redis cache failed.",
+          "lesson": "Use Redis cache limits.",
+          "source": "test:redis",
+          "subject": "redis limits",
+          "features": {
+            "constructor": [
+              "reviewed"
+            ]
+          },
+          "requires": {
+            "constructor": [
+              "reviewed"
+            ]
+          },
+          "excludes": {},
+          "created": "2026-10-01T00:00:00Z",
+          "updated": "2026-10-01T00:00:00Z",
+          "helpful": 0,
+          "unhelpful": 0,
+          "id": "custom-dimension"
+        }
+      ],
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "constructor": [
+              "reviewed"
+            ]
+          }
+        },
+        "task": "",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": true,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": [
+        "custom-dimension"
+      ]
     }
   ]
 }
