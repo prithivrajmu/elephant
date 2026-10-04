@@ -220,7 +220,7 @@ func run() error {
 		if r.Line != "" {
 			fmt.Println(r.Line)
 		} else {
-			fmt.Printf("Elephant: update status %s.\n", r.State)
+			fmt.Printf("Elephant: %s\n", r.Message)
 		}
 		return nil
 	case "init":
