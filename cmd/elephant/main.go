@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -19,7 +20,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore> [flags]; see docs/quickstart.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore|sync|team-submit|team-pull> [flags]; see docs/quickstart.md")
 	}
 	command := os.Args[1]
 	if command == "version" {
@@ -27,7 +28,7 @@ func run() error {
 		return nil
 	}
 	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
+		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: sync, team-submit, team-pull, version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
 		return nil
 	}
 	originalCommand := command
@@ -71,6 +72,12 @@ func run() error {
 	feedbackID := f.String("feedback-id", "", "stable task/run ID")
 	helpful := f.Bool("helpful", true, "observed usefulness")
 	port := f.Int("port", 7331, "loopback UI port")
+	cloudEndpoint := f.String("cloud", "", "explicit cloud HTTPS origin")
+	cloudUser := f.String("cloud-user", "", "expected authenticated cloud subject")
+	cloudTenant := f.String("cloud-tenant", "", "expected cloud tenant")
+	cloudTeam := f.String("cloud-team", "", "authorized cloud team")
+	syncScopes := f.String("sync-scopes", "", "explicit comma-separated private scopes to synchronize")
+	resolve := f.String("resolve", "", "reviewed conflict resolution: local or remote, requires --id")
 	if err := f.Parse(os.Args[2:]); err != nil {
 		if err == flag.ErrHelp {
 			return nil
@@ -189,6 +196,28 @@ func run() error {
 		return data, e
 	}
 	switch command {
+	case "team-pull":
+		r, e := svc.Store.PullTeamCloud(svc.Identity, memory.CloudSyncOptions{Endpoint: *cloudEndpoint, Token: os.Getenv("ELEPHANT_CLOUD_TOKEN"), Remote: memory.Identity{Tenant: *cloudTenant, User: *cloudUser}}, *cloudTeam)
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
+	case "team-submit":
+		data, e := input()
+		if e != nil {
+			return e
+		}
+		r, e := memory.TeamCloud(memory.CloudSyncOptions{Endpoint: *cloudEndpoint, Token: os.Getenv("ELEPHANT_CLOUD_TOKEN"), Remote: memory.Identity{Tenant: *cloudTenant, User: *cloudUser}}, data)
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
+	case "sync":
+		r, e := svc.Store.SyncCloud(svc.Identity, memory.CloudSyncOptions{Endpoint: *cloudEndpoint, Token: os.Getenv("ELEPHANT_CLOUD_TOKEN"), Remote: memory.Identity{Tenant: *cloudTenant, User: *cloudUser}, Scopes: strings.Split(*syncScopes, ","), Resolve: *resolve, ID: *id})
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
 	case "backup":
 		if *output == "" {
 			return fmt.Errorf("backup requires --output /path/to/new-backup.sqlite")

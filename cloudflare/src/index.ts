@@ -1,12 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import type { z } from "zod";
+import { syncSchema } from "./sync";
+import { TeamMemory, teamSchema } from "./team";
 import { AuthError, authenticate, validateConfig, type AuthConfig, type Authenticated } from "./auth";
 import { envelopeSchema, toolSchemas, type Envelope, type ToolName, type OperationResponse } from "./contracts";
 import { PersonalMemory } from "./storage";
-export { PersonalMemory };
+export { PersonalMemory, TeamMemory };
 
-export interface Env extends AuthConfig { MEMORY: DurableObjectNamespace<PersonalMemory> }
+export interface Env extends AuthConfig { MEMORY: DurableObjectNamespace<PersonalMemory>; TEAM?:DurableObjectNamespace<TeamMemory>; TEAM_MEMBERS?:string }
 const MAX_REQUEST_BYTES = 65536;
 const writes = new Set<ToolName>(["record_memory", "feedback_memory", "forget_memory"]);
 const descriptions: Record<ToolName, string> = {
@@ -77,11 +79,39 @@ export default {
         return Response.json({ resource: `${env.PUBLIC_ORIGIN}/mcp`, authorization_servers: [env.AUTH_ISSUER],
           scopes_supported: ["memory:read", "memory:write"], bearer_methods_supported: ["header"] });
       }
-      if (url.pathname !== "/mcp" && url.pathname !== "/v1/operations") return new Response("Not found", { status: 404 });
+      if (!["/mcp","/v1/operations","/v1/sync","/v1/team"].includes(url.pathname)) return new Response("Not found", { status: 404 });
       if (url.pathname === "/v1/operations" && request.method !== "POST") return new Response("Method not allowed", { status: 405 });
       if (!env.MEMORY) throw new AuthError(503, "Hosted storage is not configured");
       const auth = await authenticate(request, env);
+      if((request.headers.has("X-Elephant-User")&&request.headers.get("X-Elephant-User")!==auth.principal.user)||
+        (request.headers.has("X-Elephant-Tenant")&&request.headers.get("X-Elephant-Tenant")!==auth.principal.tenant))
+        throw new AuthError(403,"Unexpected sync account");
       const bounded = await boundedRequest(request);
+      if(url.pathname==="/v1/team") {
+        if(request.method!=="POST")return new Response("Method not allowed",{status:405});
+        let a;try{a=teamSchema.parse(await bounded.json())}catch{throw new AuthError(400,"Invalid team request")}
+        if(!env.TEAM||!env.TEAM_MEMBERS)throw new AuthError(503,"Team sharing is not configured");
+        let member:{members:string[];reviewers:string[]}|undefined;
+        try{const c=JSON.parse(env.TEAM_MEMBERS);member=c[a.team];if(!Array.isArray(member?.members)||!Array.isArray(member?.reviewers))throw new Error()}
+        catch{throw new AuthError(503,"Team membership is not configured")}
+        if(!member!.members.includes(auth.principal.user))throw new AuthError(403,"Team membership required");
+        const reviewer=member!.reviewers.includes(auth.principal.user)&&auth.scopes.has("memory:review");
+        if(a.action==="review"&&!reviewer)throw new AuthError(403,"Independent review authority required");
+        if(!auth.scopes.has(a.action==="pull"?"memory:read":a.action==="review"?"memory:review":"memory:write"))throw new AuthError(403,"Team scope required");
+        const snapshot=a.action==="propose"?await backend(env,auth).evidenceSnapshot(auth.principal,a.memory_id):"";
+        try{return Response.json(JSON.parse(await env.TEAM.get(env.TEAM.idFromName(JSON.stringify([auth.principal.tenant,a.team]))).execute(auth.principal,reviewer,JSON.stringify(a),snapshot)))}
+        catch(e){if(e instanceof Error&&/conflict/.test(e.message))throw new AuthError(409,e.message);
+          if(e instanceof Error&&/reviewer|required|may retire/.test(e.message))throw new AuthError(403,e.message);
+          if(e instanceof Error&&/pilot|Unknown|retired/.test(e.message))throw new AuthError(422,e.message);throw e}
+      }
+      if(url.pathname==="/v1/sync") {
+        if(request.method!=="POST") return new Response("Method not allowed",{status:405});
+        let a;try{a=syncSchema.parse(await bounded.json())}catch{throw new AuthError(400,"Invalid sync request")}
+        if(!auth.scopes.has(a.action==="push"?"memory:write":"memory:read")) throw new AuthError(403,"Sync scope required");
+        try{return Response.json(JSON.parse(await backend(env,auth).sync(auth.principal,JSON.stringify(a))))}
+        catch(e){if(e instanceof Error && /conflict|resurrect/.test(e.message)) throw new AuthError(409,e.message);
+          if(e instanceof Error && /pilot/.test(e.message)) throw new AuthError(422,e.message);throw e}
+      }
       if (url.pathname === "/v1/operations") {
         let envelope: Envelope;
         try { envelope = envelopeSchema.parse(await bounded.json()); toolSchemas[envelope.tool].parse(envelope.arguments); }

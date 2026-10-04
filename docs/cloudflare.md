@@ -62,8 +62,8 @@ Rollout order:
 1. Review and merge the backend boundary and hosted pilot after CI passes.
 2. Configure a Workers Free account, a dedicated issuer/audience and a small subject allowlist. Deploy explicitly and exercise real MCP clients.
 3. Measure CPU, quota consumption, cold starts, persistence and failures on the deployed service.
-4. Add opt-in local sync using an outbox, stable operations and explicit scope selection. Keep private local memories local unless syncing was selected.
-5. Add reviewed team promotion and server-enforced membership, revision conflicts, retention and physical deletion.
+4. Exercise the opt-in [sync and team workflows](cloud-sync.md) after reviewing their dependent PR. Keep private local memories local unless syncing was selected.
+5. Configure independent review authority and team membership. Retention and physical deletion remain future work.
 6. Add Agents SDK outbound MCP clients for explicitly authorized evidence sources after the hosted memory lifecycle is stable.
 
 Deployment is not part of the package build. There is no automatic upload, account upgrade, model call or publishing from CI.
