@@ -8,6 +8,8 @@ elephant init
 
 This installs the Codex and Claude Code command hooks for that directory. Use `--agent codex` or `--agent claude` to install one adapter. Use an installed binary at a stable path. Restart the agent, complete its normal project trust steps, and approve the hooks. In Codex, open `/hooks` and trust Elephant's hooks. Changing hook commands can require approval again. Elephant does not change host trust, permissions or sandbox policy.
 
+Codex hooks include an Elephant `statusMessage` for recall, tool outcome capture and lesson review. Codex controls how these messages appear. Run `elephant init` again to update an existing installation, then review the changed hooks in `/hooks`.
+
 After that, work normally. You do not need to ask for recall or remind the agent to record each task. No extra model key or MCP registration is required for this route. The coding agent already in use performs the lesson review.
 
 ## What happens
