@@ -7,6 +7,7 @@ import (
 
 type Service struct {
 	Store        Store
+	Backend      MemoryBackend
 	Identity     Identity
 	Root         string
 	Project      string
@@ -50,7 +51,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 			q.Profile.Features[k] = v
 		}
 		q.Initialize = name == "init_memory"
-		return s.Store.Recall(s.Identity, q)
+		return s.memoryBackend().Recall(s.Identity, q)
 	case "record_memory":
 		var m Memory
 		if err := decode(args, &m); err != nil {
@@ -74,7 +75,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 			}
 			m.Features = p.Features
 		}
-		return s.Store.Record(m, s.Task)
+		return s.memoryBackend().Record(m, s.Task)
 	case "feedback_memory":
 		var a struct {
 			ID         string `json:"id"`
@@ -87,7 +88,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 		if a.Helpful == nil {
 			return nil, fmt.Errorf("helpful boolean required")
 		}
-		err := s.Store.Feedback(s.Identity, s.Project, a.ID, a.FeedbackID, *a.Helpful, s.Conversation)
+		err := s.memoryBackend().Feedback(s.Identity, s.Project, a.ID, a.FeedbackID, *a.Helpful, s.Conversation)
 		return map[string]bool{"ok": err == nil}, err
 	case "forget_memory":
 		var a struct {
@@ -96,7 +97,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 		if err := decode(args, &a); err != nil {
 			return nil, err
 		}
-		err := s.Store.Retire(s.Identity, a.ID)
+		err := s.memoryBackend().Retire(s.Identity, a.ID)
 		return map[string]bool{"ok": err == nil}, err
 	}
 	return nil, fmt.Errorf("unknown tool %s", name)

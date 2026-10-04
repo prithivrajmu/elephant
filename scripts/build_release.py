@@ -6,7 +6,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 GO = os.environ.get('ELEPHANT_GO', 'go')
 OUT = ROOT / 'dist'
 OUT.mkdir(exist_ok=True)
-DOCS = ['README.md', 'LICENSE'] + sorted(p.relative_to(ROOT).as_posix() for p in (ROOT/'docs').rglob('*.md'))
+DOCS = ['README.md', 'LICENSE', 'cloudflare/README.md'] + sorted(p.relative_to(ROOT).as_posix() for p in (ROOT/'docs').rglob('*.md'))
 TARGETS = [('darwin','arm64'),('darwin','amd64'),('linux','amd64'),('linux','arm64'),('windows','amd64'),('windows','arm64')]
 for goos,arch in TARGETS:
     name=f'elephant-{VERSION}-{goos}-{arch}'
