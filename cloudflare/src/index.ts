@@ -111,6 +111,9 @@ export default {
       }
       if(url.pathname==="/v1/team") {
         if(request.method!=="POST")return new Response("Method not allowed",{status:405});
+        // Every team operation returns a snapshot, including proposal and
+        // withdrawal receipts. Write/review authority alone must not read it.
+        if(!auth.scopes.has("memory:read"))throw new AuthError(403,"Team snapshot read authority required");
         let a;try{a=teamSchema.parse(await bounded.json())}catch{throw new AuthError(400,"Invalid team request")}
         if(!env.TEAM||!env.TEAM_MEMBERS)throw new AuthError(503,"Team sharing is not configured");
         let member:{members:string[];reviewers:string[]}|undefined;
