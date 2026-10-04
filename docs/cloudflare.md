@@ -64,7 +64,7 @@ Rollout order:
 3. Measure CPU, quota consumption, cold starts, persistence and failures on the deployed service.
 4. Exercise the opt-in [sync and team workflows](cloud-sync.md) after reviewing their dependent PR. Keep private local memories local unless syncing was selected.
 5. Configure independent review authority and team membership. Retention and physical deletion remain future work.
-6. Add Agents SDK outbound MCP clients for explicitly authorized evidence sources after the hosted memory lifecycle is stable.
+6. Review and configure the optional [outbound MCP evidence connectors](mcp-evidence.md) after the hosted memory lifecycle is stable.
 
 Deployment is not part of the package build. There is no automatic upload, account upgrade, model call or publishing from CI.
 

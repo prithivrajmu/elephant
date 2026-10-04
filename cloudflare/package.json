@@ -13,6 +13,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
     "agents": "0.26.0",
     "jose": "6.2.12",
@@ -21,6 +22,8 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.22.0",
     "@cloudflare/workers-types": "5.20261004.1",
+    "@msw/cloudflare": "0.2.0",
+    "msw": "3.0.2",
     "typescript": "7.0.2",
     "vitest": "4.1.11",
     "wrangler": "4.147.0"
