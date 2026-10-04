@@ -17,10 +17,10 @@ For example, an authorized Apple Silicon Mac user with the GitHub CLI can downlo
 
 ```sh
 gh auth login
-gh release download v0.6.0-pilot --repo prithivrajmu/elephant \
-  --pattern 'elephant-0.6.0-pilot-darwin-arm64.zip'
-unzip elephant-0.6.0-pilot-darwin-arm64.zip
-cd elephant-0.6.0-pilot-darwin-arm64
+gh release download v0.7.0-pilot --repo prithivrajmu/elephant \
+  --pattern 'elephant-0.7.0-pilot-darwin-arm64.zip'
+unzip elephant-0.7.0-pilot-darwin-arm64.zip
+cd elephant-0.7.0-pilot-darwin-arm64
 sh ./install.sh
 export PATH="$HOME/.local/bin:$PATH"
 elephant selftest
@@ -71,7 +71,7 @@ Repository access and Go 1.25 or later are required:
 ```sh
 git clone https://github.com/prithivrajmu/elephant.git
 cd elephant
-git checkout v0.6.0-pilot
+git checkout v0.7.0-pilot
 go build -trimpath -o elephant ./cmd/elephant
 ./elephant selftest
 ```
