@@ -32,6 +32,9 @@ command. Remote resolution accepts that remote revision. Local resolution
 acknowledges the current remote revision and sends the locally reviewed content
 with a new operation ID. Another concurrent update still causes a conflict.
 Retirement cannot be undone. Pull imports also enforce the local writing policy.
+Scope and project/conversation identity are immutable for a synced memory ID;
+use a new record ID for a different context. Pull cannot overwrite a local
+memory belonging to an unselected scope.
 Sync is bounded to 1,000 writes and ten pages per invocation; rerun to continue.
 
 ## Team review
