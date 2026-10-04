@@ -6,8 +6,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "durable_objects": {
-    "bindings": [{ "name": "MEMORY", "class_name": "PersonalMemory" }, { "name": "TEAM", "class_name": "TeamMemory" }]
+    "bindings": [{ "name": "MEMORY", "class_name": "PersonalMemory" }, { "name": "TEAM", "class_name": "TeamMemory" }, { "name": "EVIDENCE", "class_name": "EvidenceConnector" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PersonalMemory"] }, { "tag": "v2", "new_sqlite_classes": ["TeamMemory"] }],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PersonalMemory"] }, { "tag": "v2", "new_sqlite_classes": ["TeamMemory"] }, { "tag": "v3", "new_sqlite_classes": ["EvidenceConnector"] }],
   "observability": { "enabled": false }
 }
