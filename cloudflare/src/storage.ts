@@ -77,7 +77,10 @@ export class PersonalMemory extends DurableObject {
         if (old.payload !== payload) throw new Error("operation_id was already used with different arguments");
         return { ...JSON.parse(old.response), replayed: true };
       }
-      if (this.counter("receipt_count") >= MAX_RECEIPTS) throw new Error("Hosted pilot receipt limit reached");
+      // Reserve one withdrawal receipt for every possible memory. Ordinary
+      // mutations cannot consume this capacity, even with distinct retry IDs.
+      const exhausted = this.counter("receipt_count") >= MAX_RECEIPTS;
+      if (exhausted && envelope.tool !== "forget_memory") throw new Error("Hosted pilot receipt limit reached");
       let result: unknown;
       if (envelope.tool === "record_memory") {
         const a = toolSchemas.record_memory.parse(args);
@@ -104,7 +107,11 @@ export class PersonalMemory extends DurableObject {
         const row = sql.exec<Row>("SELECT data FROM memories WHERE id=?", a.id).toArray()[0];
         if (!row) throw new Error("Unknown owned memory");
         const m = JSON.parse(row.data) as Memory;
-        if (envelope.tool === "forget_memory") m.retired = true;
+        if (envelope.tool === "forget_memory") {
+          if (exhausted && (m.retired || this.counter("receipt_count") >= MAX_RECEIPTS + MAX_MEMORIES))
+            throw new Error("Hosted pilot withdrawal reserve only admits active memories");
+          m.retired = true;
+        }
         else {
           if (!visible(m, principal, { ...recallSchemaDefaults, project_id: a.project_id, conversation_id: a.conversation_id }))
             throw new Error("Memory is unavailable in this context");

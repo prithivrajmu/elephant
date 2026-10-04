@@ -40,6 +40,17 @@ async function rpc(cfg: Env, method: string, params: unknown, bearer: string, id
   return { status: response.status, data: JSON.parse(text) };
 }
 describe("authenticated hosted lifecycle", () => {
+  it("reserves retirement capacity after ordinary receipts are exhausted", async () => {
+    const cfg = config(), t = await token();
+    const id = (await execute(cfg, "record_memory", lesson, t)).data.result.id;
+    await runInDurableObject(stub(cfg), (_, ctx) => ctx.storage.sql.exec("UPDATE metadata SET value='10000' WHERE key='receipt_count'"));
+    expect((await execute(cfg, "record_memory", { ...lesson, operation_id: "extra" }, t)).response.status).toBe(422);
+    const a = { operation_id: "withdraw", id };
+    expect((await execute(cfg, "forget_memory", a, t)).response.status).toBe(200);
+    expect((await execute(cfg, "forget_memory", a, t)).data.replayed).toBe(true);
+    expect((await execute(cfg, "forget_memory", { ...a, operation_id: "waste-reserve" }, t)).response.status).toBe(422);
+    expect((await execute(cfg, "recall_memory", { task: "redis", project_id: "p", context_features: { database: ["redis"] } }, t)).data.result.hits).toEqual([]);
+  });
   it("fails closed and validates issuer, audience, expiry, subject and scope", async () => {
     const cfg = config();
     expect((await request(cfg, "/v1/operations", op("recall_memory", {}))).status).toBe(401);
