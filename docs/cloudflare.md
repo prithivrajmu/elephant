@@ -22,7 +22,7 @@ The Worker verifies issuer, audience, signature, expiry, token age, subject allo
 
 The version 1 operation envelope is `{version, tool, arguments}`. Mutating tool arguments include a stable `operation_id`. A synchronous SQLite transaction commits the memory change, indexes and response receipt together. The receipt holds the normalized request and original response, so interrupted callers can retry without repeating the change. An ID reused with different arguments fails explicitly.
 
-Private project and conversation scopes are inside the owning user's object. Shared project/team objects require a separate membership and review boundary before they can be enabled. Do not reinterpret matching project labels as permission to share.
+Private project and conversation scopes are inside the owning user's object. Reviewed team snapshots use a separate tenant/team object with server-configured membership and independent review authority. Imports remain local drafts until approved. Evidence reads use a separate tenant/user object and explicit source authorization. Do not reinterpret matching project labels as permission to share.
 
 ## Free-tier budget
 
@@ -71,7 +71,7 @@ Deployment is not part of the package build. There is no automatic upload, accou
 Validation recorded on 2026-10-04:
 
 - Go 1.25.8: `go test -race ./...`, `go vet ./...`, binary build, self-test, CLI/MCP acceptance and automatic-hook acceptance passed. The hook acceptance is a synthetic harness, not a native agent/model session.
-- Node 24.19.0: TypeScript checks, 19 local Workers-runtime tests and the Wrangler dry-run build passed. The compressed Worker bundle was 222.58 KiB. CI targets Node 22 separately.
+- Node 24.19.0: TypeScript checks, 28 local Workers-runtime tests and the Wrangler dry-run build passed. The compressed Worker bundle was 373.69 KiB. CI targets Node 22 separately.
 - The local token generator ran successfully. Standalone `wrangler dev` could not start in this execution workspace because network-interface inspection failed with `uv_interface_addresses`. No standalone socket test or Cloudflare deployment is claimed. The hosted integration tests exercised the actual Workers runtime through its test runner.
 
 SDK sources:
