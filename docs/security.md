@@ -9,3 +9,7 @@ Hooks retain tool names, status, structured exit codes and hashed session identi
 The dashboard binds to loopback and uses session-token, Host/Origin and content-security controls. Stores and backups are not encrypted by Elephant. Retirement excludes a memory from future recall but retains historical data; regulated physical erasure is not implemented.
 
 For a sensitive vulnerability, contact the repository owner through an existing private channel to agree a reporting route. Do not include secrets or exploitable private data in public issues. See [Storage](storage.md) for backup/recovery and [Updates](updates.md) for release-check behavior.
+
+## Optional hosted service
+
+The `cloudflare/` pilot derives ownership from verified access tokens and rejects team scope. It does not upload local stores. Configure a dedicated issuer/audience, pinned public verification keys and an explicit subject allowlist before exposing tools. See [Cloudflare deployment and limits](../cloudflare/README.md). Retired records and idempotency receipts remain stored; retirement is not physical erasure.

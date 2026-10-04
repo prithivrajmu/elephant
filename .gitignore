@@ -22,3 +22,10 @@ __pycache__/
 *.sqlite-wal
 *.sqlite-shm
 *.jsonl-backup
+
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+.dev-token
+/cloudflare/build/
