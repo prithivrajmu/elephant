@@ -2,6 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 import { CONTRACT_VERSION, MAX_CANDIDATES, MAX_MEMORIES, MAX_RECEIPTS, canonical, envelopeSchema,
   toolSchemas, type Envelope, type Memory, type Principal, type RecallArgs, type OperationResponse } from "./contracts";
 import { contentWords, visible, recall } from "./recall";
+import { installSync, syncOperation } from "./sync";
+import { digestMemory } from "./team";
 
 interface Row { [key: string]: SqlStorageValue; data: string }
 export class PersonalMemory extends DurableObject {
@@ -27,11 +29,25 @@ export class PersonalMemory extends DurableObject {
           sql.exec(`INSERT INTO metadata SELECT ?,CAST(count(*) AS TEXT) FROM ${table}`, key);
         }
       }
+      installSync(sql);
     });
   }
   execute(principal: Principal, input: string): string {
     if (new TextEncoder().encode(input).byteLength > 65536) throw new Error("Hosted pilot operation exceeds 65536 bytes");
     return JSON.stringify(this.applyOperation(principal, envelopeSchema.parse(JSON.parse(input))));
+  }
+  sync(principal: Principal, input: string): string {
+    if(new TextEncoder().encode(input).byteLength>65536) throw new Error("Hosted pilot operation exceeds 65536 bytes");
+    this.execute(principal,JSON.stringify({version:1,tool:"profile_memory",arguments:{}}));
+    return JSON.stringify(this.ctx.storage.transactionSync(()=>syncOperation(this.ctx.storage.sql,principal,JSON.parse(input))));
+  }
+  async evidenceSnapshot(principal:Principal,id:string):Promise<string> {
+    this.execute(principal,JSON.stringify({version:1,tool:"profile_memory",arguments:{}}));
+    const row=this.ctx.storage.sql.exec<Row>("SELECT data FROM memories WHERE id=?",id).toArray()[0];
+    if(!row)throw new Error("Unknown owned active memory");
+    const memory=JSON.parse(row.data) as Memory;
+    if(memory.retired)throw new Error("Unknown owned active memory");
+    return JSON.stringify({memory,digest:await digestMemory(memory)});
   }
   private applyOperation(principal: Principal, input: Envelope): OperationResponse {
     // RPC methods are internal. Validate here as well as at the HTTP boundary.

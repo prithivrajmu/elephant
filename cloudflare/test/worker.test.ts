@@ -40,6 +40,63 @@ async function rpc(cfg: Env, method: string, params: unknown, bearer: string, id
   return { status: response.status, data: JSON.parse(text) };
 }
 describe("authenticated hosted lifecycle", () => {
+  it("synchronizes revisions and tombstones, including changes made through MCP",async()=>{
+    const cfg=config(),t=await token();
+    const call=async(body:unknown,bearer=t)=>{const r=await request(cfg,"/v1/sync",body,bearer);return {status:r.status,data:await r.json() as any}};
+    const {operation_id:_op,...payload}=lesson;
+    const memory={...payload,id:"local-id",retired:false,created:"2026-01-01T00:00:00Z",updated:"2026-01-02T00:00:00Z"};
+    const push={action:"push",operation_id:"sync-1",expected_revision:0,memory};
+    const first=await call(push);expect(first.status).toBe(200);expect(first.data.revision).toBe(1);
+    expect(first.data.memory.updated).toBe(memory.updated);
+    expect((await call(push)).data.replayed).toBe(true);
+    expect((await call({...push,operation_id:"different"})).status).toBe(409);
+    expect((await call({...push,operation_id:"move-context",expected_revision:1,memory:{...memory,project_id:"other"}})).status).toBe(409);
+    expect((await call({...push,operation_id:"invalid-scope",memory:{...memory,project_id:undefined}})).status).toBe(400);
+    const p=await call({action:"pull",cursor:0,scopes:["project"]});expect(p.data.items).toHaveLength(1);
+    expect((await call({action:"pull",cursor:0,scopes:["project"]},await token("bob"))).data.items).toEqual([]);
+    expect((await call(push,await token("alice","memory:read"))).status).toBe(403);
+    expect((await request(cfg,"/v1/sync",push,t,{"X-Elephant-User":"bob"})).status).toBe(403);
+    await execute(cfg,"forget_memory",{operation_id:"mcp-retire",id:memory.id},t);
+    const retired=await call({action:"pull",cursor:p.data.cursor,scopes:["project"]});
+    expect(retired.data.items[0]).toMatchObject({revision:2,memory:{retired:true}});
+    expect((await call({...push,operation_id:"revive",expected_revision:2})).status).toBe(409);
+    await expect(runInDurableObject(stub(cfg),(_,ctx)=>ctx.abort("Sync restart"))).rejects.toThrow();
+    expect((await call(push)).data.replayed).toBe(true);
+    expect((await call({action:"pull",cursor:0,scopes:["project"]})).data.items[0].memory.retired).toBe(true);
+  });
+  it("rolls back sync state and receipts together",async()=>{
+    const cfg=config(),t=await token();
+    await runInDurableObject(stub(cfg),(_,ctx)=>ctx.storage.sql.exec("CREATE TRIGGER sync_failure BEFORE INSERT ON receipts BEGIN SELECT RAISE(ABORT,'sync failure'); END"));
+    const {operation_id:_op,...m}=lesson;
+    const body={action:"push",operation_id:"sync-fail",expected_revision:0,memory:{...m,id:"x",retired:false,created:"2026-01-01T00:00:00Z",updated:"2026-01-01T00:00:00Z"}};
+    expect((await request(cfg,"/v1/sync",body,t)).status).toBe(503);
+    expect(await runInDurableObject(stub(cfg),(_,ctx)=>ctx.storage.sql.exec<{n:number}>("SELECT count(*) n FROM sync_state").one().n)).toBe(0);
+    await runInDurableObject(stub(cfg),(_,ctx)=>ctx.storage.sql.exec("DROP TRIGGER sync_failure"));
+    expect((await request(cfg,"/v1/sync",body,t)).status).toBe(200);
+  });
+  it("requires membership and an independent reviewer for exact team snapshots",async()=>{
+    const cfg={...config(),TEAM_MEMBERS:JSON.stringify({platform:{members:["alice","bob"],reviewers:["bob"]},other:{members:["bob"],reviewers:["bob"]}})};
+    const alice=await token(),bob=await token("bob","memory:read memory:write memory:review");
+    const id=(await execute(cfg,"record_memory",lesson,alice)).data.result.id;
+    const call=async(a:unknown,t=alice)=>{const r=await request(cfg,"/v1/team",a,t);return {status:r.status,data:await r.json() as any}};
+    const proposal={action:"propose",operation_id:"proposal-1",team:"platform",memory_id:id};
+    expect((await call(proposal,await token("alice","memory:write"))).status).toBe(403);
+    const first=await call(proposal);expect(first.status).toBe(200);expect(first.data.proposal.approved).toBe(false);
+    expect((await call(proposal)).data.proposal.id).toBe(first.data.proposal.id);
+    expect((await call({...proposal,team:"other"})).status).toBe(403);
+    const p=first.data.proposal;
+    const review={action:"review",operation_id:"review-1",team:"platform",id:p.id,expected_revision:1,digest:p.digest,approve:true};
+    expect((await call(review,await token("bob","memory:review"))).status).toBe(403);
+    expect((await call(review)).status).toBe(403);
+    expect((await call(review,await token("bob"))).status).toBe(403);
+    expect((await call({...review,digest:"0".repeat(64)},bob)).status).toBe(409);
+    const approved=await call(review,bob);expect(approved.data.proposal).toMatchObject({approved:true,reviewer:"bob",revision:2});
+    expect((await call({...review,operation_id:"stale"},bob)).status).toBe(409);
+    expect((await call({action:"pull",team:"platform",cursor:0},bob)).data.items[0].approved).toBe(true);
+    const retired=await call({action:"retire",operation_id:"withdraw-team",team:"platform",id:p.id,expected_revision:2});
+    expect(retired.data.proposal).toMatchObject({retired:true,approved:false,revision:3});
+    expect((await call({...review,operation_id:"resurrect",expected_revision:3},bob)).status).toBe(409);
+  });
   it("reserves retirement capacity after ordinary receipts are exhausted", async () => {
     const cfg = config(), t = await token();
     const id = (await execute(cfg, "record_memory", lesson, t)).data.result.id;
