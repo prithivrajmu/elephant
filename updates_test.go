@@ -95,7 +95,7 @@ func TestUpdateCachingNotificationsAndControls(t *testing.T) {
 }
 func TestUpdateRejectsUnpublishedIncompatibleAndUnsafeMetadata(t *testing.T) {
 	for _, change := range []func(*githubRelease){
-		func(r *githubRelease) { r.Draft = true }, func(r *githubRelease) { r.Tag = "v1.0.0" }, func(r *githubRelease) { r.Tag = "v0.7.0-rc.1" },
+		func(r *githubRelease) { r.Draft = true }, func(r *githubRelease) { r.Tag = "v1.0.0" }, func(r *githubRelease) { r.Tag = strings.TrimSuffix(futureReleaseTag(1), "-pilot") + "-rc.1" },
 		func(r *githubRelease) { r.Assets = nil }, func(r *githubRelease) { r.URL = "javascript:alert(1)" }, func(r *githubRelease) { r.URL = "https://github.com.evil.test/releases" },
 	} {
 		r := testRelease(futureReleaseTag(1))
