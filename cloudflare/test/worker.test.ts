@@ -169,12 +169,12 @@ describe("authenticated hosted lifecycle", () => {
     expect((await execute(cfg, "record_memory", lesson, t)).data.replayed).toBe(true);
     expect((await execute(cfg, "recall_memory", { task: "redis", project_id: "p", context_features: { database: ["redis"] } }, t)).data.result.hits).toEqual([]);
   });
-  it("serves six MCP tools and recalls after a fresh MCP initialization", async () => {
+  it("serves memory and evidence MCP tools and recalls after a fresh initialization", async () => {
     const cfg = config(), t = await token();
     const init = { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "acceptance", version: "1" } };
     expect(await rpc(cfg, "initialize", init, t)).toMatchObject({ status: 200, data: { result: { serverInfo: { name: "elephant-cloud" } } } });
     const list = await rpc(cfg, "tools/list", {}, t);
-    expect(list.data.result.tools).toHaveLength(6);
+    expect(list.data.result.tools).toHaveLength(7);
     const saved = await rpc(cfg, "tools/call", { name: "record_memory", arguments: lesson }, t);
     expect(saved.data.result.isError).not.toBe(true);
     const id = saved.data.result.structuredContent.result.id;
