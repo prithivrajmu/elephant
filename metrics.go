@@ -37,7 +37,11 @@ type Dashboard struct {
 func (s Store) Recall(id Identity, q Request) (Result, error) {
 	start := time.Now()
 	var result Result
-	err := s.transact(func(all []Memory, _ map[string]bool) (*Event, error) {
+	err := s.transactSQL(false, nil, func(tx *sql.Tx, _ []Memory, _ map[string]bool) (*Event, error) {
+		all, err := readRecallMemories(tx, id, q.Profile)
+		if err != nil {
+			return nil, err
+		}
 		result = Recall(all, id, q, time.Now())
 		baseline := 0
 		for _, m := range all {

@@ -359,7 +359,10 @@ func syncFile(path string) error {
 }
 
 func readMemories(q sqlReader) ([]Memory, error) {
-	rows, err := q.Query("SELECT data FROM memories ORDER BY id")
+	return readMemoryQuery(q, "SELECT data FROM memories ORDER BY id")
+}
+func readMemoryQuery(q sqlReader, query string, args ...any) ([]Memory, error) {
+	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
