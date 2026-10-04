@@ -2,7 +2,7 @@
 
 An optional authenticated remote MCP service. The existing Go CLI, local SQLite WAL store and automatic hooks work independently of this package.
 
-This package implements private personal, project and conversation memories. It serves six MCP tools over stateless Streamable HTTP using `agents/mcp/server`, with SQLite-backed Durable Objects keyed by verified tenant and user identity. Memory state outlives MCP connections.
+This package implements private personal, project and conversation memories. It serves six memory MCP tools plus the separately authorized `read_evidence` tool over stateless Streamable HTTP using `agents/mcp/server`, with SQLite-backed Durable Objects keyed by verified tenant and user identity. Memory state outlives MCP connections.
 
 ## Local development
 
@@ -89,3 +89,5 @@ The deploy command is explicit. Missing auth configuration fails closed. Keep th
 See [Cloudflare architecture and budget](../docs/cloudflare.md).
 
 Opt-in [local sync and reviewed team sharing](../docs/cloud-sync.md) are available through the CLI and versioned HTTP APIs. Team scope remains excluded from MCP record/recall. Configure `TEAM_MEMBERS` and reviewer scopes separately.
+
+The explicit `read_evidence` MCP tool uses the Agents SDK client for configured read-only sources. See [external MCP evidence](../docs/mcp-evidence.md) for credentials, budgets and provenance retention.

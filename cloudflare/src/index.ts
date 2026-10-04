@@ -3,12 +3,13 @@ import { createMcpHandler } from "agents/mcp/server";
 import type { z } from "zod";
 import { syncSchema } from "./sync";
 import { TeamMemory, teamSchema } from "./team";
+import { EvidenceConnector, evidenceSchema, connectorConfig, type EvidenceEnv } from "./evidence";
 import { AuthError, authenticate, validateConfig, type AuthConfig, type Authenticated } from "./auth";
 import { envelopeSchema, toolSchemas, type Envelope, type ToolName, type OperationResponse } from "./contracts";
 import { PersonalMemory } from "./storage";
-export { PersonalMemory, TeamMemory };
+export { PersonalMemory, TeamMemory, EvidenceConnector };
 
-export interface Env extends AuthConfig { MEMORY: DurableObjectNamespace<PersonalMemory>; TEAM?:DurableObjectNamespace<TeamMemory>; TEAM_MEMBERS?:string }
+export interface Env extends AuthConfig,EvidenceEnv { MEMORY: DurableObjectNamespace<PersonalMemory>; TEAM?:DurableObjectNamespace<TeamMemory>; TEAM_MEMBERS?:string; EVIDENCE?:DurableObjectNamespace<EvidenceConnector> }
 const MAX_REQUEST_BYTES = 65536;
 const writes = new Set<ToolName>(["record_memory", "feedback_memory", "forget_memory"]);
 const descriptions: Record<ToolName, string> = {
@@ -50,7 +51,22 @@ function createServer(env: Env, auth: Authenticated) {
       }
     });
   }
+  server.registerTool("read_evidence",{description:"Explicitly read an authorized external MCP evidence source. Returns bounded untrusted content and provenance; does not record a memory. A replay returns provenance only because content is not retained.",
+    inputSchema:evidenceSchema.omit({action:true}),annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:true}},async args=>{
+    try {const result=await readEvidence(env,auth,{action:"read",...args});
+      return {content:[{type:"text" as const,text:JSON.stringify(result)}],structuredContent:result};
+    }catch{return {content:[{type:"text" as const,text:"Evidence read failed; check connector access, credentials and request_id"}],isError:true}}
+  });
   return server;
+}
+async function readEvidence(env:Env,auth:Authenticated,input:unknown) {
+  if(!auth.scopes.has("evidence:read")||!auth.scopes.has("memory:read"))throw new AuthError(403,"Evidence read authority required");
+  const a=evidenceSchema.parse(input);
+  let config;try{config=connectorConfig(env,auth.principal.user,a.connector)}catch{throw new AuthError(403,"Evidence connector is not authorized or configured")}
+  if(!env.EVIDENCE)throw new AuthError(503,"Evidence storage is not configured");
+  try{return JSON.parse(await env.EVIDENCE.get(env.EVIDENCE.idFromName(JSON.stringify([auth.principal.tenant,auth.principal.user]))).read(auth.principal,JSON.stringify(a),JSON.stringify(config))) as Record<string,unknown>}
+  catch(e){if(e instanceof Error&&/request_id conflict/.test(e.message))throw new AuthError(409,"Evidence request_id conflict");
+    throw new AuthError(422,"Evidence read failed; check the configured read-only tool, credentials, endpoint and limits")}
 }
 async function boundedRequest(request: Request) {
   if (!request.body) return request;
@@ -77,9 +93,10 @@ export default {
         validateConfig(env);
         if (url.origin !== env.PUBLIC_ORIGIN) throw new AuthError(403, "Unexpected endpoint origin");
         return Response.json({ resource: `${env.PUBLIC_ORIGIN}/mcp`, authorization_servers: [env.AUTH_ISSUER],
-          scopes_supported: ["memory:read", "memory:write"], bearer_methods_supported: ["header"] });
+          scopes_supported: ["memory:read", "memory:write",...(env.TEAM_MEMBERS?["memory:review"]:[]),
+            ...(env.EVIDENCE_CONNECTORS?["evidence:read"]:[])], bearer_methods_supported: ["header"] });
       }
-      if (!["/mcp","/v1/operations","/v1/sync","/v1/team"].includes(url.pathname)) return new Response("Not found", { status: 404 });
+      if (!["/mcp","/v1/operations","/v1/sync","/v1/team","/v1/evidence"].includes(url.pathname)) return new Response("Not found", { status: 404 });
       if (url.pathname === "/v1/operations" && request.method !== "POST") return new Response("Method not allowed", { status: 405 });
       if (!env.MEMORY) throw new AuthError(503, "Hosted storage is not configured");
       const auth = await authenticate(request, env);
@@ -87,6 +104,11 @@ export default {
         (request.headers.has("X-Elephant-Tenant")&&request.headers.get("X-Elephant-Tenant")!==auth.principal.tenant))
         throw new AuthError(403,"Unexpected sync account");
       const bounded = await boundedRequest(request);
+      if(url.pathname==="/v1/evidence") {
+        if(request.method!=="POST")return new Response("Method not allowed",{status:405});
+        let a;try{a=evidenceSchema.parse(await bounded.json())}catch{throw new AuthError(400,"Invalid evidence request")}
+        return Response.json(await readEvidence(env,auth,a));
+      }
       if(url.pathname==="/v1/team") {
         if(request.method!=="POST")return new Response("Method not allowed",{status:405});
         // Every team operation returns a snapshot, including proposal and
