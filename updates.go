@@ -3,8 +3,10 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +36,8 @@ type UpdateStatus struct {
 	Dismissed string         `json:"dismissed_version,omitempty"`
 	Line      string         `json:"line,omitempty"`
 	Installed string         `json:"installed_version"`
+	Reason    string         `json:"reason,omitempty"`
+	Message   string         `json:"message"`
 }
 type UpdateOptions struct {
 	Check, Force, Notify, Dismiss bool
@@ -112,10 +116,58 @@ type githubRelease struct {
 	} `json:"assets"`
 }
 
+// Only bounded, locally defined diagnostics reach the cache and UI. Never expose
+// remote response bodies, request URLs, or credentials through an error string.
+type updateCheckError struct{ reason string }
+
+func (e *updateCheckError) Error() string { return updateFailureMessage(e.reason) }
+
+func updateFailureMessage(reason string) string {
+	switch reason {
+	case "access_required":
+		return "Could not access Elephant releases. The repository may be private; set ELEPHANT_GITHUB_TOKEN for the process running Elephant, then retry."
+	case "credentials_rejected":
+		return "GitHub rejected the update-check credentials. Check ELEPHANT_GITHUB_TOKEN and its repository access, then retry."
+	case "access_denied":
+		return "GitHub denied access to Elephant releases. Check the token's repository access and any organization authorization, then retry."
+	case "not_found":
+		return "GitHub could not find accessible Elephant releases. Check the token's repository access; GitHub also returns this response for private repositories."
+	case "rate_limited":
+		return "GitHub is limiting update checks. Wait before retrying; authenticated access may provide a higher limit."
+	case "timeout":
+		return "The update check timed out. Check your connection and retry."
+	case "network":
+		return "Could not connect to GitHub to check for updates. Check your network or proxy settings and retry."
+	case "invalid_metadata":
+		return "GitHub returned release information Elephant could not read. Retry later."
+	case "invalid_version":
+		return "This Elephant build has an unrecognized version. Install a published release to enable update comparisons."
+	case "server_error":
+		return "GitHub could not complete the update check. Retry later."
+	default:
+		return "Could not verify whether an update is available. Retry the check for more details."
+	}
+}
+
+func (d *UpdateStatus) describe() {
+	switch d.State {
+	case "unavailable":
+		d.Message = updateFailureMessage(d.Reason)
+	case "current":
+		d.Message = "No newer compatible release found for this installation."
+	case "available":
+		d.Message = "A newer compatible Elephant release is available."
+	case "disabled":
+		d.Message = "Update checks are disabled."
+	default:
+		d.Message = "Updates have not been checked yet."
+	}
+}
+
 func selectRelease(releases []githubRelease) (*ReleaseUpdate, error) {
 	current, ok := parseReleaseVersion(Version)
 	if !ok {
-		return nil, fmt.Errorf("invalid installed version")
+		return nil, &updateCheckError{"invalid_version"}
 	}
 	best := current
 	var found *ReleaseUpdate
@@ -157,7 +209,7 @@ func fetchRelease(client *http.Client, endpoint string) (*ReleaseUpdate, error) 
 	defer cancel()
 	req, e := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if e != nil {
-		return nil, e
+		return nil, &updateCheckError{"network"}
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "elephant/"+Version)
@@ -167,19 +219,36 @@ func fetchRelease(client *http.Client, endpoint string) (*ReleaseUpdate, error) 
 	}
 	res, e := client.Do(req)
 	if e != nil {
-		return nil, fmt.Errorf("release metadata unavailable")
+		var timeout net.Error
+		if errors.Is(e, context.DeadlineExceeded) || errors.As(e, &timeout) && timeout.Timeout() {
+			return nil, &updateCheckError{"timeout"}
+		}
+		return nil, &updateCheckError{"network"}
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("release metadata unavailable (HTTP %d)", res.StatusCode)
+		reason := "server_error"
+		switch {
+		case res.StatusCode == 429 || res.StatusCode == 403 && (res.Header.Get("X-RateLimit-Remaining") == "0" || res.Header.Get("Retry-After") != ""):
+			reason = "rate_limited"
+		case res.StatusCode == 401:
+			reason = "credentials_rejected"
+		case res.StatusCode == 403:
+			reason = "access_denied"
+		case res.StatusCode == 404 && os.Getenv("ELEPHANT_GITHUB_TOKEN") == "":
+			reason = "access_required"
+		case res.StatusCode == 404:
+			reason = "not_found"
+		}
+		return nil, &updateCheckError{reason}
 	}
 	b, e := io.ReadAll(io.LimitReader(res.Body, (256<<10)+1))
 	if e != nil || len(b) > 256<<10 {
-		return nil, fmt.Errorf("invalid release metadata")
+		return nil, &updateCheckError{"invalid_metadata"}
 	}
 	var releases []githubRelease
 	if e = json.Unmarshal(b, &releases); e != nil || releases == nil {
-		return nil, fmt.Errorf("invalid release metadata")
+		return nil, &updateCheckError{"invalid_metadata"}
 	}
 	return selectRelease(releases)
 }
@@ -199,11 +268,13 @@ func (s Store) CachedUpdate() (UpdateStatus, error) {
 		d.Checked = time.Time{}
 		d.Latest = nil
 		d.State = "unchecked"
+		d.Reason = ""
 	}
 	if os.Getenv("ELEPHANT_UPDATE_CHECKS") == "0" {
 		d.Enabled = false
 		d.State = "disabled"
 	}
+	d.describe()
 	return d, e
 }
 func (s Store) Updates(opts UpdateOptions) (UpdateStatus, error) {
@@ -241,6 +312,7 @@ func (s Store) updates(opts UpdateOptions, client *http.Client, endpoint string,
 		d.Enabled = *opts.Enabled
 		d.Checked = time.Time{}
 		d.State = "unchecked"
+		d.Reason = ""
 	}
 	if os.Getenv("ELEPHANT_UPDATE_CHECKS") == "0" {
 		d.Enabled = false
@@ -252,10 +324,15 @@ func (s Store) updates(opts UpdateOptions, client *http.Client, endpoint string,
 		if opts.Check && (opts.Force || d.Checked.IsZero() || now.Sub(d.Checked) >= 24*time.Hour) {
 			d.Checked = now
 			d.Latest = nil
+			d.Reason = ""
 			latest, err := fetchRelease(client, endpoint)
 			if err != nil {
 				d.State = "unavailable"
-				d.Line = "Elephant: update check unavailable."
+				var failure *updateCheckError
+				if errors.As(err, &failure) {
+					d.Reason = failure.reason
+				}
+				d.Line = "Elephant: " + updateFailureMessage(d.Reason)
 			} else if latest == nil {
 				d.State = "current"
 				d.Line = "Elephant: no newer matching release found."
@@ -277,6 +354,7 @@ func (s Store) updates(opts UpdateOptions, client *http.Client, endpoint string,
 			}
 		}
 	}
+	d.describe()
 	saved := d
 	saved.Line = ""
 	b, e := json.MarshalIndent(saved, "", "  ")
