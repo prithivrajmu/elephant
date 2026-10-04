@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "elephant-memory-pilot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [{ "name": "MEMORY", "class_name": "PersonalMemory" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PersonalMemory"] }],
+  "observability": { "enabled": false }
+}

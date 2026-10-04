@@ -68,6 +68,7 @@ Open the local dashboard with `elephant palace`. For Windows, other MCP clients,
 - [Update notifications](docs/updates.md)
 - [Architecture](docs/architecture.md), [validation](docs/validation.md), and [roadmap](docs/roadmap.md)
 - [Release notes](docs/releases/v0.6.0-pilot.md)
+- [Optional Cloudflare MCP pilot](docs/cloudflare.md)
 
 ## Security and privacy
 

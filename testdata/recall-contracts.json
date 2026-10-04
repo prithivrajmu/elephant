@@ -1,0 +1,547 @@
+{
+  "memories": [
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "project",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis Redis Redis Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {
+        "database": [
+          "redis"
+        ]
+      },
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "a"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "personal",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Set Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "b"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "other",
+      "conversation": "",
+      "scope": "project",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "wrong-project"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "personal",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {
+        "database": [
+          "postgres"
+        ]
+      },
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "unknown-requirement"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "personal",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {
+        "database": [
+          "redis"
+        ]
+      },
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "excluded"
+    },
+    {
+      "tenant": "other",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "personal",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "foreign"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "personal",
+      "approved": false,
+      "retired": true,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "retired"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "c",
+      "scope": "conversation",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "conversation"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "team",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Redis cache failed.",
+      "lesson": "Use Redis cache limits.",
+      "source": "test:redis",
+      "subject": "redis limits",
+      "features": {
+        "database": [
+          "redis"
+        ]
+      },
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "team",
+      "team": "team"
+    },
+    {
+      "tenant": "t",
+      "owner": "u",
+      "project": "p",
+      "conversation": "",
+      "scope": "personal",
+      "approved": false,
+      "retired": false,
+      "class": "lesson",
+      "outcome": "good",
+      "incident": "Snowflake queries failed.",
+      "lesson": "Set Snowflake query limits.",
+      "source": "test:redis",
+      "subject": "snowflake",
+      "features": {},
+      "requires": {},
+      "excludes": {},
+      "created": "2026-10-01T00:00:00Z",
+      "updated": "2026-10-01T00:00:00Z",
+      "helpful": 0,
+      "unhelpful": 0,
+      "id": "unrelated"
+    }
+  ],
+  "cases": [
+    {
+      "name": "scopes-and-conditions",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "redis",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "unknown-facts",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {}
+        },
+        "task": "redis",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": [
+        "excluded",
+        "b"
+      ]
+    },
+    {
+      "name": "unrelated-task",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "kubernetes",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": []
+    },
+    {
+      "name": "blank-recall",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": []
+    },
+    {
+      "name": "stopwords-abstain",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "please help improve code",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": []
+    },
+    {
+      "name": "tiny-budget",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "redis",
+        "byte_budget": 1,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": []
+    },
+    {
+      "name": "conversation-scope",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "",
+          "conversation": "c",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "redis",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": [
+        "b",
+        "conversation"
+      ]
+    },
+    {
+      "name": "profile-discovery",
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "",
+        "byte_budget": 4000,
+        "limit": 6
+      },
+      "initialize": true,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "utf8-budget",
+      "memories": [
+        {
+          "tenant": "t",
+          "owner": "u",
+          "project": "p",
+          "conversation": "",
+          "scope": "personal",
+          "approved": false,
+          "retired": false,
+          "class": "lesson",
+          "outcome": "good",
+          "incident": "Redis cache failed.",
+          "lesson": "Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். Redis நினைவகம். ",
+          "source": "test:redis",
+          "subject": "redis limits",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          },
+          "requires": {},
+          "excludes": {},
+          "created": "2026-10-01T00:00:00Z",
+          "updated": "2026-10-01T00:00:00Z",
+          "helpful": 0,
+          "unhelpful": 0,
+          "id": "b"
+        }
+      ],
+      "identity": {
+        "tenant": "t",
+        "user": "u",
+        "team": ""
+      },
+      "request": {
+        "profile": {
+          "project": "p",
+          "conversation": "",
+          "features": {
+            "database": [
+              "redis"
+            ]
+          }
+        },
+        "task": "redis",
+        "byte_budget": 500,
+        "limit": 6
+      },
+      "initialize": false,
+      "now": "2026-10-04T00:00:00Z",
+      "expected_ids": []
+    }
+  ]
+}
