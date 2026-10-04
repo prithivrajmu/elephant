@@ -50,6 +50,7 @@ describe("authenticated hosted lifecycle", () => {
     expect(first.data.memory.updated).toBe(memory.updated);
     expect((await call(push)).data.replayed).toBe(true);
     expect((await call({...push,operation_id:"different"})).status).toBe(409);
+    expect((await call({...push,operation_id:"move-context",expected_revision:1,memory:{...memory,project_id:"other"}})).status).toBe(409);
     expect((await call({...push,operation_id:"invalid-scope",memory:{...memory,project_id:undefined}})).status).toBe(400);
     const p=await call({action:"pull",cursor:0,scopes:["project"]});expect(p.data.items).toHaveLength(1);
     expect((await call({action:"pull",cursor:0,scopes:["project"]},await token("bob"))).data.items).toEqual([]);

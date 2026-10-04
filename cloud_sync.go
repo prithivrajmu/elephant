@@ -351,6 +351,9 @@ func (s Store) SyncCloud(id Identity, o CloudSyncOptions) (CloudSyncResult, erro
 					if !owned(old, id) {
 						return nil, fmt.Errorf("sync ID conflicts with another local owner")
 					}
+					if !scopes[old.Scope] {
+						return nil, fmt.Errorf("sync ID conflicts with an unselected local scope")
+					}
 					var hash string
 					e = tx.QueryRow("SELECT hash FROM cloud_links WHERE connection=? AND id=?", connection, m.ID).Scan(&hash)
 					if e != nil && e != sql.ErrNoRows {
