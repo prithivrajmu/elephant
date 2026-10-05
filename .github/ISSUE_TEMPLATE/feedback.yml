@@ -1,0 +1,54 @@
+name: Pilot feedback
+description: Share your experience installing and using Elephant
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach raw transcripts, private repository content or credentials.
+        An unsupported or fabricated capture is a bug, not a success.
+  - type: input
+    id: environment
+    attributes:
+      label: Elephant version / OS / architecture
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Agent client and version
+  - type: input
+    id: time-to-lesson
+    attributes:
+      label: Install to tools-visible to first real lesson time
+  - type: textarea
+    id: checks
+    attributes:
+      label: Did version, selftest and doctor pass?
+      description: Include sanitized errors only.
+  - type: input
+    id: scope
+    attributes:
+      label: Project-linked or unattached? Scope or known requirements
+  - type: input
+    id: first-lesson
+    attributes:
+      label: First real lesson ID and source (no secrets)
+  - type: textarea
+    id: recall
+    attributes:
+      label: Recall and capture
+      description: Did the lesson survive restart? Did a related task find it? Any missed or irrelevant lessons? Did the agent capture an observed result without a reminder?
+  - type: textarea
+    id: feedback-outcome
+    attributes:
+      label: Applied-lesson outcome
+      description: If applied, the observed helpful or unhelpful outcome and a stable run ID.
+  - type: textarea
+    id: confusion
+    attributes:
+      label: Setup or UI confusion
+  - type: textarea
+    id: next-improvement
+    attributes:
+      label: One most useful next improvement
