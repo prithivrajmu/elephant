@@ -55,10 +55,12 @@ def run_native(archive):
         localapp.mkdir()
         env = os.environ.copy()
         env['ELEPHANT_INSTALL_DIR'] = str(install_dir)
-        env['HOME'] = str(home)
         if goos != 'windows':
-            env['USERPROFILE'] = str(home)  # overriding it on Windows breaks PowerShell module discovery (Get-FileHash)
-        env['LOCALAPPDATA'] = str(localapp)
+            # Redirecting profile variables on Windows breaks PowerShell module discovery
+            # (Get-FileHash is not found), so the Windows run only redirects the install directory.
+            env['HOME'] = str(home)
+            env['USERPROFILE'] = str(home)
+            env['LOCALAPPDATA'] = str(localapp)
         if goos == 'windows':
             subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(extracted / 'install.ps1')], env=env, check=True)
             installed = install_dir / 'elephant.exe'
