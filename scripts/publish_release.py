@@ -47,7 +47,12 @@ def main():
     if view.returncode == 0:
         release = json.loads(view.stdout)
         if not release['isDraft']:
-            print(f'{tag} is already published; leaving it unchanged.')
+            notice = f'::notice title=Release skipped::v{VERSION} already published; bump Version in onboarding.go and add docs/releases/v{VERSION}.md to release'
+            print(notice)
+            summary = os.environ.get('GITHUB_STEP_SUMMARY')
+            if summary:
+                with open(summary, 'a', encoding='utf-8') as step_summary:
+                    step_summary.write(notice + '\n')
             return
         if release['targetCommitish'] != commit:
             raise RuntimeError('Existing draft targets a different commit; refusing to modify it.')

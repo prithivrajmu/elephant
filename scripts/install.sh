@@ -12,9 +12,25 @@ fi
 install_dir=${ELEPHANT_INSTALL_DIR:-"$HOME/.local/bin"}
 mkdir -p "$install_dir"
 target="$install_dir/elephant"
+disclose_updates() {
+  echo "Elephant checks GitHub Releases for updates at most once per 24h (sends installed version; GitHub sees IP). Opt out with ELEPHANT_UPDATE_CHECKS=0 for this process, or run 'elephant update --enabled=false' to persist."
+  if [ "${ELEPHANT_UPDATE_CHECKS:-}" != 0 ]; then
+    return 0
+  fi
+  # Verified: with ELEPHANT_UPDATE_CHECKS unset, this writes only the update preference
+  # beside the default store. It does not create the SQLite journal or a project.
+  # --root keeps a parent project config from redirecting that write.
+  opt_root=$(mktemp -d)
+  if ! env -u ELEPHANT_UPDATE_CHECKS "$target" update --enabled=false --root "$opt_root"; then
+    echo "Could not persist the update opt-out. Run: elephant update --enabled=false" >&2
+  fi
+  rm -rf "$opt_root"
+}
 if [ -e "$target" ]; then
   if cmp -s elephant "$target"; then
-    echo "Already installed: $target"; exit 0
+    echo "Already installed: $target"
+    disclose_updates
+    exit 0
   fi
   if [ "${ELEPHANT_REPLACE:-0}" != 1 ]; then
     echo "Existing $target preserved. Set ELEPHANT_REPLACE=1 to replace it." >&2; exit 1
@@ -28,3 +44,4 @@ mv -f "$stage" "$target"
 echo "Installed: $target"
 echo "Run: \"$target\" selftest"
 echo 'Add the install directory to PATH if needed; no shell configuration was changed.'
+disclose_updates
