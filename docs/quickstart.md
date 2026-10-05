@@ -75,7 +75,7 @@ The default store is `~/.elephant/memories.sqlite`. Existing `events.jsonl` path
 
 ```sh
 elephant palace --root /absolute/path/project --project my-project
-# Visit http://127.0.0.1:7331
+# Open the printed link: http://127.0.0.1:7331/#token=<per-run token>
 ```
 
 The dashboard is an owner inventory with current context labeled. Inspect the source and applicability of the recorded lesson. Try a related task in Recall, then an unrelated task; unrelated recall should abstain. A lesson with `requires` only appears when current facts satisfy those conditions. Restart Elephant and confirm the lesson remains. Use a stable task/run ID for feedback, and report outcomes only after applying the advice.
