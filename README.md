@@ -60,7 +60,7 @@ Elephant is in a **closed beta**. Versions are `0.x` prereleases, and behavior, 
 - There is **no automatic redaction** beyond credential-format screening, where your version provides it; that is a best-effort check, not a guarantee. Secrets, personal data, and confidential text are not otherwise removed, so review lessons before saving or sharing them.
 - A **release check runs by default**: at most once per 24 hours, Elephant asks GitHub for the latest release. Opt out with `ELEPHANT_UPDATE_CHECKS=0` or `elephant update --enabled=false`. See [Update notifications](docs/updates.md).
 
-Send feedback with the [pilot feedback template](docs/pilot-feedback.md) in a [GitHub issue](https://github.com/prithivrajmu/elephant/issues). Report vulnerabilities as described in [SECURITY.md](https://github.com/prithivrajmu/elephant/blob/main/SECURITY.md). Version history is in the [CHANGELOG](https://github.com/prithivrajmu/elephant/blob/main/CHANGELOG.md) and the [release notes](docs/releases/v0.7.0-pilot.md) under `docs/releases/`.
+Send feedback with the [pilot feedback template](docs/pilot-feedback.md) in a [GitHub issue](https://github.com/prithivrajmu/elephant/issues). Report vulnerabilities as described in [SECURITY.md](https://github.com/prithivrajmu/elephant/blob/main/SECURITY.md). Version history is in the [CHANGELOG](https://github.com/prithivrajmu/elephant/blob/main/CHANGELOG.md) and the [release notes](docs/releases/) directory.
 
 ## Quick start
 
