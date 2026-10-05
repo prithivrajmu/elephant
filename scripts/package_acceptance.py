@@ -62,6 +62,9 @@ def run_native(archive):
             env['USERPROFILE'] = str(home)
             env['LOCALAPPDATA'] = str(localapp)
         if goos == 'windows':
+            # Windows PowerShell 5.1 started from PowerShell 7 inherits its PSModulePath and then
+            # cannot find Microsoft.PowerShell.Utility (Get-FileHash); let it use its own default.
+            env.pop('PSModulePath', None)
             subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(extracted / 'install.ps1')], env=env, check=True)
             installed = install_dir / 'elephant.exe'
         else:
