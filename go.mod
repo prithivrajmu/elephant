@@ -2,6 +2,8 @@ module example.com/elephant
 
 go 1.25.0
 
+toolchain go1.27.1
+
 require modernc.org/sqlite v1.48.1
 
 require (

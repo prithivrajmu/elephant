@@ -1,5 +1,29 @@
-param([string]$InstallDirectory = "$env:LOCALAPPDATA\Elephant\bin", [switch]$Replace)
+param([string]$InstallDirectory = "", [switch]$Replace)
 $ErrorActionPreference = 'Stop'
+if (-not $InstallDirectory) {
+  if ($env:ELEPHANT_INSTALL_DIR) { $InstallDirectory = $env:ELEPHANT_INSTALL_DIR }
+  else { $InstallDirectory = Join-Path $env:LOCALAPPDATA 'Elephant\bin' }
+}
+function Write-UpdateDisclosure([string]$Binary) {
+  Write-Output "Elephant checks GitHub Releases for updates at most once per 24h (sends installed version; GitHub sees IP). Opt out with ELEPHANT_UPDATE_CHECKS=0 for this process, or run 'elephant update --enabled=false' to persist."
+  if ($env:ELEPHANT_UPDATE_CHECKS -ne '0') { return }
+  $optRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
+  New-Item -ItemType Directory -Path $optRoot | Out-Null
+  $saved = $env:ELEPHANT_UPDATE_CHECKS
+  try {
+    Remove-Item Env:ELEPHANT_UPDATE_CHECKS -ErrorAction SilentlyContinue
+    $PSNativeCommandUseErrorActionPreference = $false
+    & $Binary update --enabled=false --root $optRoot
+    if ($LASTEXITCODE -ne 0) {
+      Write-Output "Could not persist the update opt-out. Run: elephant update --enabled=false"
+    }
+  } catch {
+    Write-Output "Could not persist the update opt-out. Run: elephant update --enabled=false"
+  } finally {
+    if ($null -ne $saved) { $env:ELEPHANT_UPDATE_CHECKS = $saved }
+    Remove-Item -Recurse -Force $optRoot -ErrorAction SilentlyContinue
+  }
+}
 foreach ($line in Get-Content (Join-Path $PSScriptRoot 'SHA256SUMS')) {
   if (-not $line.Trim()) { continue }
   $parts = $line -split '\s+', 2
@@ -13,7 +37,9 @@ $source = Join-Path $PSScriptRoot 'elephant.exe'
 $target = Join-Path $InstallDirectory 'elephant.exe'
 if (Test-Path $target) {
   if ((Get-FileHash $source).Hash -eq (Get-FileHash $target).Hash) {
-    Write-Output "Already installed: $target"; exit 0
+    Write-Output "Already installed: $target"
+    Write-UpdateDisclosure $target
+    exit 0
   }
   if (-not $Replace) { throw "Existing $target preserved. Use -Replace to replace it." }
 }
@@ -23,3 +49,4 @@ finally { if (Test-Path $stage) { Remove-Item $stage } }
 Write-Output "Installed: $target"
 Write-Output "Run: & `"$target`" selftest"
 Write-Output 'Add the install directory to PATH if needed; no shell configuration was changed.'
+Write-UpdateDisclosure $target

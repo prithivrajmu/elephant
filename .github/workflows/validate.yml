@@ -13,8 +13,8 @@ jobs:
       run:
         working-directory: cloudflare
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -25,18 +25,37 @@ jobs:
       - run: npm run build
         env:
           WRANGLER_SEND_METRICS: 'false'
+  minimum-go:
+    name: Minimum Go 1.25
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # setup-go reads the go directive only, not toolchain, so the floor is selected here.
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Vet and test the go.mod floor
+        shell: bash
+        env:
+          GOTOOLCHAIN: local
+        run: |
+          set -eu
+          go version
+          go vet ./...
+          go test ./...
   native:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: '1.27.x'
+          go-version: '1.27.1'
           cache: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
       - name: Tests and vet
@@ -44,6 +63,14 @@ jobs:
         run: |
           go test -race ./...
           go vet ./...
+      - name: Format, modules, and vulnerabilities
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          test -z "$(gofmt -l .)"
+          go mod verify
+          go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
       - name: Native binary and self-test
         shell: bash
         run: |
@@ -57,25 +84,63 @@ jobs:
   packages:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: '1.27.x'
+          go-version: '1.27.1'
           cache: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
       - run: python scripts/build_release.py
       - run: node scripts/dashboard_update_check.js
       - run: python scripts/package_acceptance.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: elephant-packages
           path: |
             dist/*.zip
             dist/SHA256SUMS
+  package-native:
+    name: Native package
+    needs: packages
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: elephant-packages
+          path: dist
+      - name: Execute the archive for this runner
+        run: python scripts/package_acceptance.py --native
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Scan full history with pinned gitleaks
+        shell: bash
+        run: |
+          set -eu
+          version=8.30.1
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          expected=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          work="$RUNNER_TEMP/gitleaks"
+          mkdir -p "$work"
+          curl -fsSL -o "$work/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
+          echo "${expected}  ${archive}" | (cd "$work" && sha256sum -c -)
+          tar -xzf "$work/$archive" -C "$work" gitleaks
+          "$work/gitleaks" detect --source "$GITHUB_WORKSPACE" --config "$GITHUB_WORKSPACE/.gitleaks.toml" --redact --no-banner --exit-code 1
   publish:
-    needs: [native, packages, cloudflare]
+    needs: [native, packages, package-native, cloudflare, minimum-go, secrets]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -84,11 +149,11 @@ jobs:
       group: elephant-release
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: elephant-packages
           path: dist

@@ -1,0 +1,18 @@
+title = "Elephant secret scan"
+
+[extend]
+useDefault = true
+
+# These commits only added synthetic dashboard and credential-format fixtures.
+# The files are gone. The allowlist keeps that history from failing the gate
+# without ignoring secrets introduced in any other commit.
+[[allowlists]]
+description = "Removed synthetic test fixtures, not deployed credentials"
+commits = [
+  "98dd9b631aee521f4a4b389bd9bc322e59e1338a",
+  "79787b401e661d31c64bce223137bf2abee4b39c",
+]
+paths = [
+  '''(^|/)dashboard_test.go$''',
+  '''(^|/)sensitive_test.go$''',
+]
