@@ -13,13 +13,14 @@ Download the matching ZIP from [GitHub Releases](https://github.com/prithivrajmu
 | Windows x86-64 | `windows-amd64` |
 | Windows ARM64 | `windows-arm64` |
 
-For example, an Apple Silicon Mac user with the GitHub CLI can download the pilot release:
+For example, an Apple Silicon Mac user with the GitHub CLI can download the latest release:
 
 ```sh
-gh release download v0.7.0-pilot --repo prithivrajmu/elephant \
-  --pattern 'elephant-0.7.0-pilot-darwin-arm64.zip'
-unzip elephant-0.7.0-pilot-darwin-arm64.zip
-cd elephant-0.7.0-pilot-darwin-arm64
+TAG=$(gh release list --repo prithivrajmu/elephant --limit 1 --json tagName --jq '.[0].tagName')
+gh release download "$TAG" --repo prithivrajmu/elephant \
+  --pattern 'elephant-*-darwin-arm64.zip'
+unzip elephant-*-darwin-arm64.zip
+cd elephant-*-darwin-arm64/
 sh ./install.sh
 export PATH="$HOME/.local/bin:$PATH"
 elephant selftest
@@ -74,7 +75,7 @@ Go 1.25 or later is required:
 ```sh
 git clone https://github.com/prithivrajmu/elephant.git
 cd elephant
-git checkout v0.7.0-pilot
+git checkout "$TAG"   # a release tag, e.g. from the Releases page
 go build -trimpath -o elephant ./cmd/elephant
 ./elephant selftest
 ```

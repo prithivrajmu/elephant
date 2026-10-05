@@ -18,7 +18,7 @@ Elephant stores source-backed lessons from development work and recalls relevant
 
 ## Installation
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. The current `0.7.0-pilot` release is a prerelease.
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Releases are public betas (prereleases).
 
 | Computer | Archive platform |
 | --- | --- |
@@ -83,7 +83,7 @@ Open the local dashboard with `elephant palace`. For Windows, other MCP clients,
 - [Storage, migration, and recovery](docs/storage.md)
 - [Update notifications](docs/updates.md)
 - [Architecture](docs/architecture.md), [validation](docs/validation.md), and [roadmap](docs/roadmap.md)
-- [Release notes](docs/releases/v0.7.0-pilot.md), [pilot feedback template](docs/pilot-feedback.md)
+- [Release notes](docs/releases/), [pilot feedback template](docs/pilot-feedback.md)
 - [Experimental Cloudflare MCP service](docs/cloudflare.md), [sync and sharing](docs/cloud-sync.md), and [evidence connectors](docs/mcp-evidence.md)
 
 ## Security and privacy
