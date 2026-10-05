@@ -4,6 +4,14 @@ if (-not $InstallDirectory) {
   if ($env:ELEPHANT_INSTALL_DIR) { $InstallDirectory = $env:ELEPHANT_INSTALL_DIR }
   else { $InstallDirectory = Join-Path $env:LOCALAPPDATA 'Elephant\bin' }
 }
+# SHA-256 through .NET, so the installer does not depend on the Microsoft.PowerShell.Utility module.
+function Get-Sha256Hex([string]$Path) {
+  $stream = [System.IO.File]::OpenRead($Path)
+  try {
+    $hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash($stream)
+    return ([System.BitConverter]::ToString($hash) -replace '-', '').ToLowerInvariant()
+  } finally { $stream.Dispose() }
+}
 function Write-UpdateDisclosure([string]$Binary) {
   Write-Output "Elephant checks GitHub Releases for updates at most once per 24h (sends installed version; GitHub sees IP). Opt out with ELEPHANT_UPDATE_CHECKS=0 for this process, or run 'elephant update --enabled=false' to persist."
   if ($env:ELEPHANT_UPDATE_CHECKS -ne '0') { return }
@@ -28,7 +36,7 @@ foreach ($line in Get-Content (Join-Path $PSScriptRoot 'SHA256SUMS')) {
   if (-not $line.Trim()) { continue }
   $parts = $line -split '\s+', 2
   $path = Join-Path $PSScriptRoot $parts[1]
-  if ((Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $parts[0]) {
+  if ((Get-Sha256Hex $path) -ne $parts[0]) {
     throw "Checksum mismatch: $path"
   }
 }
@@ -36,7 +44,7 @@ New-Item -ItemType Directory -Force -Path $InstallDirectory | Out-Null
 $source = Join-Path $PSScriptRoot 'elephant.exe'
 $target = Join-Path $InstallDirectory 'elephant.exe'
 if (Test-Path $target) {
-  if ((Get-FileHash $source).Hash -eq (Get-FileHash $target).Hash) {
+  if ((Get-Sha256Hex $source) -eq (Get-Sha256Hex $target)) {
     Write-Output "Already installed: $target"
     Write-UpdateDisclosure $target
     exit 0
