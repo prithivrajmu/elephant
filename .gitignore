@@ -29,3 +29,18 @@ node_modules/
 .dev.vars.*
 .dev-token
 /cloudflare/build/
+
+# Store variants
+*.db
+*.sqlite3
+*.sqlite-journal
+
+# Local agent / Elephant automation state
+# (the first four entries are written by `elephant init`; keep them verbatim)
+/.elephant/
+/.codex/hooks.json
+/.claude/settings.local.json
+*.elephant-backup-*
+/.pi/
+/.serena/
+/CLAUDE.md

@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem with Elephant
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste secrets, tokens, private memories, raw transcripts or personal file paths.**
+        Report security vulnerabilities privately; see SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Elephant version
+      description: Output of `elephant version`.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and architecture
+      placeholder: macOS 15 arm64, Ubuntu 24.04 amd64, Windows 11 amd64
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Client / host and version
+      placeholder: Codex, Claude Code, other MCP client
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Sanitized `elephant doctor` output
+      description: Remove usernames, home paths, tokens and project names before pasting.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Redaction
+      options:
+        - label: I removed secrets, private memories and personal paths from this report.
+          required: true

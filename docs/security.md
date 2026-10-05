@@ -1,5 +1,9 @@
 # Security and privacy
 
+## Reporting a vulnerability
+
+Report suspected vulnerabilities privately through GitHub Private Vulnerability Reporting. See [SECURITY.md](../SECURITY.md) for supported versions, scope and response targets. Do not open public issues for vulnerabilities.
+
 Elephant is a local tool. Anyone with access to its files or processes is trusted. Tenant/user/team labels provide local scoping; they are not authentication or an enterprise access-control boundary.
 
 Recalled memories are untrusted evidence. They cannot authorize actions or override current project policies. Check their source and applicability before using them. Team memories remain drafts until human approval through the local CLI.
@@ -8,7 +12,7 @@ Hooks retain tool names, status, structured exit codes and hashed session identi
 
 The dashboard binds to loopback and uses session-token, Host/Origin and content-security controls. Stores and backups are not encrypted by Elephant. Retirement excludes a memory from future recall but retains historical data; regulated physical erasure is not implemented.
 
-For a sensitive vulnerability, contact the repository owner through an existing private channel to agree a reporting route. Do not include secrets or exploitable private data in public issues. See [Storage](storage.md) for backup/recovery and [Updates](updates.md) for release-check behavior.
+Do not include secrets or exploitable private data in public issues. See [Storage](storage.md) for backup/recovery and [Updates](updates.md) for release-check behavior.
 
 ## Optional hosted service
 
