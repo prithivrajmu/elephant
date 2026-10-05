@@ -10,6 +10,9 @@ security fixes. Please reproduce on the latest release before reporting.
 Report vulnerabilities privately with
 [GitHub Private Vulnerability Reporting](https://github.com/prithivrajmu/elephant/security/advisories/new).
 
+If you cannot use GitHub, email prithivrajmu@gmail.com with the subject
+"Elephant security".
+
 Do not open public issues, pull requests or discussions for suspected
 vulnerabilities. Do not include real credentials, private memories or raw
 conversation data in a report; use synthetic examples.
