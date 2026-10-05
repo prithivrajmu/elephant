@@ -56,7 +56,7 @@ The default destination is `%LOCALAPPDATA%\Elephant\bin`. To persist PATH, add t
 
 ## Connect your agent
 
-On macOS/Linux, run `elephant init` in your project, then restart Codex or Claude Code and approve the hooks through the host's normal flow. Run `elephant doctor` to inspect setup. On Windows or with another MCP client, run `elephant setup --wizard`, merge the generated settings into the client's configuration and restart it. See [Quick start](quickstart.md) and [Client integration](clients.md).
+On macOS/Linux, run `elephant init` or `elephant setup --auto` in your project. Both install hooks and run local health checks. Use `--agent codex` or `--agent claude` for one agent; reruns keep that choice. Restart the agent and approve the hooks through its normal flow. Run `elephant doctor` later to inspect the store, executable path, hook files, and guidance. On Windows or with another MCP client, run `elephant setup --wizard`, merge the generated settings into the client's configuration and restart it. Identical setup files can be generated again safely; changed files require a new output directory. See [Quick start](quickstart.md) and [Client integration](clients.md).
 
 ## Upgrade
 

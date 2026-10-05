@@ -2,14 +2,43 @@
 
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Elephant is in
-pre-release; versions carry a `-pilot` suffix and compatibility is not yet
+pre-release; versions carry a `-beta` suffix and compatibility is not yet
 guaranteed.
 
 ## [Unreleased]
 
-### Public beta hardening
+## [0.9.0-beta]
 
--
+Full notes: [docs/releases/v0.9.0-beta.md](docs/releases/v0.9.0-beta.md).
+
+### Changed
+
+- Faster local recall with cached word comparisons, early budget filtering, and
+  indexed alternative-advice metadata. Ranking and applicability rules are preserved.
+- Memory saves query matching evidence within the owner's scope instead of decoding
+  the entire store. Equivalent label sets no longer create duplicate retry records.
+- Memory Palace now includes the interactive brain atlas merged in PR #30.
+
+### Added
+
+- `setup --auto` installs project hooks and runs local diagnostics.
+- `doctor` checks the configured binary, hooks, and agent guidance.
+- The Memory Palace validation script now runs in release CI.
+
+### Fixed
+
+- Setup reruns preserve the selected agent and check store access before installing hooks.
+- Repeated MCP file setup fills missing files without replacing edited content.
+- Wizard project defaults follow a changed root, and failed file generation leaves
+  the store's writing policy unchanged.
+
+## [0.8.0-beta]
+
+Full notes: [docs/releases/v0.8.0-beta.md](docs/releases/v0.8.0-beta.md).
+
+First closed beta with public distribution, credential-format screening,
+third-party notices, beta-channel updates, cloud-sync retirement protection,
+and a checksum-verified npm launcher with pi/omp integration.
 
 ## [0.7.0-pilot]
 
@@ -64,6 +93,8 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 - Older binaries cannot read a migrated store.
 - Memories and backups are not encrypted by Elephant.
 
-[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.7.0-pilot...HEAD
+[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.9.0-beta...HEAD
+[0.9.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.8.0-beta...v0.9.0-beta
+[0.8.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.7.0-pilot...v0.8.0-beta
 [0.7.0-pilot]: https://github.com/prithivrajmu/elephant/compare/v0.6.0-pilot...v0.7.0-pilot
 [0.6.0-pilot]: https://github.com/prithivrajmu/elephant/releases/tag/v0.6.0-pilot

@@ -65,6 +65,8 @@ The half-life is 180 days and contributes a modest soft discount. Feedback does 
 
 Use an MMR-like greedy heuristic and deterministic ID tie-breaking. The coefficient is heuristic, not tuned. Complete serialization includes incident, lesson, source, project/conversation provenance, requires/excludes, match evidence, reported usefulness and observation count. Potential alternatives include accessible IDs with an explicit budget-omission warning.
 
+The local engine counts query terms once per document, caches lesson word sets, and updates each candidate's maximum redundancy once per accepted result. Entries that cannot fit the remaining budget leave selection immediately. A subject index supplies alternative counts and up to five sorted IDs; the same index implementation serves usage-baseline accounting. These changes preserve task admission, corpus statistics, scoring, and rendering.
+
 Accept a complete entry only if the exact UTF-8 text plus header fits `byte_budget`. Default is 6 lessons and 4,000 bytes; caps are 20 lessons and 64,000 bytes. Long entries are skipped rather than losing applicability conditions. A tiny budget can validly return no lessons. Exact model tokenizer budgeting remains an adapter milestone.
 
 Baseline and injection share one renderer. The baseline still represents naive full loading of all visible/applicable summaries, not comparison against an optimized competitor. Provider token counts, tool overhead, prompt caching and real task improvement are not established by this estimate.

@@ -1,5 +1,28 @@
 # Validation
 
+## Recall and setup improvements, 2026-10-06
+
+Measured locally on macOS arm64 (Apple M4), comparing the retrieval and store code at `56fdc8b` with this change. Values below are medians of three runs:
+
+| Synthetic benchmark | Before | After | Allocated bytes before → after |
+| --- | ---: | ---: | ---: |
+| Retrieval engine, 1,000 memories | 25.6 ms | 8.4 ms | 18.7 MB → 7.2 MB |
+| SQLite recall with alternatives, 100 memories | 23.4 ms | 4.8 ms | 19.5 MB → 1.9 MB |
+| SQLite recall with alternatives, 1,000 memories | 1,801 ms | 34.2 ms | 1,668 MB → 19.6 MB |
+
+The alternatives fixture deliberately gives every memory the same subject and different lesson text. It exercises the previous quadratic baseline calculation. It includes database access, ranking, baseline rendering, and a usage receipt. It excludes host startup and model calls; this stress-case speedup is not a general workload estimate. The short runs contain scheduling noise.
+
+Reproduce the benchmarks with:
+
+```sh
+go test -run '^$' -bench '^BenchmarkRecall1000$' -benchmem -count=3
+go test -run '^$' -bench '^BenchmarkRecallWithAlternatives$' -benchmem -benchtime=3x -count=3
+```
+
+A temporary comparison against the previous `Recall` implementation checked identical complete results across 1,000 seeded combinations of tasks, budgets, feedback, ages, visibility, and applicability. Permanent regression tests cover bounded alternative IDs against a full scan, oversized entries, label-equivalent record retries, independent evidence, other-owner isolation, safe setup retries, wizard project changes, failed setup policy preservation, missing-hook repair, and automatic CLI setup. Local tests do not establish real Codex/Claude approval or model-driven capture.
+
+Final verification passed: `go test -race ./...`, `go vet ./...`, binary build, seven-check selftest, and `scripts/acceptance.py`, `scripts/storage_acceptance.py`, and `scripts/automation_acceptance.py` against the rebuilt binary. The MCP/dashboard check required permission to bind its isolated localhost test port.
+
 ## Release gates
 
 Publication of each release requires the [validation workflow](https://github.com/prithivrajmu/elephant/actions/workflows/validate.yml) to pass native Linux/macOS/Windows race tests, vet, selftest, external MCP and storage acceptance, plus macOS/Linux hook acceptance and six-archive package checks. The release job verifies uploaded downloads before publishing. This distinguishes native binary/protocol checks from real agent-host usage and ARM installer tests.
@@ -104,4 +127,3 @@ ELEPHANT_GO=/path/to/go python3 scripts/build_release.py
 ```
 
 Browser QA additionally uses Playwright/Chromium in the build environment. Synthetic UI data can be reproduced separately with `python3 examples/demo.py --binary ./elephant --dir /tmp/elephant-demo`; do not import this fabricated data into real user memory.
-

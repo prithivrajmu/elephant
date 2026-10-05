@@ -94,6 +94,7 @@ jobs:
           python-version: '3.11'
       - run: python scripts/build_release.py
       - run: node scripts/dashboard_update_check.js
+      - run: node scripts/dashboard_palace_check.js
       - run: python scripts/package_acceptance.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

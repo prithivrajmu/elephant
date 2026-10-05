@@ -1,5 +1,17 @@
 # CLI reference
 
+## Setup and repair
+
+```sh
+elephant setup --auto --agent codex   # macOS/Linux; claude and both also supported
+elephant doctor                     # inspect local store, executable, hooks and guidance
+elephant init                       # repair generated hooks; preserve existing agent choice
+```
+
+`setup --auto` and `init` run local health checks after installing project hooks. Setup checks store access before installing hooks. Existing unrelated settings are preserved and changed files receive backups. Restart the agent and approve hooks through its normal approval flow. Local checks do not prove host approval or tool discovery.
+
+For Windows or other MCP clients, use `elephant setup --wizard`. Generated launch paths are absolute. Rerunning file setup with identical settings succeeds and fills in missing files. Different existing content is preserved; choose a new `--output` directory to generate changed settings. `--auto` cannot be combined with `--wizard` or `--output`.
+
 ### Record a real lesson
 
 ```sh
@@ -64,7 +76,9 @@ To create and approve a team draft, consistently use `--tenant`, `--user` and `-
 
 SQLite WAL allows readers to retain a consistent snapshot during a write. Writers use `BEGIN IMMEDIATE`, wait up to three seconds for contention, and commit memory state, deduplication keys, audit events and task receipts together with `synchronous=FULL`. Normal reads do not replay historical events. SQLite recovers interrupted transactions; failed migration never replaces the original journal. [Storage](storage.md) documents backup/restore and the remaining manual migration-lock recovery step.
 
-Recall still scans current memories. Alternative-advice metadata can add worst-case O(memories²) baseline work, and the dashboard still loads the user's usage history. This change removes journal replay, not every scaling limit. Peer imports validate up front but commit individual records; rerun after a partial import to deduplicate.
+Recall scans visible, applicable current memories for exact corpus statistics. Alternative-advice metadata uses a shared subject index with bounded ID samples. Diversity comparisons cache lesson words and update once per selected result. The dashboard still loads the user's usage history. Peer imports validate up front but commit individual records; rerun after a partial import to deduplicate.
+
+Saving a memory checks only matching evidence in the same owner's scope and project. Label order, duplicate label values, and case differences do not create a new memory on retry. Original evidence is retained; different sources, applicability conditions, and project origins remain separate.
 
 ## Conversations without a project
 

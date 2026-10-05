@@ -40,12 +40,17 @@ func TestLegacyStoreAndSafeSetup(t *testing.T) {
 		t.Fatal(err)
 	}
 	original, _ := os.ReadFile(filepath.Join(out, "mcp.json"))
-	if err = WriteSetup(out, config); err == nil {
-		t.Fatal("must not overwrite")
+	if err = WriteSetup(out, config); err != nil {
+		t.Fatalf("identical setup should be safe to rerun: %v", err)
 	}
 	now, _ := os.ReadFile(filepath.Join(out, "mcp.json"))
 	if !bytes.Equal(original, now) {
 		t.Fatal("setup overwrote existing configuration")
+	}
+	changed := config
+	changed.FirstTask = "different task"
+	if err = WriteSetup(out, changed); err == nil {
+		t.Fatal("must not overwrite different setup")
 	}
 	d, err := Doctor(s)
 	if err != nil || !d.OK {

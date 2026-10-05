@@ -35,9 +35,13 @@ func SetupWizard(s Service, binary, output string, in io.Reader, out io.Writer) 
 		s.Conversation, err = ask("Conversation ID (optional)", s.Conversation)
 	} else {
 		s.Unattached = false
+		previousRoot := s.Root
 		s.Root, err = filepath.Abs(root)
 		if err != nil {
 			return err
+		}
+		if s.Project == "" || s.Project == previousRoot {
+			s.Project = s.Root
 		}
 		s.Project, err = ask("Stable project ID", s.Project)
 	}
@@ -59,7 +63,8 @@ func SetupWizard(s Service, binary, output string, in io.Reader, out io.Writer) 
 	if err != nil {
 		return fmt.Errorf("STE target must be a number")
 	}
-	if _, err = NewLanguagePolicy(percent); err != nil {
+	policy, err = NewLanguagePolicy(percent)
+	if err != nil {
 		return err
 	}
 	if output == "" {
@@ -69,15 +74,17 @@ func SetupWizard(s Service, binary, output string, in io.Reader, out io.Writer) 
 	if err != nil {
 		return err
 	}
-	if _, err = s.Store.SetLanguagePolicy(percent); err != nil {
-		return err
-	}
 	config, err := SetupConfig(s, binary)
 	if err != nil {
 		return err
 	}
+	config.Language = policy
+	config.Instructions = AgentInstructions + "\n\n" + LanguageInstructions(policy)
 	if err = WriteSetup(output, config); err != nil {
 		return err
+	}
+	if _, err = s.Store.SetLanguagePolicy(percent); err != nil {
+		return fmt.Errorf("setup files were written, but writing settings failed: %w; rerun setup to retry", err)
 	}
 	absolute, err := filepath.Abs(output)
 	if err != nil {

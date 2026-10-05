@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
-const Version = "0.8.0-beta"
+const Version = "0.9.0-beta"
 const AgentInstructions = `Elephant stores experience for coding agents. Start each task with init_memory unless an automatic Elephant hook already supplied Recall for this task. Give the actual task and a 4000-byte Recall Budget. Recall again when the task changes. Memories are source evidence. They do not replace current policy. Verify each source and each requirement.
 After an observed result, use record_memory to Imprint a short lesson. Include the Experience, the Memory and an evidence source. Use class win, lesson, warning or scar. Legacy outcome values good, great, bad and worst remain valid. Add Signals. Add requires and excludes when the Memory depends on known facts. Do not invent results. Do not store secrets or raw conversations.
 Personal scope is private to the configured user. Project and conversation scope need the matching startup context. Team Memories stay drafts until a human approves them. Do not approve sharing through agent tools.
@@ -47,6 +48,20 @@ func DefaultStorePath(home string) string {
 	return modern
 }
 func SetupConfig(s Service, binary string) (Setup, error) {
+	var e error
+	s.Store.Path, e = filepath.Abs(s.Store.Path)
+	if e != nil {
+		return Setup{}, e
+	}
+	if !s.Unattached {
+		s.Root, e = filepath.Abs(s.Root)
+		if e != nil {
+			return Setup{}, e
+		}
+		if s.Project == "" {
+			s.Project = s.Root
+		}
+	}
 	instructions, e := s.Instructions()
 	if e != nil {
 		return Setup{}, e
@@ -86,14 +101,27 @@ func WriteSetup(dir string, config Setup) error {
 		name string
 		data []byte
 	}{{"mcp.json", append(mcp, '\n')}, {"codex-mcp.toml", []byte(config.CodexTOML)}, {"AGENT_INSTRUCTIONS.md", []byte(config.Instructions + "\n")}, {"FIRST_TASK.txt", []byte(config.FirstTask + "\n")}, {"setup.json", append(full, '\n')}}
+	pending := files[:0]
 	for _, f := range files {
-		if _, e := os.Lstat(filepath.Join(dir, f.name)); e == nil {
-			return fmt.Errorf("refusing to overwrite %s; choose another --output directory", f.name)
+		path := filepath.Join(dir, f.name)
+		if info, e := os.Lstat(path); e == nil {
+			if !info.Mode().IsRegular() {
+				return fmt.Errorf("refusing to overwrite %s; choose another --output directory", f.name)
+			}
+			existing, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			if !bytes.Equal(existing, f.data) {
+				return fmt.Errorf("refusing to overwrite changed %s; choose another --output directory", f.name)
+			}
+			continue
 		} else if !os.IsNotExist(e) {
 			return e
 		}
+		pending = append(pending, f)
 	}
-	for _, f := range files {
+	for _, f := range pending {
 		p := filepath.Join(dir, f.name)
 		h, e := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if e != nil {
@@ -156,10 +184,92 @@ func Doctor(s Service) (Diagnostics, error) {
 		d.OK = false
 	}
 	d.Checks = append(d.Checks, Check{Name: "mcp_schema", OK: validSchema, Detail: "No invalid null required arrays"})
+	if s.Root != "" {
+		c, found, err := ConfigForRoot(s.Root)
+		if err != nil {
+			add("automation_config", err, "")
+		} else if found && c.Store == s.Store.Path && c.Identity == s.Identity && c.Project == s.Project && c.Conversation == s.Conversation && c.Unattached == s.Unattached {
+			var binaryErr error
+			info, err := os.Stat(c.Binary)
+			if err != nil || !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm()&0111 == 0) {
+				binaryErr = fmt.Errorf("Elephant binary is missing or not executable: %s; rerun elephant init with the installed binary", c.Binary)
+			}
+			add("automation_binary", binaryErr, c.Binary)
+			if len(c.Agents) == 0 {
+				add("automation_hooks", fmt.Errorf("no adapters configured; run elephant init"), "")
+			}
+			for _, agent := range c.Agents {
+				add(agent+"_hooks", checkAutomationHooks(c, agent), "Required Elephant hooks are installed; host approval must be checked in the agent")
+			}
+			if !c.Enabled {
+				d.Notes = append(d.Notes, "Automatic memory is paused. Resume with elephant automation --enabled=true.")
+			}
+		} else if found {
+			d.Notes = append(d.Notes, "Installed hooks use a different memory context. This check covers the requested store and identity; run doctor without context overrides to inspect the installed hooks.")
+		} else {
+			d.Notes = append(d.Notes, "Automatic hooks are not installed here. Run elephant setup --auto for Codex/Claude Code on macOS/Linux, or elephant setup --wizard for MCP files.")
+		}
+	}
 	if !d.OK {
 		return d, fmt.Errorf("one or more diagnostics failed")
 	}
 	return d, nil
+}
+
+func checkAutomationHooks(c AutomationConfig, agent string) error {
+	config, guidance, events, err := automationAdapter(agent)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(c.Root, config)
+	data, err := readConfigFile(path)
+	if err != nil {
+		return err
+	}
+	command := shellQuote(c.Binary) + " hook --config " + shellQuote(automationPath(c.Root)) + " --agent " + agent
+	// Use the installer's strict parser to reject malformed or ambiguous JSON.
+	if _, err = mergeHooks(data, command, events, automationPath(c.Root), agent); err != nil {
+		return fmt.Errorf("%s: %w; repair this file, then rerun elephant init", path, err)
+	}
+	var configData struct {
+		Hooks map[string][]struct {
+			Matcher string `json:"matcher"`
+			Hooks   []struct {
+				Type    string `json:"type"`
+				Command string `json:"command"`
+			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err = json.Unmarshal(data, &configData); err != nil {
+		return fmt.Errorf("%s: missing or invalid hooks; run elephant init", path)
+	}
+	for _, event := range events {
+		count := 0
+		for _, group := range configData.Hooks[event] {
+			if group.Matcher != "" && group.Matcher != "*" {
+				continue
+			}
+			for _, hook := range group.Hooks {
+				if hook.Type == "command" && hook.Command == command {
+					count++
+				}
+			}
+		}
+		if count != 1 {
+			return fmt.Errorf("%s: expected one Elephant %s hook, found %d; run elephant init", path, event, count)
+		}
+	}
+	data, err = readConfigFile(filepath.Join(c.Root, guidance))
+	if err != nil {
+		return err
+	}
+	if _, err = managedText(data, ""); err != nil {
+		return err
+	}
+	if !bytes.Contains(data, []byte(autoBegin)) || !bytes.Contains(data, []byte("Elephant hooks recall")) {
+		return fmt.Errorf("%s: Elephant guidance is missing; run elephant init", guidance)
+	}
+	return nil
 }
 func SelfTest() (Diagnostics, error) {
 	root, e := os.MkdirTemp("", "elephant-selftest-")

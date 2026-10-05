@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/
 irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
 ```
 
-Pin a version with `ELEPHANT_VERSION=v0.8.0-beta`. Or install manually:
+Pin a version with `ELEPHANT_VERSION=v0.9.0-beta`. See the [0.9.0-beta release notes](docs/releases/v0.9.0-beta.md). Or install manually:
 
 Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Releases are public betas (prereleases).
 
@@ -90,8 +90,9 @@ For Codex or Claude Code on macOS/Linux, run this in your project:
 
 ```sh
 elephant init
-elephant doctor
 ```
+
+`init` installs hooks and runs local health checks. You can also use `elephant setup --auto --agent codex` (or `claude` or `both`). Rerunning setup keeps the existing agent choice unless you pass `--agent`. Run `elephant doctor` later to check the store, hook files, guidance, and executable path.
 
 Restart your agent and approve its Elephant hooks through the host's normal approval flow. Work normally: hooks recall relevant memories, observe tool metadata, and request a short lesson review after the task. A saved lesson requires evidence and an acknowledged write; a task may produce no reusable lesson.
 

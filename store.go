@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -96,9 +97,29 @@ func sameMemory(a, b Memory) bool {
 	b.Writing = nil
 	a.Class = MemoryClass(a)
 	b.Class = MemoryClass(b)
+	a.Features, b.Features = canonicalLabels(a.Features), canonicalLabels(b.Features)
+	a.Requires, b.Requires = canonicalLabels(a.Requires), canonicalLabels(b.Requires)
+	a.Excludes, b.Excludes = canonicalLabels(a.Excludes), canonicalLabels(b.Excludes)
 	x, _ := json.Marshal(a)
 	y, _ := json.Marshal(b)
 	return string(x) == string(y)
+}
+
+// Label values already use case-insensitive set semantics during retrieval.
+// Apply the same semantics for retry detection without rewriting evidence.
+func canonicalLabels(labels map[string][]string) map[string][]string {
+	if len(labels) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(labels))
+	for key, values := range labels {
+		out[key] = []string{}
+		for value := range set(values) {
+			out[key] = append(out[key], value)
+		}
+		sort.Strings(out[key])
+	}
+	return out
 }
 func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	if m.Outcome == "" {
@@ -121,7 +142,7 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	m.Unhelpful = 0
 	m.Created = time.Now().UTC()
 	m.Updated = m.Created
-	err := s.transact(func(all []Memory, _ map[string]bool) (*Event, error) {
+	err := s.transactSQL(false, nil, func(tx *sql.Tx, _ []Memory, _ map[string]bool) (*Event, error) {
 		policy, e := s.LanguagePolicy()
 		if e != nil {
 			return nil, e
@@ -131,6 +152,18 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 			return nil, fmt.Errorf("STE target 100: %s Revise the summary. Source evidence stays unchanged.", writing.Issues[0].Message)
 		}
 		m.Writing = &writing
+		// Only exact evidence in this owner's scope can be a retry. Keep this
+		// lookup and the write in one transaction so concurrent retries agree.
+		all, e := readMemoryQuery(tx, `SELECT data FROM memories
+			WHERE tenant=? AND owner=? AND scope=? AND project=?
+			AND json_extract(data,'$.retired')=0
+			AND json_extract(data,'$.incident')=?
+			AND json_extract(data,'$.lesson')=?
+			AND json_extract(data,'$.source')=? ORDER BY id`,
+			m.Tenant, m.Owner, m.Scope, m.Project, m.Incident, m.Lesson, m.Source)
+		if e != nil {
+			return nil, e
+		}
 		var receipt *Experience
 		if len(task) > 0 && task[0] != nil {
 			t := task[0]

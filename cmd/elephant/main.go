@@ -57,6 +57,7 @@ func run() error {
 	text := f.String("text", "", "summary for local language checks")
 	output := f.String("output", "", "setup directory (default: ./elephant-setup); existing files are preserved")
 	wizard := f.Bool("wizard", false, "show the interactive setup steps")
+	autoSetup := f.Bool("auto", false, "setup: install automatic project hooks and check local health")
 	root := f.String("root", ".", "project directory")
 	project := f.String("project", "", "stable project ID (default absolute root)")
 	unattached := f.Bool("unattached", false, "no project: skip cwd/manifest profiling")
@@ -87,6 +88,12 @@ func run() error {
 	}
 	if f.NArg() != 0 {
 		return fmt.Errorf("unexpected positional argument %q; boolean flags use --helpful=false", f.Arg(0))
+	}
+	if *autoSetup {
+		if command != "setup" || *wizard || *output != "" {
+			return fmt.Errorf("--auto is for setup and cannot be combined with --wizard or --output")
+		}
+		command = "init"
 	}
 	abs, err := filepath.Abs(*root)
 	if err != nil {
@@ -155,6 +162,9 @@ func run() error {
 		}
 		if !seenFlags["budget"] {
 			*budget = c.Budget
+		}
+		if command == "init" && !seenFlags["agent"] && len(c.Agents) == 1 {
+			*agent = c.Agents[0]
 		}
 	}
 	if *unattached && *project != "" {
@@ -262,7 +272,12 @@ func run() error {
 		if e != nil {
 			return e
 		}
-		return printJSON(r)
+		d, e := memory.Doctor(svc)
+		r.Checks = d.Checks
+		if err := printJSON(r); err != nil {
+			return err
+		}
+		return e
 	case "automation":
 		var change *bool
 		if seenFlags["enabled"] {
