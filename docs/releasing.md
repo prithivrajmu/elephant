@@ -51,3 +51,5 @@ On Windows, compile `packaging/elephant.iss` with Inno Setup and `ReleaseDir` po
 ## npm package (`npx elephant-memory`)
 
 `npm/` holds a dependency-free launcher. It downloads the GitHub release matching its own `package.json` version, verifies the SHA-256 from `SHA256SUMS`, caches the binary in `~/.elephant/bin/<tag>`, installs it to `~/.local/bin` (Windows: `%LOCALAPPDATA%\Elephant\bin`) and passes any arguments through. After the GitHub release is published, set `npm/package.json` `version` to the release version (it must equal `Version` in `onboarding.go`) and run `npm publish --access public --tag beta` from `npm/`. Publishing is manual.
+
+The same npm package is a pi package (`pi` manifest in `npm/package.json`): `extensions/pi.js` registers the MCP server with `pi.registerMcpServer` and `skills/elephant` carries the agent workflow. `npx elephant-memory connect [pi|omp]` merges the `elephant` entry into `~/.pi/agent/mcp.json` or `~/.omp/agent/mcp.json` and a marked block into the matching `AGENTS.md`; it is idempotent and preserves other entries.

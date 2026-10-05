@@ -4,7 +4,30 @@
   "description": "Elephant: persistent experience for coding agents. Installs and runs the checksum-verified Elephant binary.",
   "license": "MIT",
   "repository": "github:prithivrajmu/elephant",
-  "bin": { "elephant-memory": "bin/elephant-memory.js" },
-  "files": ["bin"],
-  "engines": { "node": ">=18" }
+  "bin": {
+    "elephant-memory": "bin/elephant-memory.js"
+  },
+  "files": [
+    "bin",
+    "extensions",
+    "skills"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "pi-package",
+    "omp",
+    "mcp",
+    "coding-agent",
+    "memory"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/pi.js"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  }
 }
