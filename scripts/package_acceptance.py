@@ -7,6 +7,7 @@ import posixpath
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import zipfile
 from release_version import ROOT, VERSION
@@ -16,6 +17,9 @@ def verify_archive(archive):
         folder = archive.stem
         assert z.read(folder + '/VERSION').decode().strip() == VERSION
         sums = z.read(folder + '/SHA256SUMS').decode().splitlines()
+        assert folder + '/THIRD_PARTY_NOTICES' in z.namelist(), 'Missing third-party notices.'
+        assert 'THIRD_PARTY_NOTICES' in [row.split('  ', 1)[1] for row in sums], 'Third-party notices missing from SHA256SUMS.'
+        assert 'modernc.org/sqlite' in z.read(folder + '/THIRD_PARTY_NOTICES').decode(), 'Missing SQLite notice.'
         for row in sums:
             checksum, name = row.split('  ', 1)
             assert hashlib.sha256(z.read(folder + '/' + name)).hexdigest() == checksum
@@ -75,7 +79,7 @@ def verify_all():
     assert len(found) == 6, 'Expected all six platform archives.'
     for archive in found:
         folder = verify_archive(archive)
-        if archive.name.endswith('-linux-amd64.zip'):
+        if sys.platform == 'linux' and archive.name.endswith('-linux-amd64.zip'):
             with zipfile.ZipFile(archive) as z, tempfile.TemporaryDirectory(prefix='elephant-package-check-') as tmp:
                 z.extractall(tmp)
                 p = pathlib.Path(tmp) / folder
@@ -88,7 +92,7 @@ def verify_all():
                 subprocess.run(['sh', str(p/'install.sh')], env=env, check=True, capture_output=True)
                 subprocess.run([str(install_dir/'elephant'), 'selftest'], check=True, capture_output=True)
                 subprocess.run(['sh', str(p/'install.sh')], env=env, check=True, capture_output=True)
-    print('Six archive versions/checksums/docs and Linux amd64 execution passed.')
+    print('Six archive versions/checksums/docs/third-party notices passed; Linux amd64 execution runs on Linux only.')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
