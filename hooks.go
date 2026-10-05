@@ -40,6 +40,7 @@ type HookInput struct {
 	Response   json.RawMessage `json:"tool_response"`
 	StopActive bool            `json:"stop_hook_active"`
 	AgentID    string          `json:"agent_id"`
+	Background []any           `json:"background_tasks"`
 }
 type hookState struct {
 	Reviewed  bool     `json:"reviewed"`
@@ -48,7 +49,12 @@ type hookState struct {
 	Context   string   `json:"context,omitempty"`
 	Agent     string   `json:"agent,omitempty"`
 	Recalled  []string `json:"recalled,omitempty"`
+	// Signal marks a task with a failed tool call or a file edit; only those get a review.
+	Signal bool `json:"signal,omitempty"`
 }
+
+// editTools change files. Claude names first, then Codex.
+var editTools = map[string]bool{"Edit": true, "Write": true, "MultiEdit": true, "NotebookEdit": true, "apply_patch": true}
 
 func (s Store) observe(x Experience) error {
 	return s.transactSQL(false, []string{"experience:" + x.ID}, func(_ *sql.Tx, _ []Memory, seen map[string]bool) (*Event, error) {
@@ -150,9 +156,36 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 				x.Status = "failed"
 			}
 		}
+		if x.Status == "failed" || editTools[h.Tool] {
+			err = svc.Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
+				var state hookState
+				b, e := readConfigFile(statePath)
+				if e != nil {
+					return nil, e
+				}
+				if len(b) > 0 {
+					if e = json.Unmarshal(b, &state); e != nil {
+						return nil, e
+					}
+				}
+				if state.Signal {
+					return nil, nil
+				}
+				state.Signal = true
+				if e = safeParents(filepath.Dir(c.Store), statePath); e != nil {
+					return nil, e
+				}
+				b, _ = json.Marshal(state)
+				return nil, atomicLocalFile(statePath, b, 0600)
+			})
+			if err != nil {
+				return out, err
+			}
+		}
 		return out, svc.Store.observe(x)
 	case "Stop":
-		if h.StopActive {
+		// ponytail: a long-lived background task (e.g. a dev server) defers the review until the next task resets state.
+		if h.StopActive || len(h.Background) > 0 {
 			return out, nil
 		}
 		review := false
@@ -167,7 +200,7 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 					return nil, e
 				}
 			}
-			if state.Reviewed {
+			if state.Reviewed || !state.Signal {
 				return nil, nil
 			}
 			state.Reviewed = true
@@ -195,10 +228,10 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		if c.Unattached {
 			scope = "personal"
 		}
-		reason := reviewPrefix + " Review the observed work before you finish. Save zero to three useful lessons: a tested approach, a failure and its verified fix, or a confirmed convention. Use only observed evidence. Do not invent causes, outcomes or sources. Do not store secrets or transcripts. Skip recording if no durable lesson is justified. Use short, clear sentences. For each lesson, send JSON on stdin to this command:\n" + c.recordCommand() + "\nJSON fields: incident, lesson, source (actual test, review or tool evidence), class (win, lesson, warning or scar), scope (" + scope + " by default), features (signal names to string arrays). Add requires/excludes when a lesson depends on a condition. Use personal scope only for transferable lessons; do not promote to team scope. Report saved memory IDs or errors. A tool exit code alone is not a lesson. Do not mark recall helpful unless you applied it and observed the effect. When done, finish the user's response. This review runs once per task."
+		record := shellQuote(c.Binary) + " remember --config " + shellQuote(configPath) + " --task-session " + shellQuote(sessionKey) + " --task-id " + shellQuote(x.Task)
 		out["decision"] = "block"
-		reason = strings.Replace(reason, c.recordCommand(), c.recordCommand()+" --config "+shellQuote(configPath)+" --task-session "+shellQuote(sessionKey)+" --task-id "+shellQuote(x.Task), 1)
-		reason += " After reviewing, run this command and include its exact one-line output once in your final response:\n" + c.taskStatusCommand(sessionKey, x.Task) + "\nDo not invent counts. If status cannot be read, say Elephant: capture status unavailable. Do not confuse review requested with a saved lesson."
+		reason := reviewPrefix + " Save 0-3 lessons from this task: a tested approach, a verified fix, or a confirmed convention. Use only observed evidence; no secrets, no transcripts. A tool exit code alone is not a lesson. For each lesson, pipe JSON on stdin to:\n" + record +
+			"\nFields: incident, lesson, source (real test, review or tool evidence), class (win, lesson, warning or scar), scope (" + scope + " by default; personal only if transferable, never team), features (signal name to string array), optional requires/excludes. Then run this and put its one-line output once in your final response:\n" + c.taskStatusCommand(sessionKey, x.Task)
 		out["reason"] = reason
 		return out, nil
 	case "UserPromptSubmit":

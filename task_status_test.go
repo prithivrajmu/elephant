@@ -27,6 +27,7 @@ func TestTaskStatusAcknowledgedSavesAndRestart(t *testing.T) {
 	if _, e := TaskSummary(config, session, true); e == nil {
 		t.Fatal("completed review before request")
 	}
+	editCall(t, config, "codex")
 	hookCall(t, config, "codex", "Stop", nil)
 	if d, e := TaskSummary(config, session, false); e != nil || d.State != "review_incomplete" {
 		t.Fatal(d, e)
@@ -62,6 +63,7 @@ func TestTaskStatusAcknowledgedSavesAndRestart(t *testing.T) {
 	if e != nil || d.Saved != 0 || d.Recalled != 1 {
 		t.Fatal(d, e)
 	}
+	editCall(t, config, "codex")
 	hookCall(t, config, "codex", "Stop", nil)
 	d, e = TaskSummary(config, session, true)
 	if e != nil || d.State != "no_lesson" || !strings.Contains(d.Line, "no reusable lesson found") {
@@ -70,6 +72,7 @@ func TestTaskStatusAcknowledgedSavesAndRestart(t *testing.T) {
 }
 func TestTaskStatusFailurePauseAndIsolation(t *testing.T) {
 	svc, config, session := taskFixture(t)
+	editCall(t, config, "codex")
 	hookCall(t, config, "codex", "Stop", nil)
 	_, capture, e := CaptureForTask(config, session)
 	if e != nil {

@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
         assert hook(agent, "Stop") == {}
         assert hook(agent, "Stop", stop_hook_active=True) == {}
         # The host agent supplies extraction; simulate its exact stdin command.
-        command = review["reason"].split("this command:\n", 1)[1].split("\nJSON fields:", 1)[0]
+        command = review["reason"].split("pipe JSON on stdin to:\n", 1)[1].split("\nFields:", 1)[0]
         lesson = {"scope": "project", "class": "warning", "incident": "The pool test failed.",
                   "lesson": "Limit query concurrency to the connection pool size.",
                   "source": "Synthetic acceptance: bounded pool test passed after the fix.",
@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
         p = subprocess.run(shlex.split(command), input=json.dumps(lesson), text=True,
                            capture_output=True, check=True, cwd=project)
         memory = json.loads(p.stdout)
-        status_command = review["reason"].split("output once in your final response:\n", 1)[1].split("\nDo not invent counts", 1)[0]
+        status_command = review["reason"].split("final response:\n", 1)[1].strip()
         status_args = shlex.split(status_command)
         incomplete = subprocess.run(status_args[:-1] + ["--json"], capture_output=True, text=True, check=True)
         assert json.loads(incomplete.stdout)["state"] == "review_incomplete"
@@ -78,18 +78,20 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
         recalled = hook(agent, "UserPromptSubmit", prompt="Change query concurrency in the connection pool")
         context = recalled["hookSpecificOutput"]["additionalContext"]
         assert "Limit query concurrency" in context and len(context.encode()) <= 4000
+        hook(agent, "PostToolUse", tool_name="Edit", tool_use_id="edit-2")
         next_review = hook(agent, "Stop")
         assert next_review["decision"] == "block"
-        status_args = shlex.split(next_review["reason"].split("output once in your final response:\n", 1)[1].split("\nDo not invent counts", 1)[0])
+        status_args = shlex.split(next_review["reason"].split("final response:\n", 1)[1].strip())
         summary = subprocess.run(status_args + ["--json"], capture_output=True, text=True, check=True)
         summary = json.loads(summary.stdout)
         assert summary["recalled"] == 1 and summary["saved"] == 0 and summary["state"] == "no_lesson"
         hook(agent, "UserPromptSubmit", prompt="Task with invalid lesson")
+        hook(agent, "PostToolUse", tool_name="Edit", tool_use_id="edit-3")
         failed_review = hook(agent, "Stop")
-        failed_command = failed_review["reason"].split("this command:\n", 1)[1].split("\nJSON fields:", 1)[0]
+        failed_command = failed_review["reason"].split("pipe JSON on stdin to:\n", 1)[1].split("\nFields:", 1)[0]
         failed = subprocess.run(shlex.split(failed_command), input='{}', capture_output=True, text=True)
         assert failed.returncode != 0
-        status_args = shlex.split(failed_review["reason"].split("output once in your final response:\n", 1)[1].split("\nDo not invent counts", 1)[0])
+        status_args = shlex.split(failed_review["reason"].split("final response:\n", 1)[1].strip())
         failed_status = subprocess.run(status_args + ["--json"], capture_output=True, text=True, check=True)
         assert json.loads(failed_status.stdout)["state"] == "capture_failed"
     status = cli("automation")

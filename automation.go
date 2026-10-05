@@ -56,25 +56,6 @@ func ReadAutomation(path string) (AutomationConfig, error) {
 }
 
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
-func (c AutomationConfig) recordCommand() string {
-	args := []string{c.Binary, "remember", "--store", c.Store, "--tenant", c.Identity.Tenant, "--user", c.Identity.User, "--root", c.Root}
-	if c.Unattached {
-		args = append(args, "--unattached")
-	} else {
-		args = append(args, "--project", c.Project)
-	}
-	if c.Conversation != "" {
-		args = append(args, "--conversation", c.Conversation)
-	}
-	if c.Identity.Team != "" {
-		args = append(args, "--team", c.Identity.Team)
-	}
-	args = append(args, "--file", "-")
-	for i := range args {
-		args[i] = shellQuote(args[i])
-	}
-	return strings.Join(args, " ")
-}
 
 type InitResult struct {
 	Configured bool     `json:"configured"`
