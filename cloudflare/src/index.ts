@@ -9,8 +9,25 @@ import { envelopeSchema, toolSchemas, type Envelope, type ToolName, type Operati
 import { PersonalMemory } from "./storage";
 export { PersonalMemory, TeamMemory, EvidenceConnector };
 
-export interface Env extends AuthConfig,EvidenceEnv { MEMORY: DurableObjectNamespace<PersonalMemory>; TEAM?:DurableObjectNamespace<TeamMemory>; TEAM_MEMBERS?:string; EVIDENCE?:DurableObjectNamespace<EvidenceConnector> }
+export interface Env extends AuthConfig,EvidenceEnv {
+  MEMORY: DurableObjectNamespace<PersonalMemory>;
+  TEAM?: DurableObjectNamespace<TeamMemory>;
+  TEAM_MEMBERS?: string;
+  EVIDENCE?: DurableObjectNamespace<EvidenceConnector>;
+  RATE_LIMITER?: RateLimit;
+  RATE_LIMIT_DISABLED?: string;
+}
 const MAX_REQUEST_BYTES = 65536;
+// Workers rate-limit periods are at most 60 seconds; the API exposes no reset time.
+const RATE_LIMIT_RETRY_SECONDS = 60;
+async function limitRequest(env: Env, auth: Authenticated) {
+  if (!env.RATE_LIMITER) {
+    if (env.RATE_LIMIT_DISABLED === "true") return;
+    throw new AuthError(503, "Hosted request rate limiting is not configured");
+  }
+  const { success } = await env.RATE_LIMITER.limit({ key: `${auth.principal.tenant}:${auth.principal.user}` });
+  if (!success) throw new AuthError(429, "Authenticated request rate limit exceeded");
+}
 const writes = new Set<ToolName>(["record_memory", "feedback_memory", "forget_memory"]);
 const descriptions: Record<ToolName, string> = {
   profile_memory: "Return the client-supplied hosted profile. The server cannot inspect local manifests.",
@@ -100,6 +117,7 @@ export default {
       if (url.pathname === "/v1/operations" && request.method !== "POST") return new Response("Method not allowed", { status: 405 });
       if (!env.MEMORY) throw new AuthError(503, "Hosted storage is not configured");
       const auth = await authenticate(request, env);
+      await limitRequest(env, auth);
       if((request.headers.has("X-Elephant-User")&&request.headers.get("X-Elephant-User")!==auth.principal.user)||
         (request.headers.has("X-Elephant-Tenant")&&request.headers.get("X-Elephant-Tenant")!==auth.principal.tenant))
         throw new AuthError(403,"Unexpected sync account");
@@ -155,6 +173,7 @@ export default {
       const status = e instanceof AuthError ? e.status : 503;
       const message = e instanceof AuthError ? e.message : "Hosted memory is unavailable; retry writes with the same operation_id";
       const headers = new Headers({ "Cache-Control": "no-store" });
+      if (status === 429) headers.set("Retry-After", String(RATE_LIMIT_RETRY_SECONDS));
       if (status === 401) headers.set("WWW-Authenticate", `Bearer resource_metadata="${env.PUBLIC_ORIGIN}/.well-known/oauth-protected-resource/mcp"`);
       return Response.json({ error: message }, { status, headers });
     }

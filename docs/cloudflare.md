@@ -24,6 +24,60 @@ The version 1 operation envelope is `{version, tool, arguments}`. Mutating tool 
 
 Private project and conversation scopes are inside the owning user's object. Reviewed team snapshots use a separate tenant/team object with server-configured membership and independent review authority. Imports remain local drafts until approved. Evidence reads use a separate tenant/user object and explicit source authorization. Do not reinterpret matching project labels as permission to share.
 
+## Authenticated request rate limiting
+
+The `RATE_LIMITER` Workers Rate Limiting binding is checked after JWT verification and the subject allowlist, **before reading the request body or accessing any Durable Object**. Its key is the server-configured `TENANT_ID` followed by `:` and the verified JWT `sub`. Tokens, client headers and request arguments cannot choose another subject's key. All authenticated requests to `/mcp`, `/v1/operations`, `/v1/sync`, `/v1/team` and `/v1/evidence` share that subject's allowance, including retries and malformed requests. This is a request limit, not a tool-call or daily spending quota; an MCP request can contain more than one operation.
+
+`cloudflare/wrangler.jsonc` defaults to 60 requests per 60 seconds per key:
+
+```jsonc
+"ratelimits": [{
+  "name": "RATE_LIMITER",
+  "namespace_id": "1001", // Example only; choose an unused numeric namespace in your account.
+  "simple": { "limit": 60, "period": 60 }
+}]
+```
+
+Before deployment, replace the example namespace ID with an operator-chosen numeric ID, unique to this limiter in your account (not an account or zone ID). Keep it stable across deployments to retain the same limiter namespace; use separate namespaces for independent environments. Tune `simple.limit` and `simple.period` against observed traffic, CPU, Durable Object rows and outbound evidence costs. Supported periods are 10 or 60 seconds. Cloudflare rate limiting is permissive, location-local and eventually consistent, **not a precise global counter or protection against exhausting account quotas**. Evidence requests use the same limiter; this PR does not add a separate evidence allowance.
+
+A rejected request returns HTTP 429, JSON `{"error":"Authenticated request rate limit exceeded"}`, `Cache-Control: no-store` and `Retry-After: 60`. The binding does not expose an exact reset time, so 60 seconds is a conservative delay for either supported period, not a guarantee the next request succeeds. Clients should back off with jitter, honor the header and preserve write `operation_id` / evidence `request_id` values on retry.
+
+A missing binding fails closed with HTTP 503 before body processing or storage access. A binding error also fails closed with 503. For local development **only**, explicitly set `RATE_LIMIT_DISABLED="true"` in local environment variables when the binding is absent; other spellings do not bypass the check. The flag never bypasses a present binding. Do not set it in production. The tests inject a deterministic allow stub, then replace it per request to test denial and missing-binding behavior; they do not claim to verify Cloudflare's distributed enforcement. `/health` and OAuth protected-resource metadata remain public and do not require the binding.
+
+### Edge protection for unauthenticated traffic
+
+JWT verification still costs Worker CPU, and unauthenticated traffic has no trusted subject key. Configure a Cloudflare WAF rate-limiting rule on a custom-domain route **before production exposure**, counting all requests by source IP to the protected paths (including requests with bogus Authorization headers). For example, use this matching expression, replacing the hostname:
+
+```text
+(http.host eq "memory.example.com" and http.request.uri.path in {"/mcp" "/v1/operations" "/v1/sync" "/v1/team" "/v1/evidence"})
+```
+
+Choose an IP threshold and mitigation duration for your plan and expected shared-IP clients (a small pilot might start at 120 requests per IP per minute, blocking for 60 seconds, where the plan supports it). Counting only requests missing Authorization would let forged headers bypass edge protection. Also protect public discovery/health routes with suitable edge rules if abused. Rule availability, periods and counting characteristics depend on the Cloudflare plan; verify support rather than assuming Workers Free includes a particular WAF feature. If you cannot configure equivalent edge protection, restrict exposure and do not treat the subject limiter as an unauthenticated-traffic defense. WAF rules on a zone do not protect a separate `workers.dev` hostname: pin `PUBLIC_ORIGIN` to the protected custom domain and disable `workers_dev` in production, or separately protect every exposed route.
+
+Rate Limiting API source: https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+
+## Lifetime caps and operator recovery
+
+These application storage caps are **lifetime totals**, independent of the short request-limit window and Cloudflare's daily quotas. They do not reset at midnight or on redeploy/restart. Current limits and behavior:
+
+| Object | Lifetime cap | What still works at the cap |
+| --- | --- | --- |
+| Personal tenant/subject | 1,000 stored memories (including retired); 10,000 ordinary mutation receipts shared by operations and sync | Reads, sync pulls and exact receipt replays remain available. At the memory cap, feedback/updates can continue if receipts remain; no new memories can be stored. At the receipt cap, new ordinary mutations fail; active-memory retirements have a reserve up to 11,000 total receipts. |
+| Tenant/team | 1,000 proposals (including retired); 10,000 ordinary propose/review receipts | Pulls and exact replays remain available. At the proposal cap, reviews can continue if receipts remain. Active-proposal retirement has a reserve up to 11,000 total receipts. |
+| Evidence tenant/subject | 1,000 evidence receipts | Existing `request_id` replays return provenance only, without another external fetch; new reads fail. |
+
+Cap failures on the versioned HTTP routes return 422 (evidence returns the generic evidence-read failure); MCP tools report an error result. The object is not completely unreadable at a cap, but capacity does not recover by waiting. `forget_memory`, sync tombstones and team retirement remove items from active recall/sharing, **not from storage or lifetime counters**. Users cannot free capacity through retirement. Exact retries do not consume another receipt; new operation IDs can. The withdrawal reserve permits only active-item retirement after ordinary receipts are exhausted, not repeated retirements under new IDs. No configurable runtime cap increase, receipt-pruning API, reset endpoint or physical-deletion API exists in this release.
+
+For an exhausted pilot object, an operator can move forward using the existing identity/configuration boundaries, not an in-place reset:
+
+1. Pause new writes/reads that would allocate receipts. Keep the old identity available only as needed for authorized export and outstanding retries. Export needed personal data via the existing sync pull workflow and retain local backups before changing access; evidence receipts contain provenance, not the external content. Retire any team snapshots that should no longer be shared separately—personal retirement does not withdraw team copies.
+2. For personal/evidence capacity, provision a **new verified OAuth subject** for the user in the issuer and replace the old entry in `AUTH_SUBJECTS` when export/retries are complete. Object names are `[TENANT_ID, sub]`; there is no subject-alias/user-mapping setting. Issue a token for the new subject and update any `TEAM_MEMBERS` member/reviewer entries and `EVIDENCE_CONNECTORS` user allowlists / `EVIDENCE_CREDENTIALS` subject keys. Check access and scopes before resuming. Rotating a token with the same `sub` does not create new capacity.
+3. For an exhausted team object, provision a **new team name** in `TEAM_MEMBERS` and update clients to use it. Rotating an author's subject alone does not reset a team object, which is keyed by `[TENANT_ID, team]`. Re-propose only selected active memories and require independent review again; old reviews do not transfer.
+4. Start with an empty object or selectively sync reviewed, active personal memories into the new subject (new-object `expected_revision: 0`, fresh operation IDs). Reset client sync cursors and reconcile local revision state for the new account/team before pushing. Preserve backups and do not blindly import 1,000 entries, retired rows, receipts or old authority. A full import to the old cap immediately consumes the new capacity. Memories, feedback, receipts, evidence history and team approval are not automatically migrated.
+5. Verify the new identity's isolation and successful operations, then remove old access/configuration entries as appropriate. The old Durable Object and its data still exist; this workaround is not deletion or a reset of the old object. Changing `TENANT_ID` would affect every subject and team in that tenant, so it is not a per-user recovery mechanism.
+
+**Follow-up:** design an authorized, audited retention/reset workflow with export, physical deletion, receipt expiry and an explicit idempotency/retry horizon. Until that exists, use conservative pilot traffic and monitor growth; raising hardcoded caps requires a separately reviewed code change and capacity measurements, not an undocumented config knob.
+
 ## Free-tier budget
 
 Checked against Cloudflare documentation on 2026-10-04. These are account-level allocations, shared with other usage.
