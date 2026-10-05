@@ -56,7 +56,8 @@ def run_native(archive):
         env = os.environ.copy()
         env['ELEPHANT_INSTALL_DIR'] = str(install_dir)
         env['HOME'] = str(home)
-        env['USERPROFILE'] = str(home)
+        if goos != 'windows':
+            env['USERPROFILE'] = str(home)  # overriding it on Windows breaks PowerShell module discovery (Get-FileHash)
         env['LOCALAPPDATA'] = str(localapp)
         if goos == 'windows':
             subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(extracted / 'install.ps1')], env=env, check=True)
