@@ -17,6 +17,7 @@ func TestThirdPartyNotices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	noticesText := strings.ReplaceAll(string(notices), "\r\n", "\n") // tolerate CRLF checkouts on Windows
 	requires := make(map[string]string)
 	inRequire := false
 	scanner := bufio.NewScanner(strings.NewReader(string(mod)))
@@ -51,7 +52,7 @@ func TestThirdPartyNotices(t *testing.T) {
 
 	// Each module section is the generator's linked-module manifest.
 	linked := make(map[string]string)
-	for _, line := range strings.Split(string(notices), "\n") {
+	for _, line := range strings.Split(noticesText, "\n") {
 		if !strings.HasPrefix(line, "=== ") || !strings.HasSuffix(line, " ===") {
 			continue
 		}
@@ -88,11 +89,11 @@ func TestThirdPartyNotices(t *testing.T) {
 			t.Errorf("missing linked module %s in THIRD_PARTY_NOTICES", module)
 		}
 	}
-	if !strings.Contains(string(notices), "=== Go standard library/runtime ===\nSPDX license identifier (guess): BSD-3-Clause\n\n--- LICENSE ---\nCopyright") {
+	if !strings.Contains(noticesText, "=== Go standard library/runtime ===\nSPDX license identifier (guess): BSD-3-Clause\n\n--- LICENSE ---\nCopyright") {
 		t.Error("missing Go standard library/runtime LICENSE section")
 	}
 	for _, text := range []string{"--- SQLITE-LICENSE ---", "SQLite Is Public Domain", "--- LICENSE-3RD-PARTY.md ---", "musl as a whole is licensed"} {
-		if !strings.Contains(string(notices), text) {
+		if !strings.Contains(noticesText, text) {
 			t.Errorf("missing embedded third-party notice %q", text)
 		}
 	}
