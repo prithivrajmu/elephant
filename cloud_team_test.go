@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -58,5 +59,35 @@ func TestTeamCloudRequiresLocalReviewAndPropagatesWithdrawal(t *testing.T) {
 	all, _ = s.All()
 	if !all[0].Retired || all[0].Sharing.Revision != 4 {
 		t.Fatal("withdrawal did not propagate")
+	}
+}
+
+func TestTeamCloudBodiesOmitLocalProjectPaths(t *testing.T) {
+	id, _, _ := fixture()
+	f, _, o := newCloudFixture(t)
+	root := t.TempDir()
+	projectPath := filepath.Join(root, "private-repo")
+	s := Store{Path: filepath.Join(root, "m.sqlite")}
+	saved := recordSyncFixture(t, s, projectPath, "Bound query concurrency to available pool capacity")
+	if _, e := s.SyncCloud(id, o); e != nil {
+		t.Fatal(e)
+	}
+	request, _ := json.Marshal(map[string]any{"action": "propose", "operation_id": "proposal-1", "team": "platform", "memory_id": saved.ID})
+	if _, e := TeamCloud(o, request); e != nil {
+		t.Fatal(e)
+	}
+	peer := Store{Path: filepath.Join(t.TempDir(), "peer.sqlite")}
+	staged, e := peer.PullTeamCloud(id, o, "platform")
+	if e != nil || len(staged) != 1 {
+		t.Fatalf("team pull %v %v", staged, e)
+	}
+	if got := staged[0].Memory.Project; got != cloudProjectID(o.Remote.Tenant, projectPath) {
+		t.Fatalf("team snapshot project %q", got)
+	}
+	bodies := f.allBodies()
+	for _, leak := range []string{projectPath, root, "/Users/", "private-repo"} {
+		if strings.Contains(bodies, leak) {
+			t.Fatalf("team request bodies contain local path %q", leak)
+		}
 	}
 }
