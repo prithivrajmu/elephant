@@ -18,6 +18,28 @@ Elephant stores source-backed lessons from development work and recalls relevant
 
 ## Installation
 
+Fastest (needs Node 18+; downloads and checksum-verifies the binary):
+
+```sh
+npx elephant-memory          # install
+npx elephant-memory init     # in a project: enable automatic memory for Codex/Claude Code
+npx elephant-memory connect  # pi and omp: register the MCP server and guidance (user-level, all projects)
+```
+
+pi users can instead run `pi install npm:elephant-memory`, which registers the MCP server and an `elephant` skill with no config edits.
+
+Or one line without Node (verifies the release checksum, installs to `~/.local/bin`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.sh | sh
+```
+
+```powershell
+irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
+```
+
+Pin a version with `ELEPHANT_VERSION=v0.8.0-beta`. Or install manually:
+
 Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Releases are public betas (prereleases).
 
 | Computer | Archive platform |

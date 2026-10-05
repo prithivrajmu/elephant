@@ -4,9 +4,9 @@
 
 `onboarding.go` is the version source. `scripts/release_version.py` derives archive names and native package versions. Add notes at `docs/releases/vVERSION.md`, update the README's release link and validate installation instructions for each supported platform. Pilot versions publish as prereleases.
 
-Release builds use the `toolchain go1.27.1` line in `go.mod`. CI installs that exact patch with `go-version: '1.27.1'`. `actions/setup-go` reads only the `go` directive from `go.mod`, not `toolchain`, so the workflow does not use `go-version-file`. A separate minimum-Go job runs `go vet` and `go test` on Go 1.25.x with `GOTOOLCHAIN=local`, so the `go 1.25.0` floor is compiled instead of being upgraded to the toolchain line.
+Release builds use the `toolchain go1.27.1` line in `go.mod`. CI installs that exact patch with `go-version: '1.27.1'`. `actions/setup-go` reads only the `go` directive from `go.mod`, not `toolchain`, so the workflow does not use `go-version-file`. A separate minimum-Go job runs `go vet` and `go test` on Go 1.26.x with `GOTOOLCHAIN=local`, so the `go 1.26.0` floor is compiled instead of being upgraded to the toolchain line.
 
-Actions in `.github/workflows/validate.yml` are pinned to full commit SHAs. Dependabot opens weekly pull requests for `github-actions` and `gomod` so those pins and module requirements can be updated deliberately.
+Actions in `.github/workflows/validate.yml` are pinned to full commit SHAs. Dependabot is disabled; update pins and module requirements by hand.
 
 ## Reproducible packages
 
@@ -47,3 +47,9 @@ python3 scripts/build_installers.py --format pkg --arch arm64
 ```
 
 On Windows, compile `packaging/elephant.iss` with Inno Setup and `ReleaseDir` pointing to the Windows release folder. Set `Architecture=arm64` for ARM64; the default is `x64compatible`. Native installers preserve the README and nested documentation layout. Signing, notarization, Homebrew and WinGet publication are future work; do not advertise them as available until published and tested.
+
+## npm package (`npx elephant-memory`)
+
+`npm/` holds a dependency-free launcher. It downloads the GitHub release matching its own `package.json` version, verifies the SHA-256 from `SHA256SUMS`, caches the binary in `~/.elephant/bin/<tag>`, installs it to `~/.local/bin` (Windows: `%LOCALAPPDATA%\Elephant\bin`) and passes any arguments through. After the GitHub release is published, set `npm/package.json` `version` to the release version (it must equal `Version` in `onboarding.go`) and run `npm publish --access public --tag beta` from `npm/`. Publishing is manual.
+
+The same npm package is a pi package (`pi` manifest in `npm/package.json`): `extensions/pi.js` registers the MCP server with `pi.registerMcpServer` and `skills/elephant` carries the agent workflow. `npx elephant-memory connect [pi|omp]` merges the `elephant` entry into `~/.pi/agent/mcp.json` or `~/.omp/agent/mcp.json` and a marked block into the matching `AGENTS.md`; it is idempotent and preserves other entries.

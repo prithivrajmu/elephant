@@ -4,7 +4,7 @@ See [SQL retrieval and benchmarks](retrieval.md) for scoped recall selection.
 
 Elephant 0.6 uses SQLite with WAL, `synchronous=FULL`, foreign keys and a 3-second busy timeout. Independent CLI, MCP and dashboard processes share the same local store. Readers use snapshots; writers use `BEGIN IMMEDIATE`. A callback runs once, so contention does not replay hook side effects.
 
-The pinned CGo-free `modernc.org/sqlite` v1.48.1 bundles SQLite 3.51.3, including its WAL-reset fix. The module requires Go 1.25+. CI uses Go 1.27. No database daemon, C compiler or separate SQLite installation is required.
+The pinned CGo-free `modernc.org/sqlite` v1.60.1 bundles SQLite 3.53.4, including its WAL-reset fix. The module requires Go 1.26+. CI uses Go 1.27. No database daemon, C compiler or separate SQLite installation is required.
 
 ## Paths and migration
 
@@ -54,6 +54,6 @@ Corrupt SQLite databases and unsupported schema versions fail explicitly. Run `d
 ## References
 
 - [SQLite WAL](https://www.sqlite.org/wal.html)
-- [SQLite 3.51.3 fixes](https://sqlite.org/releaselog/3_51_3.html)
+- [SQLite 3.53.4 fixes](https://sqlite.org/releaselog/3_51_3.html)
 - [SQLite VACUUM INTO](https://www.sqlite.org/lang_vacuum.html)
 - [Pinned Go driver](https://pkg.go.dev/modernc.org/sqlite@v1.48.1)

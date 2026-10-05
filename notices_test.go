@@ -92,7 +92,7 @@ func TestThirdPartyNotices(t *testing.T) {
 	if !strings.Contains(noticesText, "=== Go standard library/runtime ===\nSPDX license identifier (guess): BSD-3-Clause\n\n--- LICENSE ---\nCopyright") {
 		t.Error("missing Go standard library/runtime LICENSE section")
 	}
-	for _, text := range []string{"--- SQLITE-LICENSE ---", "SQLite Is Public Domain", "--- LICENSE-3RD-PARTY.md ---", "musl as a whole is licensed"} {
+	for _, text := range []string{"--- LICENSE-SQLITE ---", "SQLite Is Public Domain", "--- LICENSE-3RD-PARTY.md ---", "musl as a whole is licensed"} {
 		if !strings.Contains(noticesText, text) {
 			t.Errorf("missing embedded third-party notice %q", text)
 		}
