@@ -105,8 +105,13 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 		m.Outcome = OutcomeForClass(m.Class)
 	}
 	m.Class = MemoryClass(m)
+	// Preserve the authored subject for case-sensitive credential signatures.
+	screening := m
 	m.Subject = strings.ToLower(strings.Join(strings.Fields(m.Subject), " "))
 	if err := Validate(m); err != nil {
+		return m, err
+	}
+	if err := ScreenSensitive(screening); err != nil {
 		return m, err
 	}
 	m.ID = newID()
