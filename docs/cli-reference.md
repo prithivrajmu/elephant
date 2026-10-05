@@ -68,7 +68,7 @@ Recall still scans current memories. Alternative-advice metadata can add worst-c
 
 ## Conversations without a project
 
-Use `--unattached --conversation CONVERSATION_ID` with record, recall, MCP or UI. The project field stays empty and the profiler never scans the ambient working directory. Personal memories remain private and reusable across your conversations; conversation scope restricts them to the exact conversation ID. `recall --task` requires an exact content-term match, while `recall --initialize` without a task explicitly allows known-profile discovery. See [Architecture review](reviews/architecture-review.md) for findings, revised math, examples and the connection roadmap.
+Use `--unattached --conversation CONVERSATION_ID` with record, recall, MCP or UI. The project field stays empty and the profiler never scans the ambient working directory. Personal memories remain private and reusable across your conversations; conversation scope restricts them to the exact conversation ID. `recall --task` requires an exact content-term match, while `recall --initialize` without a task explicitly allows known-profile discovery. See [Architecture](architecture.md) for the retrieval math and the connection roadmap.
 
 ```sh
 ./elephant record --unattached --conversation design-talk --file examples/untagged-lesson.json

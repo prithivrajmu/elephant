@@ -84,7 +84,7 @@ The deploy command is explicit. Missing auth configuration fails closed. Keep th
 - Retiring a memory hides it from recall. Historical data, tokens and receipts remain. This is not a physical deletion API.
 - Hosted profiles are explicit client assertions. The Worker cannot inspect local manifests, observe local agent tools or access evidence paths on a laptop.
 - Hosted writing checks do not implement the local configurable STE guide. A nonempty source is required; its presence does not prove that the source or lesson is correct.
-- Local hooks, local-to-cloud sync, shared team approval, external MCP connectors and a hosted dashboard are follow-up work. Installing this package does not change `elephant init` or upload existing memories.
+- Explicit local-to-cloud sync, reviewed team sharing and external MCP evidence connectors are implemented, as described below. Local hooks and a hosted dashboard are not part of this package. Installing this package does not change `elephant init` or upload existing memories.
 
 See [Cloudflare architecture and budget](../docs/cloudflare.md).
 
