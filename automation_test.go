@@ -46,6 +46,12 @@ func hookCall(t *testing.T, config, agent, event string, extra map[string]any) m
 	}
 	return out
 }
+
+// editCall gives the current task review signal.
+func editCall(t *testing.T, config, agent string) {
+	t.Helper()
+	hookCall(t, config, agent, "PostToolUse", map[string]any{"tool_name": "Edit", "tool_use_id": newID()})
+}
 func TestInitPreservesConfigAndIsIdempotent(t *testing.T) {
 	svc, config, binary := autoFixture(t)
 	p := filepath.Join(svc.Root, ".claude", "settings.local.json")
@@ -139,6 +145,7 @@ func TestAutomaticLifecycle(t *testing.T) {
 		if r = hookCall(t, config, agent, "Stop", map[string]any{"stop_hook_active": true}); len(r) != 0 {
 			t.Fatal("active stop loop")
 		}
+		editCall(t, config, agent)
 		if r = hookCall(t, config, agent, "Stop", nil); r["decision"] != "block" {
 			t.Fatal("next task lacks review")
 		}
@@ -213,6 +220,7 @@ func TestHooksPauseAndIdentityIsolation(t *testing.T) {
 	}
 	resumed := true
 	Automation(svc.Root, &resumed)
+	editCall(t, config, "codex")
 	if r := hookCall(t, config, "codex", "Stop", nil); r["decision"] != "block" {
 		t.Fatal("resume failed")
 	}
@@ -253,12 +261,39 @@ func TestUnanchoredAutomaticMemory(t *testing.T) {
 		t.Fatal(e)
 	}
 	hookCall(t, r.Config, "claude", "SessionStart", nil)
+	editCall(t, r.Config, "claude")
 	result := hookCall(t, r.Config, "claude", "Stop", nil)
 	if !strings.Contains(result["reason"].(string), "personal by default") {
 		t.Fatal("unanchored scope wrong")
 	}
 	d, e := svc.Store.Dashboard(svc.Identity, Profile{})
-	if e != nil || d.ExperienceCount != 2 {
+	if e != nil || d.ExperienceCount != 3 {
 		t.Fatal("missing unanchored experiences", e)
+	}
+}
+
+func TestStopReviewsOnlyFinishedTasksWithSignal(t *testing.T) {
+	_, config, _ := autoFixture(t)
+	hookCall(t, config, "claude", "UserPromptSubmit", map[string]any{"prompt": "Explain the hook flow"})
+	hookCall(t, config, "claude", "PostToolUse", map[string]any{"tool_name": "Read", "tool_use_id": "r1", "tool_response": map[string]any{"exit_code": 0}})
+	if r := hookCall(t, config, "claude", "Stop", nil); len(r) != 0 {
+		t.Fatal("reviewed a read-only task", r)
+	}
+	hookCall(t, config, "claude", "PostToolUseFailure", map[string]any{"tool_name": "Bash", "tool_use_id": "b1"})
+	if r := hookCall(t, config, "claude", "Stop", map[string]any{"background_tasks": []any{map[string]any{"id": "agent-1"}}}); len(r) != 0 {
+		t.Fatal("reviewed while background work runs", r)
+	}
+	r := hookCall(t, config, "claude", "Stop", nil)
+	if r["decision"] != "block" {
+		t.Fatal("failed tool call lacks review", r)
+	}
+	reason := r["reason"].(string)
+	if strings.Contains(reason, "--store") || !strings.Contains(reason, "remember --config") || strings.Count(reason, "\n") > 4 {
+		t.Fatal("review prompt not compact", reason)
+	}
+	hookCall(t, config, "codex", "UserPromptSubmit", map[string]any{"prompt": "Fix a bug"})
+	hookCall(t, config, "codex", "PostToolUse", map[string]any{"tool_name": "Bash", "tool_use_id": "c1", "tool_response": map[string]any{"exit_code": 2}})
+	if r := hookCall(t, config, "codex", "Stop", nil); r["decision"] != "block" {
+		t.Fatal("nonzero exit lacks review", r)
 	}
 }

@@ -19,7 +19,7 @@ After that, work normally. You do not need to ask for recall or remind the agent
 | Session start | Fingerprint the project and recall relevant project knowledge. |
 | Task submitted | Recall against the current task within a 4,000-byte default budget. |
 | Tool returns | Save an Experience with the tool name, status and explicit exit code when supplied. |
-| Agent finishes | Request one review of observed work. The agent can save zero to three useful lessons, then emit one factual task-status line. |
+| Agent finishes | Request one review only when the task had a failed tool call or a file edit and no background task is still running. Read-only tasks are not reviewed. The agent can save zero to three useful lessons, then emit one factual task-status line. |
 | Next related task | Recall the saved lesson if its scope, task terms and conditions match. |
 
 The finish hook continues the agent once to perform its review. It does not repeatedly block completion. It respects the host's `stop_hook_active` guard and also keeps a local per-session review guard. A new user task resets the guard. Hook errors report a warning and let the agent continue.
