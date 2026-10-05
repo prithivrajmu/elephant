@@ -43,19 +43,20 @@ func (s Store) Recall(id Identity, q Request) (Result, error) {
 			return nil, err
 		}
 		result = Recall(all, id, q, time.Now())
+		admitted := []Memory{}
+		for _, m := range all {
+			if visible(m, id, q.Profile.Project, q.Profile.Conversation) && applicable(m, q.Profile) && discoveryEligible(m, q) {
+				admitted = append(admitted, m)
+			}
+		}
+		alternatives := indexAlternatives(admitted)
 		baseline := 0
 		for _, m := range all {
 			if visible(m, id, q.Profile.Project, q.Profile.Conversation) && applicable(m, q.Profile) {
 				_, matches := similarity(m.Features, q.Profile.Features)
 				h := Hit{Matched: matches, Confidence: (2 + float64(m.Helpful)) / (4 + float64(m.Helpful+m.Unhelpful)), Observations: m.Helpful + m.Unhelpful}
 				if m.Subject != "" && discoveryEligible(m, q) {
-					for _, n := range all {
-						if n.ID != m.ID && n.Subject == m.Subject && n.Lesson != m.Lesson && visible(n, id, q.Profile.Project, q.Profile.Conversation) && applicable(n, q.Profile) && discoveryEligible(n, q) {
-							h.Alternatives = append(h.Alternatives, n.ID)
-						}
-					}
-					sort.Strings(h.Alternatives)
-					h.Conflict = len(h.Alternatives) > 0
+					alternatives.annotate(m, &h)
 				}
 				baseline += len(renderEntry(m, h))
 			}

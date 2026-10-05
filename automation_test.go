@@ -83,6 +83,78 @@ func TestInitPreservesConfigAndIsIdempotent(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestDoctorChecksHooksAndInitRepairsThem(t *testing.T) {
+	svc, _, binary := autoFixture(t)
+	if d, err := Doctor(svc); err != nil || !d.OK {
+		t.Fatalf("healthy install: %+v %v", d, err)
+	}
+	path := filepath.Join(svc.Root, ".codex", "hooks.json")
+	if err := os.WriteFile(path, []byte(`{"permissions":{"keep":true},"hooks":{}}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	d, err := Doctor(svc)
+	if err == nil || d.OK {
+		t.Fatal("doctor missed missing hooks")
+	}
+	isolated := svc
+	isolated.Store.Path = filepath.Join(t.TempDir(), "other.sqlite")
+	if isolatedCheck, err := Doctor(isolated); err != nil || !isolatedCheck.OK {
+		t.Fatalf("unrelated installed hooks broke diagnostics for an explicit store: %+v %v", isolatedCheck, err)
+	}
+	found := false
+	for _, check := range d.Checks {
+		if check.Name == "codex_hooks" && !check.OK && strings.Contains(check.Detail, "elephant init") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("missing repair instruction: %+v", d)
+	}
+	if _, err = InitAutomation(svc, binary, "codex", 4000); err != nil {
+		t.Fatal(err)
+	}
+	if d, err = Doctor(svc); err != nil || !d.OK {
+		t.Fatalf("repair failed: %+v %v", d, err)
+	}
+	data, _ := os.ReadFile(path)
+	if !bytes.Contains(data, []byte("permissions")) {
+		t.Fatal("repair removed unrelated configuration")
+	}
+	c, err := ReadAutomation(automationPath(svc.Root))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Binary = filepath.Join(svc.Root, "missing-elephant")
+	data, _ = json.Marshal(c)
+	if err = os.WriteFile(automationPath(svc.Root), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if d, err = Doctor(svc); err == nil || d.OK {
+		t.Fatal("doctor missed stale executable")
+	}
+}
+
+func TestInitRejectsUnavailableStoreBeforeInstallingHooks(t *testing.T) {
+	root := t.TempDir()
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	blocker := filepath.Join(root, "not-a-directory")
+	if err = os.WriteFile(blocker, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	svc := Service{Root: root, Project: "test", Store: Store{Path: filepath.Join(blocker, "memory.sqlite")}, Identity: Identity{Tenant: "local", User: "me"}}
+	if _, err = InitAutomation(svc, binary, "codex", 4000); err == nil {
+		t.Fatal("unavailable store accepted")
+	}
+	for _, name := range []string{".codex/hooks.json", ".elephant/automation.json", "AGENTS.md", ".gitignore"} {
+		if _, err = os.Stat(filepath.Join(root, name)); !os.IsNotExist(err) {
+			t.Fatalf("failed setup installed %s", name)
+		}
+	}
+}
 func TestInitRejectsBadConfigBeforeChangingFiles(t *testing.T) {
 	for _, bad := range []string{`{"hooks":`, `{"hooks":{},"hooks":{}}`, `{"hooks":{"Stop":null}}`, `{"hooks":{"Stop":[{"hooks":[null]}]}}`, `{"hooks":{"Stop":[{"hooks":[],"hooks":[]}]}}`} {
 		t.Run(bad, func(t *testing.T) {

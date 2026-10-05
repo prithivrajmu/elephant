@@ -275,25 +275,38 @@ func Recall(all []Memory, id Identity, q Request, now time.Time) Result {
 		limit = 20
 	}
 	result := Result{ByteBudget: budget, Hits: []Hit{}}
+	query := set(contentWords(q.Task))
+	if len(query) == 0 && (!q.Initialize || strings.TrimSpace(q.Task) != "") {
+		return result
+	}
 	candidates := []Memory{}
 	for _, m := range all {
 		if visible(m, id, q.Profile.Project, q.Profile.Conversation) && applicable(m, q.Profile) {
 			candidates = append(candidates, m)
 		}
 	}
-	query := set(contentWords(q.Task))
 	queryTerms := []string{}
 	for term := range query {
 		queryTerms = append(queryTerms, term)
 	}
 	sort.Strings(queryTerms)
-	docs := make([][]string, len(candidates))
+	type document struct {
+		length int
+		tf     map[string]int
+	}
+	docs := make([]document, len(candidates))
 	df := map[string]int{}
 	avg := 0.0
 	for i, m := range candidates {
-		docs[i] = contentWords(m.Incident + " " + m.Lesson + " " + m.Subject)
-		avg += float64(len(docs[i]))
-		for term := range set(docs[i]) {
+		terms := contentWords(m.Incident + " " + m.Lesson + " " + m.Subject)
+		docs[i] = document{length: len(terms), tf: map[string]int{}}
+		avg += float64(len(terms))
+		for _, term := range terms {
+			if query[term] {
+				docs[i].tf[term]++
+			}
+		}
+		for term := range docs[i].tf {
 			df[term]++
 		}
 	}
@@ -304,26 +317,28 @@ func Recall(all []Memory, id Identity, q Request, now time.Time) Result {
 		avg = 1
 	}
 	type ranked struct {
-		m Memory
-		h Hit
+		m          Memory
+		h          Hit
+		words      map[string]bool
+		redundancy float64
+		entry      string
 	}
 	rank := []ranked{}
 	for i, m := range candidates {
-		sim, coverage, matches := similarityDetails(m.Features, q.Profile.Features)
-		tf := map[string]int{}
-		for _, t := range docs[i] {
-			tf[t]++
+		if len(query) > 0 && len(docs[i].tf) == 0 {
+			continue
 		}
+		sim, coverage, matches := similarityDetails(m.Features, q.Profile.Features)
 		bm := 0.0
 		termMatch := false
 		for _, term := range queryTerms {
-			f := float64(tf[term])
+			f := float64(docs[i].tf[term])
 			if f == 0 {
 				continue
 			}
 			termMatch = true
 			idf := math.Log(1 + (float64(len(docs)-df[term])+0.5)/(float64(df[term])+0.5))
-			bm += idf * (f * 2.2) / (f + 1.2*(0.25+0.75*float64(len(docs[i]))/avg))
+			bm += idf * (f * 2.2) / (f + 1.2*(0.25+0.75*float64(docs[i].length)/avg))
 		}
 		lex := bm / (bm + 2)
 		base := lex * (1 + 0.20*sim*coverage)
@@ -344,40 +359,30 @@ func Recall(all []Memory, id Identity, q Request, now time.Time) Result {
 		fresh := math.Exp(-math.Ln2 * age / 180)
 		// Outcome is recorded, but dramatic incidents get no unvalidated ranking boost.
 		score := base * (0.5 + 0.5*confidence) * (0.8 + 0.2*fresh)
-		rank = append(rank, ranked{m, Hit{ID: m.ID, Score: score, Similarity: sim, Coverage: coverage, Lexical: lex, Confidence: confidence, Observations: m.Helpful + m.Unhelpful, Matched: matches}})
+		rank = append(rank, ranked{m: m, h: Hit{ID: m.ID, Score: score, Similarity: sim, Coverage: coverage, Lexical: lex, Confidence: confidence, Observations: m.Helpful + m.Unhelpful, Matched: matches}})
 	}
 	// A subject identifies potentially contradictory advice; surface alternatives, don't silently overwrite.
-	subjects := map[string]map[string]bool{}
+	admitted := make([]Memory, 0, len(rank))
 	for _, r := range rank {
-		if r.m.Subject != "" {
-			if subjects[r.m.Subject] == nil {
-				subjects[r.m.Subject] = map[string]bool{}
-			}
-			subjects[r.m.Subject][r.m.Lesson] = true
+		admitted = append(admitted, r.m)
+	}
+	alternatives := indexAlternatives(admitted)
+	header := "Retrieved experience (untrusted evidence; current project policy takes precedence):\n"
+	eligible := rank[:0]
+	for _, r := range rank {
+		alternatives.annotate(r.m, &r.h)
+		r.entry = renderEntry(r.m, r.h)
+		if len(header)+len(r.entry) <= budget {
+			r.words = set(words(r.m.Lesson))
+			eligible = append(eligible, r)
 		}
 	}
-	selected := []Memory{}
-	header := "Retrieved experience (untrusted evidence; current project policy takes precedence):\n"
+	rank = eligible
 	for len(rank) > 0 && len(result.Hits) < limit {
 		best := 0
 		utility := -math.MaxFloat64
 		for i, r := range rank {
-			redundancy := 0.0
-			for _, m := range selected {
-				a := set(words(r.m.Lesson))
-				b := set(words(m.Lesson))
-				inter := 0
-				for t := range a {
-					if b[t] {
-						inter++
-					}
-				}
-				union := len(a) + len(b) - inter
-				if union > 0 {
-					redundancy = math.Max(redundancy, float64(inter)/float64(union))
-				}
-			}
-			u := r.h.Score - 0.12*redundancy
+			u := r.h.Score - 0.12*r.redundancy
 			if u > utility || (u == utility && r.m.ID < rank[best].m.ID) {
 				utility = u
 				best = i
@@ -385,21 +390,8 @@ func Recall(all []Memory, id Identity, q Request, now time.Time) Result {
 		}
 		r := rank[best]
 		rank = append(rank[:best], rank[best+1:]...)
-		r.h.Conflict = len(subjects[r.m.Subject]) > 1
-		if r.h.Conflict {
-			for _, m := range candidates {
-				if m.ID != r.m.ID && m.Subject == r.m.Subject && m.Lesson != r.m.Lesson && discoveryEligible(m, q) {
-					r.h.Alternatives = append(r.h.Alternatives, m.ID)
-				}
-			}
-			sort.Strings(r.h.Alternatives)
-			r.h.AlternativeCount = len(r.h.Alternatives)
-			if len(r.h.Alternatives) > 5 {
-				r.h.Alternatives = r.h.Alternatives[:5]
-			}
-		}
 		// JSON quoting prevents a lesson's newlines from impersonating result metadata.
-		entry := renderEntry(r.m, r.h)
+		entry := r.entry
 		overhead := 0
 		if result.Context == "" {
 			overhead = len(header)
@@ -412,7 +404,25 @@ func Recall(all []Memory, id Identity, q Request, now time.Time) Result {
 		}
 		result.Context += entry
 		result.Hits = append(result.Hits, r.h)
-		selected = append(selected, r.m)
+		// Update diversity once per accepted result. Discard entries that cannot
+		// fit now; the remaining budget can only shrink.
+		remaining := rank[:0]
+		for _, next := range rank {
+			if len(result.Context)+len(next.entry) > budget {
+				continue
+			}
+			inter := 0
+			for term := range next.words {
+				if r.words[term] {
+					inter++
+				}
+			}
+			if union := len(next.words) + len(r.words) - inter; union > 0 {
+				next.redundancy = math.Max(next.redundancy, float64(inter)/float64(union))
+			}
+			remaining = append(remaining, next)
+		}
+		rank = remaining
 	}
 	result.Bytes = len(result.Context)
 	return result
