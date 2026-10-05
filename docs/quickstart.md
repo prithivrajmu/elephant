@@ -1,6 +1,6 @@
 # Elephant: first user in ten minutes
 
-Elephant is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.25+. Elephant is in closed beta; see [Status: Beta](../README.md#status-beta) for known limitations. Releases are gated on native Linux, macOS and Windows checks; six platform archives are cross-compiled. Native ARM installer and real model-driven host acceptance remain separate checks. See [Validation](validation.md) for the exact checks and limits.
+Elephant is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.26+. Elephant is in closed beta; see [Status: Beta](../README.md#status-beta) for known limitations. Releases are gated on native Linux, macOS and Windows checks; six platform archives are cross-compiled. Native ARM installer and real model-driven host acceptance remain separate checks. See [Validation](validation.md) for the exact checks and limits.
 
 **Network use:** by default, Elephant checks GitHub for a new release at most once per 24 hours. GitHub sees your version and normal network metadata; no memory or task data is sent. Opt out with `elephant update --enabled=false` or `ELEPHANT_UPDATE_CHECKS=0`. See [Release updates](#release-updates).
 
@@ -32,7 +32,7 @@ If local script policy blocks the installer, use `Get-FileHash .\elephant.exe -A
 
 ### Build from a source checkout
 
-If you have the repository rather than a prebuilt package, install Go 1.25+ and run these commands from the repository root on macOS/Linux:
+If you have the repository rather than a prebuilt package, install Go 1.26+ and run these commands from the repository root on macOS/Linux:
 
 ```sh
 go test ./...

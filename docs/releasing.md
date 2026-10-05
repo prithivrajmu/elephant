@@ -4,9 +4,9 @@
 
 `onboarding.go` is the version source. `scripts/release_version.py` derives archive names and native package versions. Add notes at `docs/releases/vVERSION.md`, update the README's release link and validate installation instructions for each supported platform. Pilot versions publish as prereleases.
 
-Release builds use the `toolchain go1.27.1` line in `go.mod`. CI installs that exact patch with `go-version: '1.27.1'`. `actions/setup-go` reads only the `go` directive from `go.mod`, not `toolchain`, so the workflow does not use `go-version-file`. A separate minimum-Go job runs `go vet` and `go test` on Go 1.25.x with `GOTOOLCHAIN=local`, so the `go 1.25.0` floor is compiled instead of being upgraded to the toolchain line.
+Release builds use the `toolchain go1.27.1` line in `go.mod`. CI installs that exact patch with `go-version: '1.27.1'`. `actions/setup-go` reads only the `go` directive from `go.mod`, not `toolchain`, so the workflow does not use `go-version-file`. A separate minimum-Go job runs `go vet` and `go test` on Go 1.26.x with `GOTOOLCHAIN=local`, so the `go 1.26.0` floor is compiled instead of being upgraded to the toolchain line.
 
-Actions in `.github/workflows/validate.yml` are pinned to full commit SHAs. Dependabot opens weekly pull requests for `github-actions` and `gomod` so those pins and module requirements can be updated deliberately.
+Actions in `.github/workflows/validate.yml` are pinned to full commit SHAs. Dependabot is disabled; update pins and module requirements by hand.
 
 ## Reproducible packages
 

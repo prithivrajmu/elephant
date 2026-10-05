@@ -61,10 +61,12 @@ def notice_files(module, directory):
             name.startswith(("LICENSE", "COPYING", "NOTICE")) or name == "PATENTS"
         ):
             files.append(path)
-    # SQLite's dedication is named SQLITE-LICENSE, not LICENSE*. libc's
-    # LICENSE-3RD-PARTY.md is already collected above. Testdata is not linked.
+    # SQLite's dedication is LICENSE-SQLITE (SQLITE-LICENSE before v1.60);
+    # LICENSE* prefixes are collected above. Testdata is not linked.
     if module == "modernc.org/sqlite":
-        files.append(directory / "SQLITE-LICENSE")
+        legacy = directory / "SQLITE-LICENSE"
+        if legacy.is_file():
+            files.append(legacy)
     if not files:
         raise ValueError(f"No top-level license/notice files for {module}")
     return sorted(files, key=lambda path: path.name)

@@ -86,8 +86,8 @@ func TestSQLiteMigrationPreservesStateAndReceipts(t *testing.T) {
 	if mode != "wal" || sync != 2 {
 		t.Fatal(mode, sync)
 	}
-	// Driver is pinned to SQLite 3.51.3, including the WAL-reset fix.
-	if version != "3.51.3" {
+	// Driver is pinned to SQLite 3.53.4, including the WAL-reset fix.
+	if version != "3.53.4" {
 		t.Fatalf("review bundled SQLite change: %s", version)
 	}
 }

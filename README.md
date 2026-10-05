@@ -18,6 +18,18 @@ Elephant stores source-backed lessons from development work and recalls relevant
 
 ## Installation
 
+One line (verifies the release checksum, installs to `~/.local/bin`):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.sh | sh
+```
+
+```powershell
+irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
+```
+
+Pin a version with `ELEPHANT_VERSION=v0.8.0-beta`. Or install manually:
+
 Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Releases are public betas (prereleases).
 
 | Computer | Archive platform |

@@ -4,7 +4,7 @@ Open an issue with a reproducible example or a pull request describing the probl
 
 ## Development
 
-Go 1.25+ is required; CI uses Go 1.27. Python 3.11+ runs the acceptance scripts. Node runs dashboard renderer checks. The pinned SQLite driver does not require a C compiler for release builds.
+Go 1.26+ is required; CI uses Go 1.27. Python 3.11+ runs the acceptance scripts. Node runs dashboard renderer checks. The pinned SQLite driver does not require a C compiler for release builds.
 
 From the repository root:
 
