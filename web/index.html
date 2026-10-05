@@ -1,16 +1,563 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Elephant Memory Palace · Agent experience</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elephant Memory Palace · Agent experience</title>
 <style>
-:root{--bg:#f5f5ef;--paper:#fff;--ink:#182a26;--muted:#718079;--line:#e3e8df;--green:#2b674e;--mint:#dbefcd;--red:#bc5f48}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color:var(--ink)}button,input,textarea,select{font:inherit}button{cursor:pointer}.layout{display:grid;grid-template-columns:232px 1fr;min-height:100vh}.rail{background:#182d26;color:#dce8dd;padding:34px 24px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}.brand{white-space:nowrap;font-size:18px;font-weight:650;letter-spacing:-.8px}.logo{display:inline-grid;place-items:center;width:31px;height:31px;border:1px solid #67876d;border-radius:9px;color:#c4e6aa;margin-right:9px}.rail small{display:block;color:#91a599;font-size:11px;letter-spacing:1.4px;margin-top:12px}.nav{margin-top:52px}.nav button{font-size:13px;border:0;background:transparent;color:#a9bdb0;display:block;text-align:left;width:100%;padding:13px 15px;border-radius:9px;margin:5px 0}.nav button.active{background:#304a3b;color:#dcf0ce}.rail-foot{margin-top:auto;border-top:1px solid #354b3e;padding-top:20px;font-size:12px;line-height:1.8;color:#9db1a2}.live{display:inline-block;width:7px;height:7px;background:#add583;border-radius:50%;margin-right:7px}main{max-width:1440px;width:100%;padding:36px 46px 60px}.eyebrow{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;font-weight:650;color:var(--muted)}header{display:flex;align-items:center;justify-content:space-between;gap:20px}h1{font-size:35px;letter-spacing:-1.6px;margin:10px 0 8px;font-weight:600}p.sub{font-size:14px;color:var(--muted);margin:0;line-height:1.6}.btn{background:var(--green);color:white;border:0;border-radius:9px;padding:12px 18px;font-size:13px}.btn.secondary{background:transparent;border:1px solid var(--line);color:var(--ink)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:30px}.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px}.card label{color:var(--muted);font-size:12px}.value{font-size:32px;font-weight:550;letter-spacing:-1.2px;margin:12px 0 7px}.hint{font-size:11px;color:var(--muted);line-height:1.5}.stats .card:first-child{background:var(--mint);border-color:#d0e3c3}.middle{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin:22px 0}.card-head{display:flex;justify-content:space-between;align-items:center}h2{font-size:16px;letter-spacing:-.3px;margin:0}.chip{padding:5px 9px;border-radius:6px;background:#f1f4ed;color:#6a786b;font-size:10px}.chart{height:168px;margin-top:18px}.chart svg{width:100%;height:100%}.chart-foot{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:7px}.profile{display:flex;flex-wrap:wrap;gap:7px;margin:20px 0}.tag{font-size:11px;background:#f2f4ee;border:1px solid #e8ece3;border-radius:6px;padding:6px 9px}.profile-note{padding:14px;border-radius:9px;background:#f5f7f0;font-size:12px;color:#617265;line-height:1.6}.section-head{display:flex;align-items:center;justify-content:space-between;margin:28px 0 16px;gap:16px}.filters{display:flex;gap:8px}.filters select,.filters input{border:1px solid var(--line);border-radius:8px;background:white;padding:9px 11px;font-size:12px;color:var(--ink)}.memories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.memory{padding:20px 22px;background:white;border:1px solid var(--line);border-radius:12px}.memory-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.outcome{font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:5px 8px;border-radius:5px;background:#e8f3e3;color:#3d6c3f}.outcome.warning,.outcome.scar{background:#f8eae4;color:#a7523c}.memory h3{font-size:14px;font-weight:550;line-height:1.6;margin:13px 0}.memory p{font-size:12px;line-height:1.6;color:var(--muted);margin:8px 0;overflow-wrap:anywhere}.meta{display:flex;justify-content:space-between;border-top:1px solid #edf0e9;padding-top:12px;margin-top:15px;font-size:10px;color:var(--muted)}.empty{padding:38px;border:1px dashed #cfd8cb;border-radius:12px;text-align:center;color:var(--muted);grid-column:1/-1;font-size:13px;line-height:1.8}.section{display:none}.section.active{display:block}.usage-table{width:100%;border-collapse:collapse;font-size:12px;background:white;border-radius:12px;overflow:hidden}.usage-table td,.usage-table th{text-align:left;padding:15px;border-bottom:1px solid var(--line)}.usage-table th{color:var(--muted);font-weight:500}.note{font-size:12px;color:var(--muted);line-height:1.8;background:#eef1e8;padding:15px 18px;border-radius:10px;margin-top:20px}.modal{position:fixed;inset:0;background:#10281f88;display:none;align-items:center;justify-content:center;z-index:10;padding:24px}.modal.show{display:flex}.dialog{background:var(--bg);border-radius:18px;padding:28px;max-width:650px;width:100%;max-height:90vh;overflow:auto}.dialog h2{font-size:22px}.dialog label{display:block;font-size:12px;color:var(--muted);margin-top:18px}.dialog input,.dialog textarea,.dialog select{display:block;width:100%;margin-top:8px;padding:11px;border:1px solid #d8dfd2;border-radius:8px;background:#fff;color:var(--ink)}.dialog textarea{min-height:90px;resize:vertical}.row{display:flex;gap:12px}.row>label{flex:1}.actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#e9eee4;border-radius:8px;padding:16px;font-size:11px;line-height:1.8;max-height:280px;overflow:auto}.feedback{display:flex;gap:7px;margin-top:14px}.feedback button{font-size:11px;background:#f3f5ef;border:1px solid var(--line);border-radius:7px;padding:7px 10px}.toast{position:fixed;bottom:25px;right:28px;border-radius:10px;padding:14px 20px;background:var(--ink);color:white;font-size:13px;display:none;z-index:20}.detail summary{font-size:11px;color:var(--muted);cursor:pointer}.detail pre{font-size:10px}.retired{opacity:.6}@media(max-width:1100px){main{padding:28px}.layout{grid-template-columns:190px 1fr}.rail{padding:28px 18px}.stats{grid-template-columns:repeat(2,1fr)}.middle{grid-template-columns:1fr}.memories{grid-template-columns:1fr}}@media(max-width:650px){.layout{display:block}.rail{height:auto;position:static;padding:18px}.rail small,.rail-foot{display:none}.nav{margin-top:15px;display:flex}.nav button{margin:0;padding:9px;font-size:12px}.brand{font-size:18px}main{padding:24px 18px}h1{font-size:28px}header{align-items:flex-start;flex-direction:column}.stats{gap:10px}.card{padding:17px}.value{font-size:27px}.section-head{align-items:flex-start;flex-direction:column}.filters{width:100%}.filters input{min-width:0;flex:1}.usage-table{font-size:10px}.usage-table td,.usage-table th{padding:9px}.btn{padding:10px 12px}.hint{font-size:10px}}
-.map-scroll{overflow-x:auto;margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}#memory-map{min-width:900px}#memory-map svg{width:100%;height:auto;display:block}.map-node{cursor:pointer}.map-node:hover rect{stroke:#1d603d;stroke-width:2}.map-edge{stroke:#bfcdb9;stroke-width:1;opacity:.55}#language-value{display:block;margin-top:10px;font-weight:600}@media(max-width:650px){.nav{flex-wrap:wrap}.dialog{padding:20px}}
-.header-actions{flex-wrap:wrap}.update-controls{flex-wrap:wrap}.update-controls #update-state{flex-basis:100%}.outcome.warning{background:#fff2d6;color:#8b681f}.outcome.lesson{background:#e6eef8;color:#486f9f}</style></head><body><div class="layout"><aside class="rail"><div class="brand"><span class="logo"><svg viewBox="0 0 48 40" width="24" height="24" role="img" aria-label="Elephant"><path fill="currentColor" d="M9 13C3 13 3 20 4 25L6 25L6 36L12 36L13 27L20 27L21 36L27 36L28 26L31 25L32 18L36 18L36 30C36 38 44 37 45 31L41 29C41 33 39 34 39 29L39 16C39 9 33 6 28 7C23 3 11 6 9 13Z"/><path d="M25 12C18 9 16 15 19 20C21 23 25 22 27 19" fill="none" stroke="#19372b" stroke-width="2"/><circle cx="33" cy="12" r="1.3" fill="#19372b"/></svg></span>Elephant</div><small>PERSISTENT EXPERIENCE</small><nav class="nav"><button data-tab="overview" class="active">◈ &nbsp; Overview</button><button data-tab="library">▤ &nbsp; Memory library</button><button data-tab="map">⌘ &nbsp; Memory Map</button><button data-tab="activity">↗ &nbsp; Activity</button></nav><div class="rail-foot"><span class="live"></span>Local memory engine<br><span>CLI + MCP · any agent</span><br><span id="project-label"></span></div></aside><main><header><div><div class="eyebrow">Persistent experience for coding agents</div><h1>Agents forget. Elephants don’t.</h1><p class="sub">Store useful experience. Recall what the current task needs.</p><p class="hint" id="inventory-note">Your full Memory inventory · local pilot</p></div><div class="row header-actions"><button class="btn secondary" id="language-button">STE · 80%</button><button class="btn secondary" id="connect-button">Connect your agent</button><button class="btn" id="learn-button">+ Imprint a Memory</button></div></header><div class="note" id="token-notice" role="alert" hidden></div><div class="note" id="update-notice" role="status" hidden><span id="update-copy"></span> <a id="update-link" target="_blank" rel="noopener noreferrer">Upgrade</a> <button class="btn secondary" id="update-dismiss">Dismiss</button></div><div class="row update-controls" style="margin-bottom:16px"><button class="btn secondary" id="update-check">Check for updates</button><button class="btn secondary" id="update-toggle">Disable update checks</button><span class="hint" id="update-state" role="status" aria-live="polite"></span></div>
-<section class="section active" id="overview"><div class="stats"><div class="card"><label>Memories stored</label><div class="value" id="count">0</div><div class="hint" id="count-hint">Your memory starts here</div></div><div class="card"><label>Context tokens avoided · estimate</label><div class="value" id="tokens">0</div><div class="hint">vs. loading all eligible Memories · bytes ÷ 4</div></div><div class="card"><label>Reported useful Recall</label><div class="value" id="helpful">—</div><div class="hint" id="helpful-hint">Waiting for outcome feedback</div></div><div class="card"><label>Recalls completed</label><div class="value" id="retrievals">0</div><div class="hint" id="latency">p95 ranking + journal replay</div></div></div>
-<div class="middle"><div class="card"><div class="card-head"><h2>Memory growth</h2><span class="chip">Cumulative Memories · 14 days</span></div><div class="chart" id="chart"></div><div class="chart-foot"><span id="chart-start"></span><span>Today</span></div></div><div class="card"><div class="card-head"><h2>Current Fingerprint</h2><span class="chip">Manifest evidence</span></div><div class="profile" id="profile"></div><div class="profile-note">Signals suggest a match. Requirements decide if the Memory applies.</div><button class="btn secondary" id="recall-button" style="margin-top:16px">Try Recall ↗</button></div></div><div class="section-head"><h2>Recent Memories</h2><span class="hint">Each Memory keeps its source</span></div><div class="memories" id="recent"></div><div class="note">Token figures are estimates. They compare Recall with all eligible summaries. They do not measure task quality or time saved. No model calls or usage reports leave this process.</div></section>
-<section class="section" id="library"><div class="section-head"><h2>Memory library</h2><div class="filters"><input id="search" placeholder="Find a Memory or project…" aria-label="Find a Memory"><select id="filter" aria-label="Filter outcome"><option value="">All Classes</option><option value="win">Win</option><option value="lesson">Lesson</option><option value="warning">Warning</option><option value="scar">Scar</option></select></div></div><div class="memories" id="all-memories"></div></section>
-<section class="section" id="map"><div class="section-head"><h2>Memory Map</h2><span class="hint" id="map-count"></span></div><p class="sub">Follow a Trail from a project or Signal to a Memory and its source. Select a Memory to inspect it.</p><div class="map-scroll"><div id="memory-map"></div></div><pre id="map-detail">Select a node to inspect its stored facts.</pre></section><section class="section" id="activity"><div class="section-head"><h2>Automatic capture</h2><span class="hint" id="experience-count"></span></div><p class="sub">Tool outcomes and review requests in this project. An event becomes a Memory only after the agent saves a useful lesson.</p><div class="map-scroll" id="experience-table"></div><div class="note">Use <code>elephant automation</code> to check setup. Pause with <code>elephant automation --enabled=false</code>. Prompts, tool text and transcripts are not stored by these hooks.</div><div class="section-head"><h2>Recall activity</h2><span class="hint">Your Recall events</span></div><div id="activity-table"></div><div class="note">The baseline loads all eligible Memory summaries. Estimates use bytes divided by four, rounded up. Actual tokens and tool overhead can differ. Latency excludes the model, disk sync and agent work.</div></section>
-</main></div>
-<div class="modal" id="learn-modal"><form class="dialog" id="learn-form"><h2>Imprint a Memory.</h2><p class="sub">Describe the Experience. Write one useful Memory. Give its source.</p><div class="row"><label>Memory Class<select name="class"><option value="win">Win</option><option value="lesson">Lesson</option><option value="warning">Warning</option><option value="scar">Scar</option></select></label><label>Visibility<select name="scope"><option value="personal">Personal · across projects</option><option value="project">This project only</option><option value="conversation">This conversation only</option><option value="team">Team draft · needs review</option></select></label></div><label>Experience · what happened?<textarea name="incident" required placeholder="Repeated requests exhausted the warehouse connection pool."></textarea></label><label>Memory · what should the agent learn?<textarea name="lesson" required placeholder="Bound concurrency to available connections and measure queue wait time."></textarea></label><label>Evidence source<input name="source" required placeholder="PR #42, test run, incident report…"></label><label>Subject · optional<input name="subject" placeholder="warehouse-concurrency"></label><label>Requires · optional JSON<textarea name="requires" placeholder='{"database":["snowflake"]}'></textarea></label><label>Excludes · optional JSON<textarea name="excludes" placeholder='{"cloud":["azure"]}'></textarea></label><p class="hint">Unknown requirements block Recall. Use a list of values for each Signal type. Scope must match the startup context.</p><div class="actions"><button type="button" class="btn secondary" data-close>Cancel</button><button class="btn">Imprint Memory</button></div></form></div>
-<div class="modal" id="recall-modal"><div class="dialog"><h2>Recall useful Memories.</h2><p class="sub">Use the current task and known Signals.</p><form id="recall-form"><label>Current task<input name="task" required placeholder="Improve filter caching and warehouse query concurrency"></label><label>Recall Budget · bytes<input name="byte_budget" type="number" min="1" max="64000" value="4000"></label><label>Known current facts · optional JSON<textarea name="context_features" placeholder='{"database":["snowflake"]}'></textarea></label><label>Stable task/run ID · needed for feedback<input name="feedback_id" placeholder="task-123-validation-1"></label><div class="actions"><button type="button" class="btn secondary" data-close>Close</button><button class="btn">Recall Memories</button></div></form><div id="recall-result"></div></div></div><div class="modal" id="connect-modal"><div class="dialog"><h2>Connect your agent.</h2><p class="sub">Add the MCP settings to your client. Add the agent instructions. Then restart the client.</p><label>MCP JSON configuration<pre id="connect-json"></pre></label><label>Codex TOML configuration<pre id="connect-toml"></pre></label><label>Agent instructions<pre id="connect-instructions"></pre></label><p class="hint">Restart the client. Confirm that Elephant tools are present. Use Recall before a task. Imprint a Memory after an observed result.</p><div class="actions"><button type="button" class="btn secondary" data-close>Close</button></div></div></div><div class="modal" id="language-modal"><form class="dialog" id="language-form"><h2>Writing target</h2><p class="sub">Use ASD-STE100 as the writing guide. The target is a setting. It is not a compliance score.</p><label>STE target · percent<input name="target_percent" type="range" min="80" max="100" step="1" value="80"><output id="language-value">80%</output></label><p class="note">80–99%: show local warnings. 100%: reject new summaries that fail local checks. These checks cover sentence length, selected complex phrases and selected contractions. They do not validate the full standard. Evidence, code and old Memories stay unchanged.</p><div class="actions"><button type="button" class="btn secondary" data-close>Close</button><button class="btn">Save target</button></div></form></div><div class="toast" id="toast" role="status"></div>
+:root{color-scheme:dark;--bg:#111315;--paper:#191c1f;--ink:#eceeea;--muted:#999f9f;--line:#303538;--green:#c6dbab;--mint:#242e26;--red:#e99986;--win:#b8d99a;--lesson:#8fbdd2;--warning:#dfbb7b;--scar:#e5988c}
+
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#51585a transparent}
+body{margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);font-size:14px}
+button,input,textarea,select{font:inherit}
+button,a,input,select,textarea,summary{outline-offset:4px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--green)}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+button{transition:background .15s,border-color .15s}
+button:hover{filter:brightness(1.12)}
+[hidden]{display:none!important}
+h1,h2,h3,p{overflow-wrap:anywhere}
+button,input,select,textarea,.layout>*,.row>*,.card,.memory,.section,.filters,.meta>*,.card-head>*{min-width:0}
+a{color:var(--green)}
+
+.layout{display:grid;grid-template-columns:204px minmax(0,1fr);min-height:100dvh}
+.rail{background:#151719;border-right:1px solid var(--line);padding:30px 18px;display:flex;flex-direction:column;position:sticky;top:0;height:100dvh;overflow:auto}
+.brand{display:flex;align-items:center;font-size:21px;font-weight:650;letter-spacing:-.8px}
+.logo{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--green);color:#263020;margin-right:10px;flex-shrink:0}
+.rail small{display:block;color:var(--muted);font-size:9px;letter-spacing:1.9px;margin:17px 0 0 3px}
+.nav{margin-top:42px;display:grid;gap:6px}
+.nav button{font-size:12px;border:1px solid transparent;background:transparent;color:var(--muted);display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:12px;border-radius:7px}
+.nav button.active{background:#272d27;border-color:#3a4537;color:var(--green)}
+.nav-icon{width:19px;font-size:18px;text-align:center}
+.rail-foot{margin-top:auto;padding-top:28px;font-size:11px;line-height:1.9;color:var(--muted);overflow-wrap:anywhere}
+.rail-foot>span:last-child{display:block;margin-top:10px;border-top:1px solid var(--line);padding-top:12px}
+.live{display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;margin-right:7px}
+main{width:100%;max-width:1900px;padding:30px 34px 48px;margin:0 auto;min-width:0}
+header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-size:32px;letter-spacing:-1.2px;margin:8px 0 8px;font-weight:550}
+p.sub{font-size:13px;color:var(--muted);margin:0;line-height:1.7}
+.btn{background:var(--green);color:#20281c;border:1px solid var(--green);border-radius:7px;padding:10px 14px;font-size:12px;font-weight:550}
+.btn.secondary{background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.header-actions{flex-wrap:wrap;justify-content:flex-end;max-width:410px}
+.row{display:flex;gap:10px}
+.row>label{flex:1}
+.hint{font-size:11px;color:var(--muted);line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:24px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:20px}
+.card label{color:var(--muted);font-size:12px}
+.value{font-size:32px;font-weight:500;letter-spacing:-1px;margin:14px 0 7px;font-variant-numeric:tabular-nums}
+.stats .card:first-child{background:var(--mint)}
+.middle{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin:18px 0}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h2{font-size:16px;font-weight:550;letter-spacing:-.3px;margin:0}
+.chip{padding:5px 8px;border-radius:5px;background:#242a2a;color:#bbc2bc;font-size:10px;overflow-wrap:anywhere}
+.chart{height:168px;margin-top:18px}
+.chart svg{width:100%;height:100%}
+.chart-foot{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:7px}
+.profile{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0}
+.tag{font-size:10px;color:#b4c0bc;background:#242a29;border:1px solid #343c39;border-radius:4px;padding:5px 8px;overflow-wrap:anywhere;max-width:100%}
+.profile-note{padding:13px;border-left:2px solid #5e7253;background:#222824;font-size:12px;color:#adb8a6;line-height:1.7}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:24px 0 14px;gap:16px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters select,.filters input,.map-toolbar select,.map-toolbar input{border:1px solid var(--line);border-radius:6px;background:#191d1e;padding:9px 11px;font-size:12px;color:var(--ink)}
+.memories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.memory{padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:9px;overflow-wrap:anywhere}
+.memory-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.outcome{display:inline-flex;font-size:10px;text-transform:uppercase;letter-spacing:.9px;padding:4px 7px;border-radius:4px;background:#293626;color:var(--win)}
+.outcome.warning{background:#393124;color:var(--warning)}
+.outcome.scar{background:#3b2b29;color:var(--scar)}
+.outcome.lesson{background:#26343b;color:var(--lesson)}
+.memory h3{font-size:14px;font-weight:500;line-height:1.75;margin:15px 0}
+.memory p{font-size:12px;line-height:1.75;color:var(--muted);margin:8px 0;white-space:pre-wrap}
+.meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:12px;margin-top:15px;font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.empty{padding:38px 22px;border:1px dashed #3e4741;border-radius:8px;text-align:center;color:var(--muted);grid-column:1/-1;font-size:13px;line-height:1.8}
+.section{display:none}
+.section.active{display:block}
+.usage-table{width:100%;min-width:620px;border-collapse:collapse;font-size:12px;background:var(--paper);table-layout:fixed}
+.usage-table td,.usage-table th{text-align:left;padding:15px;border-bottom:1px solid var(--line);overflow-wrap:anywhere;line-height:1.6;vertical-align:top}
+.usage-table th{color:var(--muted);font-weight:500;position:sticky;top:0;background:#202426}
+.note{font-size:12px;color:var(--muted);line-height:1.8;background:#1d2320;padding:14px 17px;border:1px solid #303a32;border-radius:7px;margin-top:20px;overflow-wrap:anywhere}
+.modal{position:fixed;inset:0;background:#060909bc;backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:10;padding:24px}
+.modal.show{display:flex}
+.dialog{background:var(--paper);border:1px solid #414845;border-radius:12px;padding:28px;max-width:650px;width:100%;max-height:90dvh;overflow:auto;overscroll-behavior:contain}
+.dialog h2{font-size:23px;margin-bottom:8px}
+.dialog label{display:block;font-size:12px;color:var(--muted);margin-top:18px}
+.dialog input,.dialog textarea,.dialog select{display:block;width:100%;margin-top:8px;padding:11px;border:1px solid #414745;border-radius:6px;background:#111615;color:var(--ink)}
+.dialog textarea{min-height:90px;resize:vertical;line-height:1.7}
+.actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:22px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#121717;border:1px solid var(--line);border-radius:6px;padding:15px;font-size:11px;line-height:1.8;max-height:280px;overflow:auto}
+.feedback{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:14px}
+.feedback button{font-size:11px;color:var(--ink);background:#263027;border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.toast{position:fixed;bottom:25px;right:28px;max-width:min(440px,calc(100vw - 36px));border:1px solid #607151;border-radius:8px;padding:14px 20px;background:#273225;color:var(--ink);font-size:13px;line-height:1.6;overflow-wrap:anywhere;display:none;z-index:20}
+.detail summary{font-size:11px;color:var(--muted);cursor:pointer}
+.retired{opacity:.65}
+.map-scroll,#activity-table{overflow:auto;max-height:580px;margin-top:18px;border:1px solid var(--line);border-radius:8px;background:var(--paper);overscroll-behavior:contain}
+#language-value{display:block;margin-top:10px;font-weight:600}
+.maintenance{margin-top:24px;color:var(--muted);font-size:11px}
+.maintenance summary{cursor:pointer;width:fit-content}
+.update-controls{flex-wrap:wrap;margin-top:12px}
+.update-controls #update-state{flex-basis:100%}
+
+.palace-heading{display:flex;justify-content:space-between;gap:20px;align-items:center;margin:25px 0 18px}
+.palace-heading h2{font-size:20px;margin-bottom:5px}
+.palace-count{font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:var(--muted);text-align:right;line-height:1.8}
+.palace-workspace{display:grid;grid-template-columns:minmax(0,1fr) 320px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
+.network-panel{min-width:0;background:#14191b;position:relative}
+.map-toolbar{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.map-toolbar input{flex:1;width:160px}
+.map-toolbar select{max-width:100%}
+.network-kicker{display:flex;justify-content:space-between;gap:12px;padding:19px 22px 0;font-family:ui-monospace,SFMono-Regular,monospace;font-size:9px;letter-spacing:1.6px;color:#8b999b}
+.network-viewport{height:470px;overflow:auto;scrollbar-gutter:stable;position:relative}
+#memory-map{width:100%;height:100%;min-height:360px}
+#memory-map svg{display:block;width:100%;height:100%;min-width:380px}
+.brain-outline{fill:#1b2528;stroke:#435558;stroke-width:1.3}
+.brain-fold{fill:none;stroke:#34474a;stroke-width:1.3}
+.map-edge{fill:none;stroke-width:1;stroke:#8ca9aa;opacity:.18;transition:opacity .2s}
+.map-edge.focused{opacity:.75;stroke-width:1.5;stroke:#c6dbab}
+.map-node{cursor:pointer;outline:none}
+.map-node .node-dot{stroke:#111719;stroke-width:2}
+.map-node:hover .node-ring,.map-node:focus-visible .node-ring,.map-node.selected .node-ring{opacity:1;stroke-width:1.5}
+.node-ring{fill:none;stroke:currentColor;opacity:0}
+.map-node.dim{opacity:.2}
+.brain-label{fill:#83989c;font:9px ui-monospace,monospace;letter-spacing:2px}
+.network-footer{padding:13px 18px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:10px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:6px;height:6px;border-radius:50%;background:var(--color)}
+.zoom-controls{display:flex;align-items:center;gap:4px}
+.zoom-controls button{border:1px solid var(--line);background:#202628;color:var(--ink);border-radius:4px;min-width:28px;height:28px;font-size:12px}
+.network-caption{padding:0 18px 14px;margin:0;color:var(--muted);font-size:10px;line-height:1.7}
+.inspector{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.inspector-head{padding:19px 20px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:1.5px;color:var(--muted);display:flex;justify-content:space-between}
+.inspector-body{height:570px;overflow:auto;overscroll-behavior:contain;padding:22px;scrollbar-gutter:stable;overflow-wrap:anywhere}
+.inspector-body h3{font-size:17px;font-weight:500;line-height:1.65;margin:17px 0;white-space:pre-wrap}
+.inspector-body h4{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);margin:24px 0 9px;font-weight:500}
+.inspector-body p{font-size:12px;line-height:1.85;white-space:pre-wrap;color:#c0c7c5;margin:8px 0}
+.inspector-body .source{border-left:2px solid #829474;padding-left:12px}
+.inspector-placeholder{padding-top:90px;text-align:center}
+.inspector-placeholder .orbit{font-size:48px;color:#809276;margin-bottom:24px}
+.inspector-placeholder h3{font-size:18px}
+.inspector-placeholder p{color:var(--muted)}
+.memory-index{margin-top:20px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.index-heading{padding:16px 18px;display:flex;justify-content:space-between;gap:12px;align-items:center;background:var(--paper);border-bottom:1px solid var(--line)}
+.index-heading h2{font-size:13px}
+.memory-list{max-height:310px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.memory-row{width:100%;display:grid;grid-template-columns:74px minmax(0,1fr) 120px 24px;text-align:left;align-items:start;gap:16px;border:0;border-bottom:1px solid #282e30;padding:15px 18px;background:transparent;color:var(--ink)}
+.memory-row:last-child{border-bottom:0}
+.memory-row:hover,.memory-row.selected{background:#232b28}
+.memory-row.selected{box-shadow:inset 2px 0 var(--green)}
+.memory-row .outcome{justify-self:start}
+.memory-row-title{font-size:12px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
+.memory-row-project{font-size:10px;line-height:1.8;color:var(--muted);overflow-wrap:anywhere}
+.memory-row-arrow{color:var(--muted)}
+.map-empty{margin:60px 28px}
+.inspector-metrics{display:flex;gap:18px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 0;margin-top:20px;font-size:10px;color:var(--muted)}
+.inspector-metrics strong{font-size:16px;display:block;color:var(--ink);font-weight:500;margin-bottom:4px}
+
+@media(min-width:1600px){.network-viewport{height:550px}
+.inspector-body{height:650px}
+}
+
+@media(max-width:1200px){.layout{grid-template-columns:180px minmax(0,1fr)}
+main{padding:25px 22px}
+.palace-workspace{grid-template-columns:minmax(0,1fr) 285px}
+.header-actions{max-width:280px}
+.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.memory-row{grid-template-columns:70px minmax(0,1fr) 90px 16px;gap:10px}
+}
+
+@media(max-width:980px){.layout{grid-template-columns:156px minmax(0,1fr)}
+.rail{padding:24px 12px}
+.rail small{font-size:8px;letter-spacing:1px}
+.nav button{padding:10px 8px;font-size:11px}
+.palace-workspace{grid-template-columns:minmax(0,1fr)}
+.inspector{border-left:0;border-top:1px solid var(--line)}
+.inspector-body{height:300px}
+.inspector-placeholder{padding-top:5px}
+.inspector-placeholder .orbit{display:none}
+.middle{grid-template-columns:1fr}
+header{align-items:flex-start;flex-direction:column;gap:15px}
+.header-actions{max-width:none;justify-content:flex-start}
+.memories{grid-template-columns:1fr}
+}
+
+@media(max-width:650px){.layout{display:block}
+.rail{height:auto;position:static;padding:17px 18px 10px;border-right:0;border-bottom:1px solid var(--line)}
+.rail small,.rail-foot{display:none}
+.brand{font-size:19px}
+.logo{width:30px;height:30px}
+.nav{margin-top:17px;display:flex;overflow-x:auto;gap:5px}
+.nav button{white-space:nowrap;width:auto;flex:0 0 auto;padding:9px;font-size:11px;gap:6px}
+.nav-icon{font-size:14px;width:14px}
+main{padding:22px 16px 36px}
+h1{font-size:29px}
+.eyebrow{font-size:9px}
+.header-actions{gap:6px}
+.btn{font-size:11px;padding:9px 11px}
+.palace-heading{align-items:flex-start}
+.palace-heading h2{font-size:18px}
+.palace-count{font-size:9px;max-width:105px}
+.palace-heading .sub{font-size:11px}
+.map-toolbar{padding:12px;gap:7px}
+.map-toolbar input{flex-basis:100%}
+.map-toolbar select{flex:1;font-size:11px}
+.network-kicker{font-size:8px;padding:17px 14px 0}
+.network-viewport{height:370px}
+.network-footer{padding:12px}
+.legend{gap:10px}
+.memory-row{grid-template-columns:63px minmax(0,1fr) 14px;padding:13px 12px;gap:9px}
+.memory-row-project{display:none}
+.memory-row-title{font-size:11px}
+.stats{gap:10px}
+.card{padding:16px}
+.value{font-size:27px}
+.section-head{align-items:flex-start;flex-direction:column}
+.filters{width:100%}
+.filters input{flex:1;width:100px}
+.dialog{padding:20px}
+.modal{padding:14px}
+.dialog .row{flex-direction:column;gap:0}
+.toast{right:18px}
+.network-caption{font-size:10px}
+.memory-list{max-height:340px}
+}
+
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}
+}
+
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="rail">
+<div class="brand">
+<span class="logo">
+<svg viewBox="0 0 48 40" width="24" height="24" role="img" aria-label="Elephant">
+<path fill="currentColor" d="M9 13C3 13 3 20 4 25L6 25L6 36L12 36L13 27L20 27L21 36L27 36L28 26L31 25L32 18L36 18L36 30C36 38 44 37 45 31L41 29C41 33 39 34 39 29L39 16C39 9 33 6 28 7C23 3 11 6 9 13Z"/>
+<path d="M25 12C18 9 16 15 19 20C21 23 25 22 27 19" fill="none" stroke="#19372b" stroke-width="2"/>
+<circle cx="33" cy="12" r="1.3" fill="#19372b"/>
+</svg>
+</span>Elephant</div>
+<small>PERSISTENT EXPERIENCE</small>
+<nav class="nav" aria-label="Main navigation">
+<button data-tab="map" class="active" aria-current="page">
+<span class="nav-icon">◎</span>Memory palace</button>
+<button data-tab="library">
+<span class="nav-icon">▤</span>Library</button>
+<button data-tab="overview">
+<span class="nav-icon">◫</span>Overview</button>
+<button data-tab="activity">
+<span class="nav-icon">↗</span>Activity</button>
+</nav>
+<div class="rail-foot">
+<span class="live">
+</span>Local memory engine<br>
+<span>CLI + MCP · any agent</span>
+<br>
+<span id="project-label">
+</span>
+</div>
+</aside>
+<main>
+<header>
+<div>
+<div class="eyebrow">Your agent’s long-term memory</div>
+<h1>Memory palace</h1>
+<p class="sub">Every experience leaves a connection.</p>
+<p class="hint" id="inventory-note">Your full Memory inventory · local pilot</p>
+</div>
+<div class="row header-actions">
+<button class="btn secondary" id="language-button">STE · 80%</button>
+<button class="btn secondary" id="connect-button">Connect your agent</button>
+<button class="btn" id="learn-button">+ Add memory</button>
+</div>
+</header>
+<div class="note" id="token-notice" role="alert" hidden>
+</div>
+<div class="note" id="update-notice" role="status" hidden>
+<span id="update-copy">
+</span> <a id="update-link" target="_blank" rel="noopener noreferrer">Upgrade</a> <button class="btn secondary" id="update-dismiss">Dismiss</button>
+</div>
+<section class="section" id="overview">
+<div class="stats">
+<div class="card">
+<label>Memories stored</label>
+<div class="value" id="count">0</div>
+<div class="hint" id="count-hint">Your memory starts here</div>
+</div>
+<div class="card">
+<label>Context tokens avoided · estimate</label>
+<div class="value" id="tokens">0</div>
+<div class="hint">vs. loading all eligible Memories · bytes ÷ 4</div>
+</div>
+<div class="card">
+<label>Reported useful Recall</label>
+<div class="value" id="helpful">—</div>
+<div class="hint" id="helpful-hint">Waiting for outcome feedback</div>
+</div>
+<div class="card">
+<label>Recalls completed</label>
+<div class="value" id="retrievals">0</div>
+<div class="hint" id="latency">p95 ranking + journal replay</div>
+</div>
+</div>
+<div class="middle">
+<div class="card">
+<div class="card-head">
+<h2>Memory growth</h2>
+<span class="chip">Cumulative Memories · 14 days</span>
+</div>
+<div class="chart" id="chart">
+</div>
+<div class="chart-foot">
+<span id="chart-start">
+</span>
+<span>Today</span>
+</div>
+</div>
+<div class="card">
+<div class="card-head">
+<h2>Current Fingerprint</h2>
+<span class="chip">Manifest evidence</span>
+</div>
+<div class="profile" id="profile">
+</div>
+<div class="profile-note">Signals suggest a match. Requirements decide if the Memory applies.</div>
+<button class="btn secondary" id="recall-button" style="margin-top:16px">Try Recall ↗</button>
+</div>
+</div>
+<div class="section-head">
+<h2>Recent Memories</h2>
+<span class="hint">Each Memory keeps its source</span>
+</div>
+<div class="memories" id="recent">
+</div>
+<div class="note">Token figures are estimates. They compare Recall with all eligible summaries. They do not measure task quality or time saved. No model calls or usage reports leave this process.</div>
+</section>
+<section class="section" id="library">
+<div class="section-head">
+<h2>Memory library</h2>
+<div class="filters">
+<input id="search" placeholder="Find a Memory or project…" aria-label="Find a Memory">
+<select id="filter" aria-label="Filter outcome">
+<option value="">All Classes</option>
+<option value="win">Win</option>
+<option value="lesson">Lesson</option>
+<option value="warning">Warning</option>
+<option value="scar">Scar</option>
+</select>
+</div>
+</div>
+<div class="memories" id="all-memories">
+</div>
+</section>
+<section class="section active" id="map" aria-label="Memory palace">
+<div class="palace-heading">
+<div>
+<h2>A mind made of experience</h2>
+<p class="sub">Explore memories and the context that connects them.</p>
+</div>
+<div class="palace-count" id="map-count" role="status">
+</div>
+</div>
+<div class="palace-workspace">
+<div class="network-panel">
+<div class="map-toolbar">
+<input id="map-search" type="search" placeholder="Search this mind…" aria-label="Search memory network">
+<select id="map-class" aria-label="Filter network by class">
+<option value="">All classes</option>
+<option value="win">Wins</option>
+<option value="lesson">Lessons</option>
+<option value="warning">Warnings</option>
+<option value="scar">Scars</option>
+</select>
+<select id="map-links" aria-label="Connection type">
+<option value="signals">Shared signals</option>
+<option value="project">Same project</option>
+</select>
+</div>
+<div class="network-kicker">
+<span>NEURAL ATLAS / TOP VIEW</span>
+<span id="network-status">LOCAL MEMORY</span>
+</div>
+<div class="network-viewport" id="network-viewport" tabindex="0" aria-label="Scrollable memory network">
+<div id="memory-map">
+</div>
+</div>
+<div class="network-footer">
+<div class="legend">
+<span>
+<i style="--color:var(--win)">
+</i>Win</span>
+<span>
+<i style="--color:var(--lesson)">
+</i>Lesson</span>
+<span>
+<i style="--color:var(--warning)">
+</i>Warning</span>
+<span>
+<i style="--color:var(--scar)">
+</i>Scar</span>
+</div>
+<div class="zoom-controls">
+<button id="zoom-out" aria-label="Zoom out">−</button>
+<button id="zoom-reset" aria-label="Reset network zoom">100%</button>
+<button id="zoom-in" aria-label="Zoom in">+</button>
+</div>
+</div>
+<p class="network-caption">A brain-inspired map of stored experience. Lines show shared context, not biological or causal links. Select a node or a memory below.</p>
+</div>
+<aside class="inspector" aria-label="Memory inspector">
+<div class="inspector-head">
+<span>MEMORY INSPECTOR</span>
+<span id="inspector-position">—</span>
+</div>
+<div class="inspector-body" id="map-detail">
+</div>
+</aside>
+</div>
+<div class="memory-index">
+<div class="index-heading">
+<h2>In this mind</h2>
+<span class="hint" id="index-count">
+</span>
+</div>
+<div class="memory-list" id="map-list" aria-label="Memories in network">
+</div>
+</div>
+</section>
+<section class="section" id="activity">
+<div class="section-head">
+<h2>Automatic capture</h2>
+<span class="hint" id="experience-count">
+</span>
+</div>
+<p class="sub">Tool outcomes and review requests in this project. An event becomes a Memory only after the agent saves a useful lesson.</p>
+<div class="map-scroll" id="experience-table">
+</div>
+<div class="note">Use <code>elephant automation</code> to check setup. Pause with <code>elephant automation --enabled=false</code>. Prompts, tool text and transcripts are not stored by these hooks.</div>
+<div class="section-head">
+<h2>Recall activity</h2>
+<span class="hint">Your Recall events</span>
+</div>
+<div id="activity-table">
+</div>
+<div class="note">The baseline loads all eligible Memory summaries. Estimates use bytes divided by four, rounded up. Actual tokens and tool overhead can differ. Latency excludes the model, disk sync and agent work.</div>
+</section>
+<details class="maintenance">
+<summary>Engine settings & updates</summary>
+<div class="row update-controls" style="margin-bottom:16px">
+<button class="btn secondary" id="update-check">Check for updates</button>
+<button class="btn secondary" id="update-toggle">Disable update checks</button>
+<span class="hint" id="update-state" role="status" aria-live="polite">
+</span>
+</div>
+</details>
+</main>
+</div>
+<div class="modal" id="learn-modal">
+<form class="dialog" id="learn-form">
+<h2>Imprint a Memory.</h2>
+<p class="sub">Describe the Experience. Write one useful Memory. Give its source.</p>
+<div class="row">
+<label>Memory Class<select name="class">
+<option value="win">Win</option>
+<option value="lesson">Lesson</option>
+<option value="warning">Warning</option>
+<option value="scar">Scar</option>
+</select>
+</label>
+<label>Visibility<select name="scope">
+<option value="personal">Personal · across projects</option>
+<option value="project">This project only</option>
+<option value="conversation">This conversation only</option>
+<option value="team">Team draft · needs review</option>
+</select>
+</label>
+</div>
+<label>Experience · what happened?<textarea name="incident" required placeholder="Repeated requests exhausted the warehouse connection pool.">
+</textarea>
+</label>
+<label>Memory · what should the agent learn?<textarea name="lesson" required placeholder="Bound concurrency to available connections and measure queue wait time.">
+</textarea>
+</label>
+<label>Evidence source<input name="source" required placeholder="PR #42, test run, incident report…">
+</label>
+<label>Subject · optional<input name="subject" placeholder="warehouse-concurrency">
+</label>
+<label>Requires · optional JSON<textarea name="requires" placeholder='{"database":["snowflake"]}'>
+</textarea>
+</label>
+<label>Excludes · optional JSON<textarea name="excludes" placeholder='{"cloud":["azure"]}'>
+</textarea>
+</label>
+<p class="hint">Unknown requirements block Recall. Use a list of values for each Signal type. Scope must match the startup context.</p>
+<div class="actions">
+<button type="button" class="btn secondary" data-close>Cancel</button>
+<button class="btn">Imprint Memory</button>
+</div>
+</form>
+</div>
+<div class="modal" id="recall-modal">
+<div class="dialog">
+<h2>Recall useful Memories.</h2>
+<p class="sub">Use the current task and known Signals.</p>
+<form id="recall-form">
+<label>Current task<input name="task" required placeholder="Improve filter caching and warehouse query concurrency">
+</label>
+<label>Recall Budget · bytes<input name="byte_budget" type="number" min="1" max="64000" value="4000">
+</label>
+<label>Known current facts · optional JSON<textarea name="context_features" placeholder='{"database":["snowflake"]}'>
+</textarea>
+</label>
+<label>Stable task/run ID · needed for feedback<input name="feedback_id" placeholder="task-123-validation-1">
+</label>
+<div class="actions">
+<button type="button" class="btn secondary" data-close>Close</button>
+<button class="btn">Recall Memories</button>
+</div>
+</form>
+<div id="recall-result">
+</div>
+</div>
+</div>
+<div class="modal" id="connect-modal">
+<div class="dialog">
+<h2>Connect your agent.</h2>
+<p class="sub">Add the MCP settings to your client. Add the agent instructions. Then restart the client.</p>
+<label>MCP JSON configuration<pre id="connect-json">
+</pre>
+</label>
+<label>Codex TOML configuration<pre id="connect-toml">
+</pre>
+</label>
+<label>Agent instructions<pre id="connect-instructions">
+</pre>
+</label>
+<p class="hint">Restart the client. Confirm that Elephant tools are present. Use Recall before a task. Imprint a Memory after an observed result.</p>
+<div class="actions">
+<button type="button" class="btn secondary" data-close>Close</button>
+</div>
+</div>
+</div>
+<div class="modal" id="language-modal">
+<form class="dialog" id="language-form">
+<h2>Writing target</h2>
+<p class="sub">Use ASD-STE100 as the writing guide. The target is a setting. It is not a compliance score.</p>
+<label>STE target · percent<input name="target_percent" type="range" min="80" max="100" step="1" value="80">
+<output id="language-value">80%</output>
+</label>
+<p class="note">80–99%: show local warnings. 100%: reject new summaries that fail local checks. These checks cover sentence length, selected complex phrases and selected contractions. They do not validate the full standard. Evidence, code and old Memories stay unchanged.</p>
+<div class="actions">
+<button type="button" class="btn secondary" data-close>Close</button>
+<button class="btn">Save target</button>
+</div>
+</form>
+</div>
+<div class="toast" id="toast" role="status">
+</div>
 <script nonce="__NONCE__">
 let state=null;const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const num=x=>Number(x||0).toLocaleString();let toastTimer;function toast(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',3500)}
 // The per-run token arrives in the URL fragment, which is never sent to the server. Keep it for reloads in this tab only and strip it from the address bar.
@@ -20,8 +567,8 @@ async function api(path,body){const r=await fetch('/api/'+path,{method:body?'POS
 function memoryClass(m){return m.class||({great:'win',good:'lesson',bad:'warning',worst:'scar'}[m.outcome])||'lesson'}
 function memoryCard(m){const tags=Object.entries(m.features||{}).flatMap(([k,values])=>values.map(v=>k+': '+v)).slice(0,5);const status=m.retired?'retired':m.scope==='team'&&!m.approved?'team draft':m.scope;return '<article class="memory '+(m.retired?'retired':'')+'"><div class="memory-top"><span class="outcome '+esc(memoryClass(m))+'">'+esc(memoryClass(m))+'</span><span class="hint">'+esc(status)+' · '+new Date(m.created).toLocaleDateString(undefined,{month:'short',day:'numeric'})+'</span></div><h3>'+esc(m.lesson)+'</h3><p>'+esc(m.incident)+'</p><div class="profile" style="margin:12px 0">'+tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div><div class="meta"><span>'+esc(m.project||('No project · '+(m.conversation||'personal')))+'</span><span>'+num(m.helpful)+' helpful · '+num(m.unhelpful)+' unhelpful</span></div><details class="detail" style="margin-top:12px"><summary>Source & applicability</summary><pre>'+esc(JSON.stringify({id:m.id,source:m.source,requires:m.requires||{},excludes:m.excludes||{},subject:m.subject||'',writing:m.writing||{status:'Not checked at original Imprint'}},null,2))+'</pre></details></article>'}
 function empty(){return '<div class="empty">No Memories yet.<br>Imprint a real Experience. Then use Recall on a related task.</div>'}
-function chart(){const today=new Date();today.setHours(0,0,0,0);const days=Array.from({length:14},(_,i)=>new Date(today.getTime()-(13-i)*86400000));const vals=days.map(d=>state.memories.filter(m=>new Date(m.created)<new Date(d.getTime()+86400000)).length);const max=Math.max(1,...vals),points=vals.map((v,i)=>(i*560/13+15)+','+(145-v/max*115)).join(' ');let svg='<svg viewBox="0 0 590 165" role="img" aria-label="Cumulative memories over the last fourteen days">';for(let i=0;i<4;i++){const y=145-i*38.3;svg+='<line x1="15" y1="'+y+'" x2="575" y2="'+y+'" stroke="#e8ece2" stroke-dasharray="4 5"/>'}svg+='<polygon points="15,145 '+points+' 575,145" fill="#e5f0dd"/><polyline points="'+points+'" fill="none" stroke="#467451" stroke-width="2.5"/>';svg+='<circle cx="575" cy="'+(145-vals[13]/max*115)+'" r="4" fill="#467451"/></svg>';$('chart').innerHTML=svg;$('chart-start').textContent=days[0].toLocaleDateString(undefined,{month:'short',day:'numeric'})}
-function renderLibrary(){const term=$('search').value.toLowerCase(),outcome=$('filter').value;const list=state.memories.filter(m=>(!outcome||memoryClass(m)===outcome)&&[m.lesson,m.incident,m.project].some(s=>s.toLowerCase().includes(term)));$('all-memories').innerHTML=list.map(memoryCard).join('')||empty()}
+function chart(){const today=new Date();today.setHours(0,0,0,0);const days=Array.from({length:14},(_,i)=>new Date(today.getTime()-(13-i)*86400000));const vals=days.map(d=>state.memories.filter(m=>new Date(m.created)<new Date(d.getTime()+86400000)).length);const max=Math.max(1,...vals),points=vals.map((v,i)=>(i*560/13+15)+','+(145-v/max*115)).join(' ');let svg='<svg viewBox="0 0 590 165" role="img" aria-label="Cumulative memories over the last fourteen days">';for(let i=0;i<4;i++){const y=145-i*38.3;svg+='<line x1="15" y1="'+y+'" x2="575" y2="'+y+'" stroke="#303c38" stroke-dasharray="4 5"/>'}svg+='<polygon points="15,145 '+points+' 575,145" fill="#293d30"/><polyline points="'+points+'" fill="none" stroke="#afcd95" stroke-width="2.5"/>';svg+='<circle cx="575" cy="'+(145-vals[13]/max*115)+'" r="4" fill="#afcd95"/></svg>';$('chart').innerHTML=svg;$('chart-start').textContent=days[0].toLocaleDateString(undefined,{month:'short',day:'numeric'})}
+function renderLibrary(){const term=$('search').value.toLowerCase(),outcome=$('filter').value;const list=state.memories.filter(m=>(!outcome||memoryClass(m)===outcome)&&[m.lesson,m.incident,m.project,m.source,m.subject].some(s=>String(s||'').toLowerCase().includes(term)));$('all-memories').innerHTML=list.map(memoryCard).join('')||empty()}
 function renderExperiences(){const events=[...(state.experiences||[])].reverse();$('experience-count').textContent=num(state.experience_count||0)+' events · latest 100';$('experience-table').innerHTML=events.length?'<table class="usage-table"><thead><tr><th>Time</th><th>Agent</th><th>Event</th><th>Tool</th><th>Status</th></tr></thead><tbody>'+events.map(x=>'<tr><td>'+esc(new Date(x.at).toLocaleString())+'</td><td>'+esc(x.agent)+'</td><td>'+esc(x.event)+'</td><td>'+esc(x.tool||'—')+'</td><td>'+esc(x.status.replaceAll('_',' '))+(x.exit_code===undefined?'':' · exit '+esc(x.exit_code))+'</td></tr>').join('')+'</tbody></table>':'<div class="empty">No hook events in this project yet.<br>Run elephant init, approve the hooks in your agent, and start a task.</div>'}
 function render(){renderExperiences();$('language-button').textContent='STE · '+state.language.target_percent+'%';renderMap();document.querySelectorAll('#learn-form [name=scope] option').forEach(o=>o.disabled=(o.value==='project'&&!state.profile.project)||(o.value==='conversation'&&!state.profile.conversation)||(o.value==='team'&&!state.identity.team));$('inventory-note').textContent='Your full Memory inventory · '+(state.profile.project||'No project attached')+' · Elephant '+state.version;const active=state.memories.filter(m=>!m.retired),drafts=active.filter(m=>m.scope==='team'&&!m.approved);$('count').textContent=num(active.length);$('count-hint').textContent=drafts.length+' team drafts · '+(state.memories.length-active.length)+' retired';$('tokens').textContent=num(state.estimated_tokens_avoided);const n=state.helpful+state.unhelpful;$('helpful').textContent=n?Math.round(state.helpful/n*100)+'%':'—';$('helpful-hint').textContent=n?num(n)+' observations · includes visible peer feedback':'Waiting for observed outcomes';$('retrievals').textContent=num(state.usage.length);$('latency').textContent=state.usage.length?'p95 '+state.p95_ms.toFixed(1)+' ms · core retrieval':'Waiting for first retrieval';$('project-label').textContent=state.profile.project||('No project · '+(state.profile.conversation||'personal'));$('profile').innerHTML=Object.entries(state.profile.features||{}).flatMap(([k,vs])=>vs.map(v=>'<span class="tag" title="'+esc((state.profile.evidence||{})[k+'='+v]?.join(', ')||'Explicit label')+'">'+esc(v)+'</span>')).join('')||'<span class="hint">No project or Signals found. Give a task. Add known facts if a Memory requires them.</span>';$('recent').innerHTML=active.slice(0,4).map(memoryCard).join('')||empty();chart();renderLibrary();const rows=[...state.usage].reverse();$('activity-table').innerHTML=rows.length?'<table class="usage-table"><thead><tr><th>Time</th><th>Project</th><th>Memories</th><th>Injected est. tokens</th><th>Avoided est. tokens</th><th>Core ms</th></tr></thead><tbody>'+rows.map(u=>'<tr><td>'+new Date(u.at).toLocaleString()+'</td><td>'+esc(u.project)+'</td><td title="'+esc(u.memory_ids.join(', '))+'">'+u.memory_ids.length+'</td><td>'+num(Math.ceil(u.injected_bytes/4))+'</td><td>'+num(Math.max(0,Math.ceil(u.baseline_bytes/4)-Math.ceil(u.injected_bytes/4)))+'</td><td>'+u.latency_ms.toFixed(1)+'</td></tr>').join('')+'</tbody></table>':empty()}
 
@@ -33,23 +580,84 @@ $('update-check').onclick=()=>updateAction({check:true});
 $('update-dismiss').onclick=()=>updateAction({dismiss:true});
 $('update-toggle').onclick=()=>updateAction({enabled:!updateState?.enabled});
 
-async function refresh(){try{state=await api('dashboard');renderUpdate(await api('update'));if((state.profile.features.style||[]).includes('synthetic-demo'))document.querySelector('.eyebrow').textContent='Synthetic demo · invented incidents and outcomes';render()}catch(e){toast(e.message)}}
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(n=>n.classList.toggle('active',n===b));document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===b.dataset.tab))});$('search').oninput=renderLibrary;$('filter').onchange=renderLibrary;$('learn-button').onclick=()=>$('learn-modal').classList.add('show');$('recall-button').onclick=()=>$('recall-modal').classList.add('show');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('show'));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal').forEach(m=>m.classList.remove('show'))});
-$('learn-form').onsubmit=async e=>{e.preventDefault();try{const body=Object.fromEntries(new FormData(e.target));body.requires=parseLabels(body.requires,'Requires');body.excludes=parseLabels(body.excludes,'Excludes');const saved=await api('record',body);$('learn-modal').classList.remove('show');e.target.reset();toast(saved.writing?.issues.length?'Memory stored. '+saved.writing.issues.length+' writing warnings.':'Memory stored.');await refresh()}catch(e){toast(e.message)}};
+async function refresh(){try{state=await api('dashboard');if((state.profile.features.style||[]).includes('synthetic-demo'))document.querySelector('.eyebrow').textContent='Synthetic demo · invented incidents and outcomes';render()}catch(e){toast(e.message);return}try{renderUpdate(await api('update'))}catch(e){$('update-state').textContent='Update status unavailable. Retry from engine settings.'}}
+let modalTrigger=null;
+function openModal(id){modalTrigger=document.activeElement;const modal=$(id);modal.classList.add('show');document.querySelector('.layout').inert=true;document.body.style.overflow='hidden';modal.querySelector('input,textarea,select,button')?.focus()}
+function closeModal(modal){modal.classList.remove('show');document.querySelector('.layout').inert=false;document.body.style.overflow='';modalTrigger?.focus()}
+document.querySelectorAll('.modal').forEach(modal=>{const dialog=modal.querySelector('.dialog'),heading=dialog.querySelector('h2');heading.id=modal.id+'-title';dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');dialog.setAttribute('aria-labelledby',heading.id);modal.onclick=e=>{if(e.target===modal)closeModal(modal)}});
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav button').forEach(n=>{n.classList.toggle('active',n===b);if(n===b)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current')});document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===b.dataset.tab))});$('search').oninput=renderLibrary;$('filter').onchange=renderLibrary;$('learn-button').onclick=()=>openModal('learn-modal');$('recall-button').onclick=()=>openModal('recall-modal');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeModal(b.closest('.modal')));document.addEventListener('keydown',e=>{const modal=document.querySelector('.modal.show');if(!modal)return;if(e.key==='Escape')closeModal(modal);if(e.key==='Tab'){const controls=[...modal.querySelectorAll('button,input,textarea,select,summary,[tabindex="0"]')].filter(el=>!el.disabled);const first=controls[0],last=controls[controls.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+$('learn-form').onsubmit=async e=>{e.preventDefault();try{const body=Object.fromEntries(new FormData(e.target));body.requires=parseLabels(body.requires,'Requires');body.excludes=parseLabels(body.excludes,'Excludes');const saved=await api('record',body);closeModal($('learn-modal'));e.target.reset();toast(saved.writing?.issues.length?'Memory stored. '+saved.writing.issues.length+' writing warnings.':'Memory stored.');await refresh()}catch(e){toast(e.message)}};
 $('recall-form').onsubmit=async e=>{e.preventDefault();try{const body=Object.fromEntries(new FormData(e.target));body.byte_budget=Number(body.byte_budget);body.context_features=parseLabels(body.context_features,'Current facts');delete body.feedback_id;const r=await api('recall',body);$('recall-result').innerHTML='<div class="note">'+r.hits.length+' Memories · '+r.bytes+' / '+r.byte_budget+' bytes</div><pre>'+esc(r.context||'No Memory returned. Check the task terms, known facts, scope and Recall Budget.')+'</pre>'+r.hits.map(h=>'<div class="feedback"><span class="hint">'+esc(h.id.slice(0,8))+'</span><button data-help="true" data-id="'+esc(h.id)+'">Applied · helped</button><button data-help="false" data-id="'+esc(h.id)+'">Applied · did not help</button></div>').join('');$('recall-result').querySelectorAll('[data-help]').forEach(b=>b.onclick=async()=>{try{const runID=$('recall-form').elements.feedback_id.value.trim();if(!runID)throw Error('Enter a stable task/run ID before reporting an applied outcome.');await api('feedback',{id:b.dataset.id,feedback_id:runID,helpful:b.dataset.help==='true'});b.parentElement.querySelectorAll('button').forEach(x=>x.disabled=true);toast('Feedback stored.');await refresh()}catch(e){toast(e.message)}});await refresh()}catch(e){toast(e.message)}};
 function parseLabels(value,name){if(!value||!value.trim())return {};const object=JSON.parse(value);if(!object||Array.isArray(object)||typeof object!=='object')throw Error(name+' must be a JSON object');for(const [key,values]of Object.entries(object)){if(!Array.isArray(values)||!values.length||values.some(v=>typeof v!=='string'||!v.trim()))throw Error(name+': '+key+' must contain a nonempty list of strings')}return object}
-$('connect-button').onclick=async()=>{try{const c=await api('setup');$('connect-json').textContent=JSON.stringify(c.mcp_config,null,2);$('connect-toml').textContent=c.codex_toml;$('connect-instructions').textContent=c.agent_instructions;$('connect-modal').classList.add('show')}catch(e){toast(e.message)}};
-function renderMap(){
- const memories=state.memories.filter(m=>!m.retired).slice(0,12);const projects=[...new Set(memories.map(m=>m.project||m.conversation||'Unanchored'))].slice(0,8);const signals=[...new Set(memories.flatMap(m=>Object.entries(m.features||{}).flatMap(([k,vs])=>vs.map(v=>k+': '+v))))].slice(0,10);
- const height=Math.max(700,memories.length*65+90);const nodes=[];const edges=[];const add=(id,label,x,y,kind,data)=>{nodes.push({id,label,x,y,kind,data})};
- projects.forEach((p,i)=>add('p:'+p,p,20,70+i*70,'Origin',{origin:p}));signals.forEach((p,i)=>add('s:'+p,p,235,70+i*58,'Signal',{signal:p}));
- memories.forEach((m,i)=>{const y=70+i*65;add('m:'+m.id,memoryClass(m).toUpperCase()+': '+m.lesson,450,y,'Memory',m);add('e:'+m.id,m.source,665,y,'Evidence',{source:m.source,incident:m.incident});edges.push(['p:'+(m.project||m.conversation||'Unanchored'),'m:'+m.id]);edges.push(['m:'+m.id,'e:'+m.id]);for(const [k,vs]of Object.entries(m.features||{}))for(const v of vs)if(signals.includes(k+': '+v))edges.push(['s:'+k+': '+v,'m:'+m.id])});
- const byID=Object.fromEntries(nodes.map(n=>[n.id,n]));let svg='<svg viewBox="0 0 900 '+height+'" role="img" aria-label="Memory Map">'+['Origin','Signals','Memories','Evidence'].map((v,i)=>'<text x="'+(20+i*215)+'" y="32" fill="#617265" font-size="13">'+v+'</text>').join('');
- svg+=edges.map(([a,b])=>{const x=byID[a],y=byID[b];if(!x||!y)return '';return '<path class="map-edge" d="M '+(x.x+190)+' '+(x.y+20)+' C '+(x.x+205)+' '+(x.y+20)+', '+(y.x-15)+' '+(y.y+20)+', '+y.x+' '+(y.y+20)+'" fill="none"/>'}).join('');
- svg+=nodes.map((n,i)=>'<g class="map-node" tabindex="0" role="button" aria-label="'+esc(n.label)+'" data-node="'+i+'"><title>'+esc(n.label)+'</title><rect x="'+n.x+'" y="'+n.y+'" width="190" height="42" rx="8" fill="'+(n.kind==='Memory'?'#e5f0dd':'#f7f8f3')+'" stroke="#d8e0d1"/><text x="'+(n.x+10)+'" y="'+(n.y+25)+'" font-size="11" fill="#24372a">'+esc(n.label.length>27?n.label.slice(0,26)+'…':n.label)+'</text></g>').join('');svg+='</svg>';$('memory-map').innerHTML=memories.length?svg:empty();$('map-count').textContent='Showing '+memories.length+' of '+state.memories.filter(m=>!m.retired).length+' active Memories';
- $('memory-map').querySelectorAll('[data-node]').forEach(el=>{const select=()=>$('map-detail').textContent=JSON.stringify(nodes[Number(el.dataset.node)].data,null,2);el.onclick=select;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')select()}})
+$('connect-button').onclick=async()=>{try{const c=await api('setup');$('connect-json').textContent=JSON.stringify(c.mcp_config,null,2);$('connect-toml').textContent=c.codex_toml;$('connect-instructions').textContent=c.agent_instructions;openModal('connect-modal')}catch(e){toast(e.message)}};
+let selectedMemoryID='',mapSignature='',mapZoom=1,mapNodes=[],mapEdges=[],mapMatches=[];
+const classColors={win:'#b8d99a',lesson:'#8fbdd2',warning:'#dfbb7b',scar:'#e5988c'};
+function signalKeys(memory){return Object.entries(memory.features||{}).flatMap(([key,values])=>values.map(value=>key+': '+value))}
+function mapMemoryMatches(memory,term,kind){return !memory.retired&&(!kind||memoryClass(memory)===kind)&&[memory.lesson,memory.incident,memory.source,memory.project,memory.subject,...signalKeys(memory)].some(value=>String(value||'').toLowerCase().includes(term))}
+function buildNeuralGraph(memories,mode){
+ const groups={win:[],lesson:[],warning:[],scar:[]};
+ memories.forEach(m=>groups[memoryClass(m)]?.push(m));
+ const nodes=[];
+ for(const [kind,list]of Object.entries(groups)){
+  list.sort((a,b)=>a.id.localeCompare(b.id));
+  const left=kind==='win'||kind==='warning',upper=kind==='win'||kind==='lesson';
+  list.forEach((memory,index)=>{
+   const angle=index*2.399963229728653,radius=Math.sqrt((index+.5)/list.length);
+   nodes.push({memory,x:(left?211:389)+Math.cos(angle)*radius*68,y:(upper?156:316)+Math.sin(angle)*radius*72,color:classColors[kind]});
+  });
+ }
+ // A sparse, deterministic sample of real shared-context relationships.
+ const buckets=new Map(),edges=[],seen=new Set();
+ nodes.forEach((node,index)=>{
+  const keys=mode==='project'?(node.memory.project?[node.memory.project]:[]):signalKeys(node.memory);
+  for(const key of keys){const previous=buckets.get(key)||[];for(const other of previous.slice(-2)){const pair=other+':'+index;if(!seen.has(pair)){edges.push([other,index]);seen.add(pair)}}previous.push(index);buckets.set(key,previous)}
+ });
+ return {nodes,edges};
 }
-$('language-button').onclick=()=>{$('language-form').elements.target_percent.value=state.language.target_percent;$('language-value').textContent=state.language.target_percent+'%';$('language-modal').classList.add('show')};$('language-form').elements.target_percent.oninput=e=>$('language-value').textContent=e.target.value+'%';$('language-form').onsubmit=async e=>{e.preventDefault();try{await api('language',{target_percent:Number(e.target.elements.target_percent.value)});$('language-modal').classList.remove('show');await refresh();toast('Writing target stored.')}catch(e){toast(e.message)}};
+function brainDrawing(){
+ const outline='M 291 52 C 273 24 225 31 201 53 C 165 48 137 76 129 104 C 99 117 94 149 105 176 C 77 204 87 241 104 258 C 88 292 108 331 129 342 C 130 375 163 398 191 398 C 210 431 255 437 283 411 C 301 394 294 351 294 326 L 294 104 C 294 82 301 66 291 52 Z';
+ const folds=['M 274 62 C 227 45 218 84 225 111 C 230 135 269 117 279 143','M 200 68 C 173 78 176 106 188 119 C 206 138 206 157 181 166 C 152 176 126 155 132 134','M 151 99 C 155 125 135 139 119 128','M 276 153 C 242 133 222 169 240 190 C 257 212 281 192 285 216','M 122 190 C 155 183 151 216 175 219 C 205 223 218 194 204 180','M 113 249 C 136 224 171 240 162 265 C 155 287 128 277 125 304','M 274 235 C 241 219 221 242 235 264 C 250 286 280 267 284 291','M 191 238 C 205 260 186 282 198 301 C 209 317 231 305 233 330','M 151 309 C 162 290 182 312 173 336 C 167 355 189 374 211 359','M 273 318 C 248 318 254 355 273 362 C 287 371 274 404 245 403','M 220 378 C 201 391 224 413 240 405'];
+ let result='<defs><pattern id="atlas-grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".65" fill="#3b4b4e" opacity=".5"/></pattern></defs><rect width="600" height="470" fill="url(#atlas-grid)"/>';
+ for(const transform of ['', 'translate(600 0) scale(-1 1)'])result+='<g transform="'+transform+'"><path class="brain-outline" d="'+outline+'"/>'+folds.map(d=>'<path class="brain-fold" d="'+d+'"/>').join('')+'</g>';
+ result+='<path d="M300 38 V432" stroke="#809192" stroke-width=".7" stroke-dasharray="2 6" opacity=".5"/><text x="64" y="62" class="brain-label">WINS</text><text x="457" y="62" class="brain-label">LESSONS</text><text x="45" y="418" class="brain-label">WARNINGS</text><text x="475" y="418" class="brain-label">SCARS</text>';
+ return '<g aria-hidden="true">'+result+'</g>';
+}
+function renderMap(){
+ if(!state)return;
+ const term=$('map-search').value.trim().toLowerCase(),kind=$('map-class').value,mode=$('map-links').value;
+ const signature=JSON.stringify([state.memories,term,kind,mode]);
+ if(signature===mapSignature)return;
+ mapSignature=signature;
+ mapMatches=state.memories.filter(m=>mapMemoryMatches(m,term,kind));
+ const graph=buildNeuralGraph(mapMatches.slice(0,120),mode);mapNodes=graph.nodes;mapEdges=graph.edges;
+ const activeCount=state.memories.filter(m=>!m.retired).length;
+ $('map-count').textContent=num(activeCount)+' active memories';
+ $('network-status').textContent=num(mapEdges.length)+' CONNECTIONS';
+ $('index-count').textContent=num(mapMatches.length)+' matching'+(mapMatches.length>120?' · first 120 on atlas':'');
+ $('memory-map').innerHTML=mapNodes.length?'<svg viewBox="0 0 600 470" role="group" aria-label="Brain-shaped memory network. Use Tab to explore memories.">'+brainDrawing()+mapEdges.map(([a,b],i)=>{const first=mapNodes[a],second=mapNodes[b];return '<path aria-hidden="true" class="map-edge" data-edge="'+i+'" d="M'+first.x+','+first.y+' Q300,'+((first.y+second.y)/2-35)+' '+second.x+','+second.y+'"/>'}).join('')+mapNodes.map((n,i)=>'<g class="map-node" tabindex="0" role="button" aria-pressed="false" aria-label="'+esc(memoryClass(n.memory)+': '+n.memory.lesson)+'" data-node="'+i+'" style="color:'+n.color+'"><title>'+esc(n.memory.lesson)+'</title><circle cx="'+n.x+'" cy="'+n.y+'" r="14" fill="transparent"/><circle class="node-ring" cx="'+n.x+'" cy="'+n.y+'" r="11"/><circle class="node-dot" cx="'+n.x+'" cy="'+n.y+'" r="'+(5+Math.min(3,Math.log2(1+(n.memory.helpful||0))))+'" fill="'+n.color+'"/></g>').join('')+'</svg>':'<div class="empty map-empty">'+(activeCount?'No memories match these filters.<br>Try a different search or class.':'Your memory palace starts here.<br>Add an experience to create your first connection.')+'</div>';
+ $('map-list').innerHTML=mapMatches.map(m=>'<button class="memory-row" data-memory-id="'+esc(m.id)+'" aria-pressed="false"><span class="outcome '+esc(memoryClass(m))+'">'+esc(memoryClass(m))+'</span><span class="memory-row-title">'+esc(m.lesson)+'</span><span class="memory-row-project">'+esc(m.project||m.scope)+'</span><span class="memory-row-arrow" aria-hidden="true">↗</span></button>').join('')||'<div class="empty">'+(activeCount?'No matching memories.':'No stored memories yet.')+'</div>';
+ $('memory-map').querySelectorAll('[data-node]').forEach(el=>{const select=()=>selectMemory(mapNodes[Number(el.dataset.node)].memory.id,true);el.onclick=select;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select()}}});
+ $('map-list').querySelectorAll('[data-memory-id]').forEach(el=>el.onclick=()=>selectMemory(el.dataset.memoryId,true));
+ if(!mapMatches.some(m=>m.id===selectedMemoryID))selectedMemoryID='';
+ selectMemory(selectedMemoryID,false);
+}
+function selectMemory(id,resetScroll){
+ selectedMemoryID=id;
+ const memory=mapMatches.find(m=>m.id===id),neighbors=new Set();
+ mapEdges.forEach(([a,b],index)=>{const match=mapNodes[a].memory.id===id||mapNodes[b].memory.id===id;if(match){neighbors.add(mapNodes[a].memory.id);neighbors.add(mapNodes[b].memory.id)}$('memory-map').querySelector('[data-edge="'+index+'"]').classList.toggle('focused',match)});
+ $('memory-map').querySelectorAll('[data-node]').forEach(el=>{const nodeID=mapNodes[Number(el.dataset.node)].memory.id;el.classList.toggle('selected',nodeID===id);el.classList.toggle('dim',!!id&&nodeID!==id&&!neighbors.has(nodeID));el.setAttribute('aria-pressed',String(nodeID===id))});
+ $('map-list').querySelectorAll('[data-memory-id]').forEach(el=>{el.classList.toggle('selected',el.dataset.memoryId===id);el.setAttribute('aria-pressed',String(el.dataset.memoryId===id))});
+ $('inspector-position').textContent=memory?String(mapMatches.indexOf(memory)+1).padStart(2,'0')+' / '+num(mapMatches.length):'—';
+ if(!memory){$('map-detail').innerHTML='<div class="inspector-placeholder"><div class="orbit" aria-hidden="true">◎</div><h3>Follow a connection.</h3><p>Select a memory to explore its lesson, original experience, and evidence.</p><p>Node size reflects helpful feedback.<br>Color reflects the memory class.</p></div>';return}
+ const status=memory.scope==='team'&&!memory.approved?'Team draft':memory.scope;
+ const labels=object=>Object.entries(object||{}).flatMap(([key,values])=>values.map(value=>'<span class="tag">'+esc(key+': '+value)+'</span>')).join('');
+ $('map-detail').innerHTML='<span class="outcome '+esc(memoryClass(memory))+'">'+esc(memoryClass(memory))+'</span><h3>'+esc(memory.lesson)+'</h3><div class="hint">'+esc(status)+' · '+esc(new Date(memory.created).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))+'</div><div class="inspector-metrics"><span><strong>'+num(memory.helpful)+'</strong>Helpful</span><span><strong>'+num(memory.unhelpful)+'</strong>Unhelpful</span><span><strong>'+num(Math.max(0,neighbors.size-1))+'</strong>Shown links</span></div><h4>What happened</h4><p>'+esc(memory.incident)+'</p><h4>Evidence</h4><p class="source">'+esc(memory.source||'No source recorded')+'</p><h4>Project</h4><p>'+esc(memory.project||'No project attached')+'</p><h4>Signals</h4><div class="profile">'+(labels(memory.features)||'<span class="hint">No signals recorded</span>')+'</div><h4>Requires</h4><div class="profile">'+(labels(memory.requires)||'<span class="hint">No additional requirements</span>')+'</div><h4>Excludes</h4><div class="profile">'+(labels(memory.excludes)||'<span class="hint">No exclusions</span>')+'</div><details class="detail"><summary>Stored record</summary><pre>'+esc(JSON.stringify(memory,null,2))+'</pre></details>';
+ if(resetScroll)$('map-detail').scrollTop=0;
+}
+function setMapZoom(value){mapZoom=Math.max(1,Math.min(2.5,value));$('memory-map').style.width=mapZoom*100+'%';$('memory-map').style.height=mapZoom*100+'%';$('zoom-reset').textContent=Math.round(mapZoom*100)+'%';$('zoom-out').disabled=mapZoom<=1;$('zoom-in').disabled=mapZoom>=2.5}
+$('map-search').oninput=renderMap;$('map-class').onchange=renderMap;$('map-links').onchange=renderMap;
+$('zoom-in').onclick=()=>setMapZoom(mapZoom+.25);$('zoom-out').onclick=()=>setMapZoom(mapZoom-.25);$('zoom-reset').onclick=()=>setMapZoom(1);setMapZoom(1);
+$('language-button').onclick=()=>{$('language-form').elements.target_percent.value=state.language.target_percent;$('language-value').textContent=state.language.target_percent+'%';openModal('language-modal')};$('language-form').elements.target_percent.oninput=e=>$('language-value').textContent=e.target.value+'%';$('language-form').onsubmit=async e=>{e.preventDefault();try{await api('language',{target_percent:Number(e.target.elements.target_percent.value)});closeModal($('language-modal'));await refresh();toast('Writing target stored.')}catch(e){toast(e.message)}};
 
 if(TOKEN){refresh();setInterval(refresh,10000)}else showTokenNotice();
 </script></body></html>
