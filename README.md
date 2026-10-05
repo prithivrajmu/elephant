@@ -2,6 +2,8 @@
 
 Persistent experience for coding agents.
 
+> **Status: closed beta.** Elephant is a `0.x` prerelease. See [Status: Beta](#status-beta) for known limitations before you rely on it.
+
 Elephant stores source-backed lessons from development work and recalls relevant experience for the next task. A local Go binary provides automatic Codex and Claude Code hooks, an MCP server, a JSON CLI, and the Memory Palace dashboard.
 
 ## Features
@@ -10,13 +12,13 @@ Elephant stores source-backed lessons from development work and recalls relevant
 - Personal, project, conversation, and reviewed team memory scopes.
 - Automatic task hooks with evidence-based lesson review and a factual one-line status.
 - SQLite WAL storage, transactional receipts, legacy migration, and verified backup/restore.
-- A local dashboard and optional, cached release notifications.
+- A local dashboard and cached release notifications (a default daily GitHub check that you can disable).
 - No separate model key, database service, or cloud account required for local use.
-- Optional authenticated Cloudflare hosting, explicit cloud sync, reviewed team sharing, and MCP evidence connectors.
+- Optional, experimental authenticated Cloudflare hosting, explicit cloud sync, reviewed team sharing, and MCP evidence connectors.
 
 ## Installation
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. The current `0.7.0-pilot` release is a prerelease. Repository access is required while this repository is private.
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. The current `0.7.0-pilot` release is a prerelease.
 
 | Computer | Archive platform |
 | --- | --- |
@@ -45,7 +47,20 @@ $env:Path = "$env:LOCALAPPDATA\Elephant\bin;$env:Path"
 elephant selftest
 ```
 
-The PATH changes above apply to the current terminal. See [Installation](docs/installation.md) for persistent PATH setup, authenticated downloads, upgrades, and source builds. Packages are currently unsigned.
+The PATH changes above apply to the current terminal. See [Installation](docs/installation.md) for persistent PATH setup, upgrades, and source builds. Packages are currently unsigned.
+
+## Status: Beta
+
+Elephant is in a **closed beta**. Versions are `0.x` prereleases, and behavior, storage details, and APIs may change between releases (read the release notes before upgrading).
+
+- Packages are **unsigned** and not notarized. Verify downloads against `SHA256SUMS`.
+- **Windows has no automatic hooks.** Use the MCP setup wizard there; automatic hooks cover Codex and Claude Code on macOS and Linux.
+- There is **no enterprise authentication**. Local tenant and user labels are configuration, not access control.
+- The **hosted Cloudflare service is experimental**. Local use needs no cloud account, and nothing is uploaded unless you run an explicit sync command.
+- There is **no automatic redaction** beyond credential-format screening, where your version provides it; that is a best-effort check, not a guarantee. Secrets, personal data, and confidential text are not otherwise removed, so review lessons before saving or sharing them.
+- A **release check runs by default**: at most once per 24 hours, Elephant asks GitHub for the latest release. Opt out with `ELEPHANT_UPDATE_CHECKS=0` or `elephant update --enabled=false`. See [Update notifications](docs/updates.md).
+
+Send feedback with the [pilot feedback template](docs/pilot-feedback.md) in a [GitHub issue](https://github.com/prithivrajmu/elephant/issues). Report vulnerabilities as described in [SECURITY.md](https://github.com/prithivrajmu/elephant/blob/main/SECURITY.md). Version history is in the [CHANGELOG](https://github.com/prithivrajmu/elephant/blob/main/CHANGELOG.md) and the [release notes](docs/releases/v0.7.0-pilot.md) under `docs/releases/`.
 
 ## Quick start
 
@@ -68,12 +83,12 @@ Open the local dashboard with `elephant palace`. For Windows, other MCP clients,
 - [Storage, migration, and recovery](docs/storage.md)
 - [Update notifications](docs/updates.md)
 - [Architecture](docs/architecture.md), [validation](docs/validation.md), and [roadmap](docs/roadmap.md)
-- [Release notes](docs/releases/v0.7.0-pilot.md)
-- [Optional Cloudflare MCP pilot](docs/cloudflare.md), [sync and sharing](docs/cloud-sync.md), and [evidence connectors](docs/mcp-evidence.md)
+- [Release notes](docs/releases/v0.7.0-pilot.md), [pilot feedback template](docs/pilot-feedback.md)
+- [Experimental Cloudflare MCP service](docs/cloudflare.md), [sync and sharing](docs/cloud-sync.md), and [evidence connectors](docs/mcp-evidence.md)
 
 ## Security and privacy
 
-Elephant stores lessons and tool-event metadata locally. It does not read transcripts or retain raw prompts, tool arguments, or tool output. Recalled memories are untrusted evidence; current project instructions take precedence. Local tenant/user labels are configuration, not enterprise authentication. See [Security](docs/security.md).
+Elephant stores lessons and tool-event metadata locally. It does not read transcripts or retain raw prompts, tool arguments, or tool output. It makes no automatic memory upload; the only default network call is the release check described above, which sends no memory or task data. Recalled memories are untrusted evidence; current project instructions take precedence. Local tenant/user labels are configuration, not enterprise authentication. See [Security](docs/security.md).
 
 ## Contributing
 

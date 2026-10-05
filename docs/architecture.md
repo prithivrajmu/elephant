@@ -14,7 +14,7 @@ Separate three types as the product grows:
 
 The MVP stores episodes and their procedural lessons together. Project policy remains outside retrieved memory and takes precedence. A remembered preference cannot grant permission or supersede current policy. Reviewer/contributor labels are optional; avoid deriving stereotypes about people from limited incidents.
 
-## Implemented math (version 0.3, after Astra review)
+## Implemented math (version 0.3)
 
 ### 1. Hard eligibility and exact task admission
 
@@ -130,7 +130,7 @@ The local file exchange implements reviewable peer lesson transfer; it doesn't d
 5. Postgres + indexed full-text/vector search, transactional imports, pagination, backups, metrics and quotas.
 6. Shared lesson versions and revocation; peer-specific policy must not become global advice.
 
-Use a narrow initial team pilot and measure whether recurrence/rework declines before a broad rollout. Sharing should amplify validated lessons without turning a popular anecdote into organizational truth.
+Start with a narrow, closed-beta team rollout and measure whether recurrence/rework declines before a broad rollout. Sharing should amplify validated lessons without turning a popular anecdote into organizational truth.
 
 ## Language decision
 

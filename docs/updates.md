@@ -32,7 +32,8 @@ the subprocess acceptance test.
 ## New Elephant releases
 
 Session-start hooks check published GitHub releases at most once per 24 hours.
-A notice includes the version, release title and upgrade link. Each version is
+This check is on by default and contacts GitHub; see below for what is sent and
+how to disable it. A notice includes the version, release title and upgrade link. Each version is
 announced once per local journal. It never installs an update automatically.
 
 ```sh
@@ -49,32 +50,36 @@ network requests. Each explicit Check forces a fresh lookup (unless checks are d
 
 The request is a GET to the Elephant repository's GitHub releases endpoint. It
 has a two-second timeout and a 256 KiB response limit; redirects are rejected.
-No task text, prompts, project paths or Memories are sent. An optional
-`ELEPHANT_GITHUB_TOKEN` environment variable supplies authorized access for the
-currently private repository. Credentials are not stored or logged. Without
-access, the check cannot determine whether an update exists. The UI and CLI report
-a specific, actionable reason for missing access, rejected credentials, rate limits,
-timeouts, network failures and unreadable release metadata. Diagnostics survive
+No task text, prompts, project paths or Memories are sent. GitHub receives the
+request's normal network metadata, such as your IP address, and a user agent
+naming Elephant and its version. No token is needed for public releases. An
+optional `ELEPHANT_GITHUB_TOKEN` environment variable raises GitHub's API rate
+limit for the check. Credentials are not stored or logged. A failed check cannot
+determine whether an update exists. The UI and CLI report a specific,
+actionable reason for rejected credentials, rate limits, timeouts, network
+failures and unreadable release metadata. Diagnostics survive
 dashboard polling and restarts; credentials and remote error bodies are never saved.
 The displayed timestamp is the last attempt, not proof of a successful check.
 
-For the private pilot, provide `ELEPHANT_GITHUB_TOKEN` to the process that launches
-Elephant (including Memory Palace), using a token authorized to read this repository.
-Restart that process after changing its environment, then click Check again. Signing
-in to GitHub in a browser does not authenticate Elephant. Do not paste a token into
-the dashboard, a Memory, or a committed configuration file. An old cached failure
-without a reason asks for a fresh check. Empty successful release results mean no newer
-matching release was found; offline/auth failures never mean the installation
-is current. Set `ELEPHANT_UPDATE_CHECKS=0` to disable checks for a process.
+If you hit rate limits, optionally provide `ELEPHANT_GITHUB_TOKEN` to the process that
+launches Elephant (including Memory Palace). A token with no special permissions is
+enough for public release metadata. Restart that process after changing its
+environment, then click Check again. Signing in to GitHub in a browser does not
+authenticate Elephant. Do not paste a token into the dashboard, a Memory, or a
+committed configuration file. An old cached failure without a reason asks for a
+fresh check. Empty successful release results mean no newer matching release was
+found; offline or rate-limited failures never mean the installation is current.
+
+To opt out, run `elephant update --enabled=false` (persistent) or set
+`ELEPHANT_UPDATE_CHECKS=0` for a process.
 
 A candidate must be published, newer, on the same major version, and have the
-ZIP asset for the current OS/architecture. Pilot installations accept pilot or
+ZIP asset for the current OS/architecture. Pilot-channel installations accept pilot or
 stable releases; stable installations do not move to prereleases. RC builds
 stay on the RC or stable channel. This is a release selection rule, not proof
 of data-format or runtime compatibility. Read release notes before upgrading.
 Archive versions derive from the Go version constant. The cache is refreshed after the installed binary version changes. A maintainer must publish
-the release and its assets before availability can be announced. This PR does
-not publish a release.
+the release and its assets before availability can be announced.
 
 Cache and dismissal settings live beside the journal in `.updates.json`; the
 short-lived update lock is separate from the memory journal lock. Lookup failure

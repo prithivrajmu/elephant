@@ -1,8 +1,11 @@
 # Opt-in cloud sync and reviewed team sharing
 
-Local installation and hooks remain offline by default. These commands require
-an explicitly configured hosted pilot, OAuth access token and selected private
-scopes. They do not run automatically from hooks, MCP or startup.
+Elephant never uploads memories automatically: hooks, MCP and startup do not
+sync, and local use needs no cloud account. Sync happens only when you run these
+explicit commands. They require a configured hosted service (experimental), an
+OAuth access token and selected private scopes. Release checks are a separate,
+default-on network call to GitHub that carries no memory or task data; see
+[Update notifications](updates.md).
 
 ```sh
 # Set ELEPHANT_CLOUD_TOKEN in your shell from your configured OAuth issuer.

@@ -2,7 +2,7 @@
 
 ## Download a prebuilt binary
 
-Download the matching ZIP from [GitHub Releases](https://github.com/prithivrajmu/elephant/releases). No Go installation is needed. Releases are currently pilot prereleases and packages are unsigned. While the repository is private, downloads require repository access and an authenticated GitHub session.
+Download the matching ZIP from [GitHub Releases](https://github.com/prithivrajmu/elephant/releases). No Go installation is needed. Elephant is in closed beta: releases are `0.x` prereleases and packages are unsigned (see [Status: Beta](../README.md#status-beta)).
 
 | Computer | Archive suffix |
 | --- | --- |
@@ -13,10 +13,9 @@ Download the matching ZIP from [GitHub Releases](https://github.com/prithivrajmu
 | Windows x86-64 | `windows-amd64` |
 | Windows ARM64 | `windows-arm64` |
 
-For example, an authorized Apple Silicon Mac user with the GitHub CLI can download the pilot release:
+For example, an Apple Silicon Mac user with the GitHub CLI can download the pilot release:
 
 ```sh
-gh auth login
 gh release download v0.7.0-pilot --repo prithivrajmu/elephant \
   --pattern 'elephant-0.7.0-pilot-darwin-arm64.zip'
 unzip elephant-0.7.0-pilot-darwin-arm64.zip
@@ -27,6 +26,10 @@ elephant selftest
 ```
 
 Alternatively, download and extract the ZIP in your browser. Each archive includes a binary, checksum-verifying installer, setup launcher, version and documentation. The release also provides `SHA256SUMS` for the ZIP downloads; compare the matching entry with `shasum -a 256 ARCHIVE.zip` or `sha256sum ARCHIVE.zip`. Checksums detect corruption; they are not a substitute for signed packages.
+
+## Release checks and network use
+
+By default, Elephant checks GitHub for a newer release at most once per 24 hours when a hooked session starts, and when you run `elephant update --check` or press Check in Memory Palace. The request goes to GitHub's public release metadata endpoint. GitHub receives the request's normal network metadata (such as your IP address and a user agent naming Elephant and its version). No memory, task, prompt, or project data is sent, and nothing is installed automatically. To opt out, run `elephant update --enabled=false` or set `ELEPHANT_UPDATE_CHECKS=0` for the process. See [Update notifications](updates.md).
 
 ## macOS and Linux
 
@@ -66,7 +69,7 @@ On Windows, run `./install.ps1 -Replace`. Existing memory data remains in place.
 
 ## Build from source
 
-Repository access and Go 1.25 or later are required:
+Go 1.25 or later is required:
 
 ```sh
 git clone https://github.com/prithivrajmu/elephant.git
@@ -77,3 +80,5 @@ go build -trimpath -o elephant ./cmd/elephant
 ```
 
 Use `-o elephant.exe` on Windows. Copy the resulting binary into a directory on PATH. See [Contributing](contributing.md) for development checks and [Releasing](releasing.md) for package recipes. Homebrew, WinGet and signed native installers are not published distribution routes yet.
+
+`go install github.com/prithivrajmu/elephant/cmd/elephant@<tag>` is available only from the first release tag cut after the Go module path was corrected to `github.com/prithivrajmu/elephant`. It does not work for `v0.7.0-pilot` or earlier tags; use a release archive or the source build above for those.

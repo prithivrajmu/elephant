@@ -1,8 +1,8 @@
-# Validation: Elephant 0.6.0-pilot
+# Validation
 
 ## Release gates
 
-Publication of v0.6.0-pilot requires the [validation workflow](https://github.com/prithivrajmu/elephant/actions/workflows/validate.yml) to pass native Linux/macOS/Windows race tests, vet, selftest, external MCP and storage acceptance, plus macOS/Linux hook acceptance and six-archive package checks. The release job verifies uploaded downloads before publishing. This distinguishes native binary/protocol checks from real agent-host usage and ARM installer tests.
+Publication of each release requires the [validation workflow](https://github.com/prithivrajmu/elephant/actions/workflows/validate.yml) to pass native Linux/macOS/Windows race tests, vet, selftest, external MCP and storage acceptance, plus macOS/Linux hook acceptance and six-archive package checks. The release job verifies uploaded downloads before publishing. This distinguishes native binary/protocol checks from real agent-host usage and ARM installer tests.
 
 The release preparation fixes Windows drive-letter SQLite URIs and makes the Windows test step fail immediately when tests fail. Local Linux checks additionally execute the extracted installer twice and verify the installed binary.
 
@@ -38,8 +38,7 @@ Executed 2026-10-03 on Linux amd64 with Go 1.23.12:
 - A normal native Codex 0.159.2 attempt timed out without completing a task. A follow-up probe reports HTTP 401 with an authentication-token parsing error. No hook trust or host permissions were bypassed. Claude Code is not installed. Native autonomous capture and final-line compliance remain unverified; use `scripts/native_host_acceptance.py` after restoring host login and normal hook trust.
 
 At that revision, no GitHub release or hosted service was published. Update notices require published
-release metadata and the matching platform archive. Private release access requires
-an explicitly supplied token. Release selection is not a data-format compatibility
+release metadata and the matching platform archive. Release selection is not a data-format compatibility
 proof. See [Update notifications](updates.md).
 
 ## Automatic memory, version 0.5

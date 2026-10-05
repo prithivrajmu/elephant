@@ -1,6 +1,8 @@
 # Elephant: first user in ten minutes
 
-Elephant 0.6.0-pilot is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.25+. This release is for a small local pilot. Publication is gated on native Linux, macOS and Windows checks; six platform archives are cross-compiled. Native ARM installer and real model-driven host acceptance remain separate pilot checks. See [Validation](validation.md) for the exact checks and limits.
+Elephant is a local Go binary with an embedded dashboard. Prebuilt packages need no Go installation, model key or cloud service. A source build needs Go 1.25+. Elephant is in closed beta; see [Status: Beta](../README.md#status-beta) for known limitations. Releases are gated on native Linux, macOS and Windows checks; six platform archives are cross-compiled. Native ARM installer and real model-driven host acceptance remain separate checks. See [Validation](validation.md) for the exact checks and limits.
+
+**Network use:** by default, Elephant checks GitHub for a new release at most once per 24 hours. GitHub sees your version and normal network metadata; no memory or task data is sent. Opt out with `elephant update --enabled=false` or `ELEPHANT_UPDATE_CHECKS=0`. See [Release updates](#release-updates).
 
 ## 1. Install the package for your computer
 
@@ -14,7 +16,7 @@ sh ./install.sh
 "$HOME/.local/bin/elephant" selftest
 ```
 
-The installer verifies package checksums and preserves a different existing binary. `ELEPHANT_INSTALL_DIR=/your/bin sh ./install.sh` chooses another destination. `ELEPHANT_REPLACE=1 sh ./install.sh` explicitly upgrades an existing binary. You can instead run `./elephant` directly. On macOS, follow your organization's normal approval process if the unsigned executable is blocked. This pilot has no signed/notarized installer.
+The installer verifies package checksums and preserves a different existing binary. `ELEPHANT_INSTALL_DIR=/your/bin sh ./install.sh` chooses another destination. `ELEPHANT_REPLACE=1 sh ./install.sh` explicitly upgrades an existing binary. You can instead run `./elephant` directly. On macOS, follow your organization's normal approval process if the unsigned executable is blocked. This beta has no signed/notarized installer.
 
 Windows PowerShell, from the extracted folder:
 
@@ -95,4 +97,4 @@ No authenticated multi-user hosting or physical erasure is included. Start with 
 
 ## Release updates
 
-Use `elephant update --check` to check releases now, `--enabled=false` to disable checks, and `--dismiss` to dismiss a notice. Session-start checks are cached for 24 hours. The private repository needs an explicitly configured `ELEPHANT_GITHUB_TOKEN`; unavailable metadata does not mean your version is current. Memory Palace also has update controls. See [Update notifications](updates.md).
+Use `elephant update --check` to check releases now, `--enabled=false` to disable checks, and `--dismiss` to dismiss a notice. Session-start checks are cached for 24 hours and contact GitHub by default, sending only your version and normal network metadata. Setting `ELEPHANT_UPDATE_CHECKS=0` also disables them. An optional `ELEPHANT_GITHUB_TOKEN` only raises GitHub rate limits; unavailable metadata does not mean your version is current. Memory Palace also has update controls. See [Update notifications](updates.md).
