@@ -53,14 +53,18 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     restarted=Client(args);assert m['id'] in restarted.tool('recall_memory',{'task':'validation evidence','context_features':{'database':['postgres']}});restarted.close()
     assert cli('list')['memories'][0]['helpful']==1
     # Separate MCP clients record concurrently while a real dashboard endpoint polls.
-    ui=subprocess.Popen([BINARY,'ui',*args,'--port','7347'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    ui=subprocess.Popen([BINARY,'ui',*args,'--port','7347'],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
     try:
+        # The per-run token is only printed to the invoking terminal, never served in the page.
+        import re
+        banner=ui.stderr.readline()
+        link=re.search(r"http://127\.0\.0\.1:7347/#token=([0-9a-f]+)",banner);assert link,banner
+        token=link.group(1)
         for _ in range(100):
             try:
                 html=urllib.request.urlopen('http://127.0.0.1:7347/',timeout=1).read().decode();break
             except OSError:time.sleep(.02)
-        import re
-        token=re.search(r"const TOKEN='([^']+)'",html).group(1)
+        assert 'Open the link printed by elephant palace' in html and token not in html
         def poll():
             for _ in range(12):
                 req=urllib.request.Request('http://127.0.0.1:7347/api/dashboard',headers={'Authorization':'Bearer '+token})
@@ -78,7 +82,7 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
             ids=jobs[0].result()+jobs[1].result();jobs[2].result()
         allrows=cli('list')['memories'];assert len(allrows)==21 and len(set(ids))==20
         assert next(x for x in allrows if x['id']==m['id'])['helpful']==1
-    finally:ui.terminate();ui.wait(timeout=5)
+    finally:ui.terminate();ui.wait(timeout=5);ui.stderr.close()
     assert cli('language')['target_percent']==80
     assert cli('language',['--ste-target','100'])['target_percent']==100
     strict=Client(args)

@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"crypto/subtle"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -13,6 +14,13 @@ import (
 
 //go:embed web/index.html
 var dashboardHTML string
+
+// dashboardURL is the link printed to the invoking terminal. The token travels
+// in the URL fragment, which browsers never send to the server, so GET / does
+// not need to embed it in the page.
+func dashboardURL(host, token string) string {
+	return "http://" + host + "/#token=" + token
+}
 
 func DashboardHandler(s Service, host, token string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -31,12 +39,10 @@ func DashboardHandler(s Service, host, token string) http.Handler {
 			nonce := newID()
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+nonce+"'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
-			html := strings.ReplaceAll(dashboardHTML, "__NONCE__", nonce)
-			html = strings.ReplaceAll(html, "__TOKEN__", token)
-			fmt.Fprint(w, html)
+			fmt.Fprint(w, strings.ReplaceAll(dashboardHTML, "__NONCE__", nonce))
 			return
 		}
-		if r.Header.Get("Authorization") != "Bearer "+token {
+		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+token)) != 1 {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -125,7 +131,8 @@ func ServeDashboard(s Service, port int) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Elephant Memory Palace: http://%s\n", host)
-	server := &http.Server{Handler: DashboardHandler(s, host, newID()), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second}
+	token := newID()
+	fmt.Fprintf(os.Stderr, "Elephant Memory Palace: %s\n", dashboardURL(host, token))
+	server := &http.Server{Handler: DashboardHandler(s, host, token), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second}
 	return server.Serve(ln)
 }
