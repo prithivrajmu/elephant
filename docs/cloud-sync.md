@@ -19,10 +19,38 @@ are excluded. Sync shares lesson content, applicability, timestamps and
 retirement. Feedback counters come from the hosted service; local task votes
 are not merged as counters. This avoids double-counting independent histories.
 
+### Project IDs
+
+The default project ID is the absolute project root, which can reveal user and
+directory names. Sync never uploads a path-derived project ID (POSIX absolute,
+Windows drive or UNC path). It sends an opaque, stable ID instead:
+`p-` followed by the first 32 hex characters of SHA-256 over the cloud tenant,
+a NUL byte and the local project ID. Explicit non-path IDs set with `--project`
+are sent unchanged, so choose a cloud-safe name if you want a readable ID.
+Pull keeps the local project ID for records that already exist locally; records
+first imported from the cloud keep the opaque ID. Hosted recall matches
+project-scope lessons by exact `project_id`, so hosted MCP clients must send the
+same opaque ID, or every machine must use the same explicit `--project` ID:
+
+```sh
+echo "p-$(printf '%s\0%s' TENANT /absolute/project/root | shasum -a 256 | cut -c1-32)"
+```
+
+The hosted service fixes `project_id` for a synced memory ID. Records uploaded
+by earlier versions keep the raw path they were uploaded with, and later
+updates and retirements reuse it so they still apply. To stop publishing such a
+path, forget the record and record the lesson again. Retirement does not
+physically erase the hosted copy.
+
 The SQLite outbox persists exact requests and operation IDs before network
 access. Retry the same command after being offline, losing an acknowledgement
-or restarting. The hosted object commits each mutation, revision and receipt
-atomically. Credentials are held in memory and are never placed in the outbox.
+or restarting. A request that may have reached the service is resent
+byte-for-byte until it is acknowledged. A queued request that was never sent is
+rebuilt from current local state on the next run. After each acknowledgement,
+sync compares current local state again and sends any newer revision, such as a
+retirement made while offline, in the same run. The hosted object commits each
+mutation, revision and receipt atomically. Credentials are held in memory and
+are never placed in the outbox.
 Expected tenant and OAuth subject headers prevent accidentally syncing to a
 different signed-in account. Redirects are rejected.
 
@@ -31,7 +59,11 @@ choosing `--resolve remote --id ID` or `--resolve local --id ID` on the same syn
 command. Remote resolution accepts that remote revision. Local resolution
 acknowledges the current remote revision and sends the locally reviewed content
 with a new operation ID. Another concurrent update still causes a conflict.
-Retirement cannot be undone. Pull imports also enforce the local writing policy.
+Retirement cannot be undone and takes precedence in conflict resolution. If the
+local record is retired and the remote revision is active, `--resolve remote`
+keeps the local retirement, sends it in the same run and lists the ID in
+`KeptLocalRetirements`. If the remote revision is retired, `--resolve local`
+cannot revive the local copy. Pull imports also enforce the local writing policy.
 Scope and project/conversation identity are immutable for a synced memory ID;
 use a new record ID for a different context. Pull cannot overwrite a local
 memory belonging to an unselected scope.
@@ -83,7 +115,8 @@ does not withdraw a previously reviewed team snapshot; withdraw the proposal
 explicitly as well. Changes to a private lesson require a new proposal/review.
 
 All team members can inspect drafts during review. Private records remain in
-user objects; proposal creation copies only the selected lesson snapshot.
+user objects; proposal creation copies only the selected lesson snapshot,
+including its opaque project ID.
 There is no background synchronization, physical erasure, automatic conflict
 merge, interactive OAuth login implementation or enterprise membership service.
 The pilot limits and deployment measurements in [Cloudflare architecture](cloudflare.md)
