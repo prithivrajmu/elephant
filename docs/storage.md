@@ -21,6 +21,14 @@ IDs, creation/update times, source evidence, scope, approval, retirement, feedba
 
 The database holds current memory state, deduplication keys, an event audit, experiences and usage. Experience context/task and usage identity indexes serve dashboard and task-summary reads. A memory and its capture receipt commit together. Recall still scans current memories and may do quadratic alternative-advice work; dashboard usage history is not yet bounded. Automatic retention and physical erasure are not implemented.
 
+## Sensitive content
+
+Elephant rejects common credential formats at record time, before writing a memory. Screening covers incident, lesson, source, subject, conversation, and all feature, requirement and exclusion label keys and values. It recognizes private-key PEM headers, common vendor API/access tokens, JWTs and URLs with embedded credentials. Rejection errors name the field and credential kind without repeating the matched content; rephrase or redact the content before recording it.
+
+This is heuristic screening, not automatic redaction: it does **not** detect PII or every secret, or establish whether a credential is valid. Bare token prefixes without a payload remain allowed. Existing stored memories still load without screening and are not retroactively redacted. Do not store secrets or regulated data in Elephant.
+
+The default project ID is the absolute project path, stored locally as memory metadata. See [cloud sync](cloud-sync.md) for upload handling; record-time screening does not remove local paths or make metadata safe to upload.
+
 ## Backups and restore
 
 ```sh
