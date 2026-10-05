@@ -3,13 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	memory "example.com/elephant"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	memory "github.com/prithivrajmu/elephant"
 )
 
 func main() {

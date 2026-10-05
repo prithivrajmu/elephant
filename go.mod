@@ -1,4 +1,4 @@
-module example.com/elephant
+module github.com/prithivrajmu/elephant
 
 go 1.25.0
 
