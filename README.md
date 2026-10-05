@@ -18,7 +18,14 @@ Elephant stores source-backed lessons from development work and recalls relevant
 
 ## Installation
 
-One line (verifies the release checksum, installs to `~/.local/bin`):
+Fastest (needs Node 18+; downloads and checksum-verifies the binary):
+
+```sh
+npx elephant-memory          # install
+npx elephant-memory init     # in a project: enable automatic memory for Codex/Claude Code
+```
+
+Or one line without Node (verifies the release checksum, installs to `~/.local/bin`):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.sh | sh

@@ -47,3 +47,7 @@ python3 scripts/build_installers.py --format pkg --arch arm64
 ```
 
 On Windows, compile `packaging/elephant.iss` with Inno Setup and `ReleaseDir` pointing to the Windows release folder. Set `Architecture=arm64` for ARM64; the default is `x64compatible`. Native installers preserve the README and nested documentation layout. Signing, notarization, Homebrew and WinGet publication are future work; do not advertise them as available until published and tested.
+
+## npm package (`npx elephant-memory`)
+
+`npm/` holds a dependency-free launcher. It downloads the GitHub release matching its own `package.json` version, verifies the SHA-256 from `SHA256SUMS`, caches the binary in `~/.elephant/bin/<tag>`, installs it to `~/.local/bin` (Windows: `%LOCALAPPDATA%\Elephant\bin`) and passes any arguments through. After the GitHub release is published, set `npm/package.json` `version` to the release version (it must equal `Version` in `onboarding.go`) and run `npm publish --access public --tag beta` from `npm/`. Publishing is manual.
