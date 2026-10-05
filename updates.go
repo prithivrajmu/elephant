@@ -44,7 +44,7 @@ type UpdateOptions struct {
 	Enabled                       *bool
 }
 
-var releaseVersionPattern = regexp.MustCompile(`^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(pilot|rc\.[1-9][0-9]*))?$`)
+var releaseVersionPattern = regexp.MustCompile(`^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(pilot|beta|rc\.[1-9][0-9]*))?$`)
 
 type releaseVersion struct {
 	parts   [3]int
@@ -71,13 +71,18 @@ func parseReleaseVersion(v string) (releaseVersion, bool) {
 	}
 	return out, true
 }
+
+// isPilotLane reports whether a channel belongs to the shared pilot/beta
+// prerelease lane, so a pilot installation can update to a beta and back.
+func isPilotLane(channel string) bool { return channel == "pilot" || channel == "beta" }
+
 func newerRelease(a, b releaseVersion) bool {
 	for i := 0; i < 3; i++ {
 		if a.parts[i] != b.parts[i] {
 			return a.parts[i] > b.parts[i]
 		}
 	}
-	if a.channel == b.channel {
+	if a.channel == b.channel || isPilotLane(a.channel) && isPilotLane(b.channel) {
 		return false
 	}
 	if a.channel == "" {
@@ -178,7 +183,7 @@ func selectRelease(releases []githubRelease) (*ReleaseUpdate, error) {
 		}
 		// A stable installation never moves to prerelease; pilot and RC channels
 		// only see their own prerelease channel or a stable release.
-		sameChannel := v.channel == current.channel || strings.HasPrefix(v.channel, "rc.") && strings.HasPrefix(current.channel, "rc.")
+		sameChannel := v.channel == current.channel || strings.HasPrefix(v.channel, "rc.") && strings.HasPrefix(current.channel, "rc.") || isPilotLane(v.channel) && isPilotLane(current.channel)
 		if (r.Prerelease || v.channel != "") && (current.channel == "" || !sameChannel) {
 			continue
 		}

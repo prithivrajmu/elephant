@@ -255,3 +255,25 @@ func TestDashboardUpdateClickForcesCheckAndPollingDoesNot(t *testing.T) {
 		t.Fatalf("two clicks must make two checks, GET polling none; got %d", requests)
 	}
 }
+
+func TestBetaChannelParsesAndSharesPilotLane(t *testing.T) {
+	beta, ok := parseReleaseVersion("v0.8.0-beta")
+	if !ok || beta.channel != "beta" {
+		t.Fatal("beta tag not parsed", beta, ok)
+	}
+	pilot, _ := parseReleaseVersion("v0.7.0-pilot")
+	if !newerRelease(beta, pilot) || newerRelease(pilot, beta) {
+		t.Fatal("beta must be newer than the earlier pilot by version number")
+	}
+	same, _ := parseReleaseVersion("v0.8.0-pilot")
+	if newerRelease(beta, same) || newerRelease(same, beta) {
+		t.Fatal("same-number pilot and beta must not outrank each other")
+	}
+	stable, _ := parseReleaseVersion("v0.8.0")
+	if !newerRelease(stable, beta) {
+		t.Fatal("stable must outrank beta")
+	}
+	if _, ok := parseReleaseVersion("v0.8.0-beta2"); ok {
+		t.Fatal("malformed beta accepted")
+	}
+}
