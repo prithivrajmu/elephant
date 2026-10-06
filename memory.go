@@ -13,10 +13,11 @@ import (
 )
 
 type Profile struct {
-	Project      string              `json:"project"`
-	Conversation string              `json:"conversation,omitempty"`
-	Features     map[string][]string `json:"features"`
-	Evidence     map[string][]string `json:"evidence,omitempty"`
+	Project       string              `json:"project"`
+	Conversation  string              `json:"conversation,omitempty"`
+	Features      map[string][]string `json:"features"`
+	Evidence      map[string][]string `json:"evidence,omitempty"`
+	manifestFiles int
 }
 type Identity struct {
 	Tenant string `json:"tenant"`

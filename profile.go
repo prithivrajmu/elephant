@@ -39,6 +39,9 @@ func ProfileProject(root, project string) (Profile, error) {
 			return nil, false, fmt.Errorf("refusing nonregular or oversized profile file %s", name)
 		}
 		b, e := os.ReadFile(path)
+		if e == nil {
+			p.manifestFiles++
+		}
 		return b, e == nil, e
 	}
 	data, ok, err := read("package.json")
@@ -138,11 +141,5 @@ func ProfileProject(root, project string) (Profile, error) {
 }
 
 func profileManifestCount(p Profile) int {
-	files := map[string]bool{}
-	for _, paths := range p.Evidence {
-		for _, path := range paths {
-			files[path] = true
-		}
-	}
-	return len(files)
+	return p.manifestFiles
 }

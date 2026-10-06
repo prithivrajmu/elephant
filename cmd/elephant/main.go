@@ -402,6 +402,7 @@ func run() error {
 		}
 		profileStart := time.Now()
 		p, e := svc.Profile()
+		profileElapsed := time.Since(profileStart)
 		if e != nil {
 			return e
 		}
@@ -428,13 +429,13 @@ func run() error {
 		}
 		request := memory.Request{Profile: p, Task: *task, ByteBudget: *budget, Limit: *limit, Initialize: *initialize}
 		if *traceRecall {
-			r, trace, e := svc.RecallWithTrace(request, time.Since(profileStart))
+			r, trace, e := svc.RecallWithTrace(request, profileElapsed)
 			if e != nil {
 				return e
 			}
 			return printJSON(map[string]any{"result": r, "trace": trace})
 		}
-		r, _, e := svc.RecallWithTrace(request, time.Since(profileStart))
+		r, _, e := svc.RecallWithTrace(request, profileElapsed)
 		if e != nil {
 			return e
 		}

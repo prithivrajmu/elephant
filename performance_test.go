@@ -35,15 +35,23 @@ func loadPerformanceRatchets(t *testing.T) performanceRatchets {
 func collectPerformanceMetrics(t *testing.T) map[string]int64 {
 	t.Helper()
 	id, p, m := fixture()
+	now := time.Unix(1700000000, 0).UTC()
+	m.Created, m.Updated = now, now
 	all := make([]Memory, 1000)
 	for i := range all {
 		all[i] = m
 		all[i].ID = fmt.Sprintf("memory-%04d", i)
 	}
-	allocs := testing.AllocsPerRun(3, func() {
-		Recall(all, id, Request{Profile: p, Task: "connection concurrency", ByteBudget: 4000}, time.Now())
-	})
-	result := Recall(all, id, Request{Profile: p, Task: "connection concurrency", ByteBudget: 4000}, time.Now())
+	allocs := 0.0
+	if !performanceRaceEnabled {
+		allocs = testing.AllocsPerRun(3, func() {
+			Recall(all, id, Request{Profile: p, Task: "connection concurrency", ByteBudget: 4000}, now)
+		})
+	}
+	result := Recall(all, id, Request{Profile: p, Task: "connection concurrency", ByteBudget: 4000}, now)
+	if len(result.Hits) == 0 || result.Bytes != len(result.Context) {
+		t.Fatal("ratchet fixture must return a nonempty, correctly counted recall")
+	}
 
 	root := t.TempDir()
 	files := map[string]string{
@@ -115,7 +123,7 @@ func collectPerformanceMetrics(t *testing.T) map[string]int64 {
 		}
 	}
 
-	return map[string]int64{
+	metrics := map[string]int64{
 		"mcp_tools_payload_bytes":      int64(len(toolJSON)),
 		"palace_memory_nodes_from_120": int64(palaceMemoryNodes),
 		"profile_manifest_files":       int64(profileManifestCount(profile)),
@@ -123,6 +131,10 @@ func collectPerformanceMetrics(t *testing.T) map[string]int64 {
 		"recall_context_bytes":         int64(result.Bytes),
 		"scoped_candidates_1000":       int64(len(selected)),
 	}
+	if performanceRaceEnabled {
+		delete(metrics, "recall_1000_allocations")
+	}
+	return metrics
 }
 
 func TestPerformanceRatchets(t *testing.T) {
@@ -138,6 +150,9 @@ func TestPerformanceRatchets(t *testing.T) {
 	}
 	ratchets := loadPerformanceRatchets(t)
 	for name, ceiling := range ratchets.Ceilings {
+		if performanceRaceEnabled && name == "recall_1000_allocations" {
+			continue // Race instrumentation changes allocation behavior.
+		}
 		value, ok := metrics[name]
 		if !ok {
 			t.Errorf("ratchet %s has no measured metric", name)
@@ -168,6 +183,10 @@ func TestRecallTraceAndDashboardPercentiles(t *testing.T) {
 	if len(result.Hits) != 1 || trace.Candidates != 1 || trace.ManifestFiles != 3 || trace.ProfileMS != 1.25 || trace.TotalMS < trace.CommitMS {
 		t.Fatalf("unexpected trace: result=%+v trace=%+v", result, trace)
 	}
+	phaseSum := trace.StoreOpenMS + trace.BeginMS + trace.CandidateMS + trace.RankRenderMS + trace.ReceiptMS + trace.CommitMS
+	if phaseSum > trace.TotalMS {
+		t.Fatalf("phase timings exceed store recall total: %+v", trace)
+	}
 	if _, _, err = store.RecallWithTrace(id, request); err != nil {
 		t.Fatal(err)
 	}
@@ -186,6 +205,21 @@ func TestRecallTraceAndDashboardPercentiles(t *testing.T) {
 		if err != nil || string(data) == "" || strings.Contains(string(data), request.Task) {
 			t.Fatalf("usage receipt retained task text: %s", data)
 		}
+	}
+}
+
+func TestProfileManifestCountIncludesEmptyConfig(t *testing.T) {
+	for _, config := range []string{".elephant.json", ".agent-memory.json"} {
+		t.Run(config, func(t *testing.T) {
+			root := t.TempDir()
+			if err := os.WriteFile(filepath.Join(root, config), []byte(`{}`), 0600); err != nil {
+				t.Fatal(err)
+			}
+			profile, err := ProfileProject(root, "perf")
+			if err != nil || profileManifestCount(profile) != 1 {
+				t.Fatalf("empty config was read but not counted: %+v %v", profile, err)
+			}
+		})
 	}
 }
 

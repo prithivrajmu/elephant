@@ -27,7 +27,7 @@ func (s Service) Profile() (Profile, error) {
 }
 
 func (s Service) RecallWithTrace(q Request, profileElapsed time.Duration) (Result, RecallTrace, error) {
-	q.profileMS = float64(profileElapsed.Microseconds()) / 1000
+	q.profileMS = float64(profileElapsed) / float64(time.Millisecond)
 	q.manifestFiles = profileManifestCount(q.Profile)
 	return s.Store.RecallWithTrace(s.Identity, q)
 }

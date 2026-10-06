@@ -29,6 +29,8 @@ def main() -> int:
         )
         if not metrics_path.exists():
             return run.returncode or 1
+        if run.returncode:
+            return run.returncode
         measured = json.loads(metrics_path.read_text())["metrics"]
         ratchets = json.loads(RATCHETS.read_text())
         ceilings = ratchets["ceilings"]
@@ -46,6 +48,10 @@ def main() -> int:
             for key, value in measured.items():
                 if key not in ceilings:
                     raise SystemExit(f"measured metric has no ceiling: {key}")
+                # Allocation counts vary with compiler/runtime and map layout.
+                # Keep calibrated headroom; never tighten it from one host run.
+                if key.endswith("_allocations"):
+                    continue
                 if value < ceilings[key]:
                     ceilings[key] = value
                     changed = True

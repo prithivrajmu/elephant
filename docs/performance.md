@@ -14,7 +14,7 @@ Run deterministic ratchets:
 python3 scripts/update_performance_ratchets.py
 ```
 
-After a verified improvement, lower every eligible ceiling to the observed
+After a verified improvement, lower eligible count ceilings to the observed
 value:
 
 ```sh
@@ -23,6 +23,11 @@ python3 scripts/update_performance_ratchets.py --lower
 
 The helper refuses a measured regression. It has no mode that raises a ceiling.
 Review and explain any intentional ceiling increase as a normal source change.
+Allocation ceilings retain headroom because compiler/runtime versions and map
+layout can change allocation counts. Calibrate allocation reductions across
+supported platforms; the helper does not tighten them from one host sample.
+Race-instrumented tests retain the work-count checks but skip allocation
+comparison. Measure production allocations with the uninstrumented helper above.
 
 Measure complete synthetic journeys through the built binary:
 
@@ -34,8 +39,13 @@ python3 scripts/perf_baseline.py --sizes 100,1000,10000 --samples 10 \
 The runner uses isolated temporary stores and marked synthetic lessons. It
 measures setup through six-tool MCP discovery, automatic hook recall, durable
 Memory capture, and Memory Palace startup/API response. The output contains the
-revision, environment, binary hash, sample count, cold result, warm
-p50/p75/p95, and recall phase timings. It does not emit task text or Memory
+revision, dirty-worktree flag, environment, binary hash, sample count, first-process
+result, subsequent-process p50/p75/p95, and recall phase timings. Every recall
+sample launches a new process; recently seeded files and uncontrolled OS caches
+make these unsuitable as cold-cache measurements. Capture checks acknowledged
+IDs after reopening the store. Palace checks the expected fixture inventory.
+Setup and Palace currently provide one observation each, not percentiles.
+The report does not emit task text or Memory
 content.
 
 For a single local recall diagnosis:
@@ -46,7 +56,9 @@ elephant recall --trace --task "query concurrency"
 
 `--trace` wraps the normal result with timings for manifest profiling, store
 open, transaction begin, candidate loading, rank/render, receipt write, commit,
-and total local recall. Candidate and manifest counts are included. These are
+and total store recall, including connection close. Profiling is measured
+separately and is not included in the store total. Candidate and successfully
+read manifest counts are included. These are
 diagnostic measurements, not a stable public wire contract.
 
 ## Ratchets and timing evidence

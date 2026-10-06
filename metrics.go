@@ -76,22 +76,24 @@ func (s Store) Recall(id Identity, q Request) (Result, error) {
 }
 
 func elapsedMS(start time.Time) float64 {
-	return float64(time.Since(start).Microseconds()) / 1000
+	return float64(time.Since(start)) / float64(time.Millisecond)
 }
 
 // RecallWithTrace exposes local phase timings for developer diagnostics. Normal
 // recall output and stored Memories remain unchanged, and task text is not kept.
-func (s Store) RecallWithTrace(id Identity, q Request) (Result, RecallTrace, error) {
+func (s Store) RecallWithTrace(id Identity, q Request) (result Result, trace RecallTrace, err error) {
 	start := time.Now()
-	var result Result
-	trace := RecallTrace{ProfileMS: q.profileMS, ManifestFiles: q.manifestFiles}
+	trace = RecallTrace{ProfileMS: q.profileMS, ManifestFiles: q.manifestFiles}
 	storeStart := time.Now()
 	db, err := s.database(true)
 	trace.StoreOpenMS = elapsedMS(storeStart)
 	if err != nil {
 		return result, trace, err
 	}
-	defer db.Close()
+	defer func() {
+		db.Close()
+		trace.TotalMS = elapsedMS(start)
+	}()
 	beginStart := time.Now()
 	tx, err := db.Begin()
 	trace.BeginMS = elapsedMS(beginStart)
@@ -147,7 +149,6 @@ func (s Store) RecallWithTrace(id Identity, q Request) (Result, RecallTrace, err
 		return result, trace, err
 	}
 	trace.CommitMS = elapsedMS(commitStart)
-	trace.TotalMS = elapsedMS(start)
 	return result, trace, nil
 }
 func (s Store) Dashboard(id Identity, p Profile) (Dashboard, error) {
