@@ -1,5 +1,61 @@
 # Validation
 
+## Performance journeys and one-way ratchets, 2026-10-07
+
+Measured locally on macOS 26.6 arm64 (Apple M4) with Go 1.27.1 and Python
+3.14.6 at `a53ae2e`. The clean synthetic report identified the exact revision
+and binary hash and reported `working_tree_dirty: false`.
+
+Deterministic ratchets passed with these observed values:
+
+| Ratchet | Observed | Ceiling |
+| --- | ---: | ---: |
+| Recall allocations, 1,000 Memories | 52,055 | 53,000 |
+| MCP tool-schema payload | 2,723 bytes | 8,192 bytes |
+| Recall context | 2,028 bytes | 4,000 bytes |
+| Successfully read profile manifests | 6 | 6 |
+| Scoped candidates from 1,000 rows | 100 | 100 |
+| Palace Memory nodes from 120 Memories | 120 | 120 |
+
+The end-to-end runner built the binary, used isolated synthetic stores, and
+verified setup through six-tool MCP discovery, automatic hook Recall, five
+durable captures after reopening the store, and a 100-Memory Palace response.
+Each Recall sample launched a new process; OS caches were not controlled.
+
+| Synthetic journey | Result |
+| --- | ---: |
+| Setup through six-tool discovery | 84.8 ms total |
+| Capture to acknowledged durable Memory, p50 / p95 | 31.0 / 39.2 ms |
+| Palace process to verified dashboard payload | 50.1 ms total |
+| Subsequent-process Recall p50, 100 Memories | 41.3 ms |
+| Subsequent-process Recall p50, 1,000 Memories | 63.1 ms |
+| Subsequent-process Recall p50, 10,000 Memories | 292.9 ms |
+
+The 10,000-Memory phase trace spent 93.3 ms loading candidates and 156.1 ms
+ranking/rendering; store open, receipt and commit were 3.6, 0.2 and 0.6 ms.
+These phase values identify the next measured bottlenecks without establishing a
+production service-level objective.
+
+A separate efficiency review compared the existing 100/1,000-Memory SQLite
+benchmark on `main` and this branch. Medians were 3.609/33.710 ms on `main` and
+3.609/30.635 ms with instrumentation. Allocations and bytes were effectively
+unchanged. The measurements support no material instrumentation overhead; their
+noise does not support a speedup claim.
+
+Final checks passed: `go test -race ./...`, `go vet ./...`, format and diff
+checks, source build, seven-check selftest, external MCP acceptance, storage
+acceptance, automatic-hook acceptance, both dashboard JavaScript checks, ten
+repeated Go 1.27 ratchet runs, and three Go 1.26 ratchet runs. The review found
+and fixed a race-build CI failure caused by comparing race-instrumented
+allocations with a production ceiling. Race builds now retain deterministic
+work-count checks and skip only the compiler-sensitive allocation comparison.
+
+Linux and Windows native execution remain delegated to CI. Setup and Palace
+have one observation each. Allocation counts remain compiler/runtime-sensitive,
+so automatic lowering preserves their reviewed headroom. These synthetic
+results do not establish real-host latency, task quality, productivity, token
+savings or billing reduction.
+
 ## Recall and setup improvements, 2026-10-06
 
 Measured locally on macOS arm64 (Apple M4), comparing the retrieval and store code at `56fdc8b` with this change. Values below are medians of three runs:
