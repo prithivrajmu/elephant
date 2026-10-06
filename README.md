@@ -2,7 +2,7 @@
 
 Persistent experience for coding agents.
 
-> **Status: closed beta.** Elephant is a `0.x` prerelease. See [Status: Beta](#status-beta) for known limitations before you rely on it.
+> **Status: closed beta.** Elephant is a pre-1.0 project. See [Status: Beta](#status-beta) for known limitations before you rely on it.
 
 Elephant stores source-backed lessons from development work and recalls relevant experience for the next task. A local Go binary provides automatic Codex and Claude Code hooks, an MCP server, a JSON CLI, and the Memory Palace dashboard.
 
@@ -38,9 +38,9 @@ curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/
 irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
 ```
 
-Pin a version with `ELEPHANT_VERSION=v0.9.0-beta`. See the [0.9.0-beta release notes](docs/releases/v0.9.0-beta.md). Or install manually:
+Pin a version with `ELEPHANT_VERSION=v0.9.1`. See the [0.9.1 release notes](docs/releases/v0.9.1.md). Or install manually:
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Releases are public betas (prereleases).
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.9.1 uses a regular release tag; the project's beta limitations still apply.
 
 | Computer | Archive platform |
 | --- | --- |
@@ -73,7 +73,7 @@ The PATH changes above apply to the current terminal. See [Installation](docs/in
 
 ## Status: Beta
 
-Elephant is in a **closed beta**. Versions are `0.x` prereleases, and behavior, storage details, and APIs may change between releases (read the release notes before upgrading).
+Elephant is in a **closed beta**. Versions are pre-1.0, and behavior, storage details, and APIs may change between releases (read the release notes before upgrading).
 
 - Packages are **unsigned** and not notarized. Verify downloads against `SHA256SUMS`.
 - **Windows has no automatic hooks.** Use the MCP setup wizard there; automatic hooks cover Codex and Claude Code on macOS and Linux.

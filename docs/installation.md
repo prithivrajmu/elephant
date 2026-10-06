@@ -2,7 +2,7 @@
 
 ## Download a prebuilt binary
 
-Download the matching ZIP from [GitHub Releases](https://github.com/prithivrajmu/elephant/releases). No Go installation is needed. Elephant is in closed beta: releases are `0.x` prereleases and packages are unsigned (see [Status: Beta](../README.md#status-beta)).
+Download the matching ZIP from [GitHub Releases](https://github.com/prithivrajmu/elephant/releases). No Go installation is needed. Elephant is in closed beta: releases are pre-1.0 and packages are unsigned (see [Status: Beta](../README.md#status-beta)).
 
 | Computer | Archive suffix |
 | --- | --- |

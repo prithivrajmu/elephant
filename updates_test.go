@@ -23,11 +23,15 @@ func futureReleaseTag(offset int) string {
 	if !ok {
 		panic("invalid installed version in test")
 	}
-	return fmt.Sprintf("v%d.%d.0-pilot", current.parts[0], current.parts[1]+offset)
+	tag := fmt.Sprintf("v%d.%d.0", current.parts[0], current.parts[1]+offset)
+	if current.channel != "" {
+		tag += "-" + current.channel
+	}
+	return tag
 }
 
 func testRelease(tag string) githubRelease {
-	r := githubRelease{Tag: tag, Name: "Smaller memory status\nNew release", URL: "https://github.com/" + releaseRepository + "/releases/tag/" + tag, Prerelease: true}
+	r := githubRelease{Tag: tag, Name: "Smaller memory status\nNew release", URL: "https://github.com/" + releaseRepository + "/releases/tag/" + tag, Prerelease: strings.Contains(tag, "-")}
 	r.Assets = append(r.Assets, struct {
 		Name string `json:"name"`
 	}{"elephant-" + strings.TrimPrefix(tag, "v") + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".zip"})
