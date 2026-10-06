@@ -56,6 +56,8 @@ type Request struct {
 	Limit           int                 `json:"limit"`
 	Initialize      bool                `json:"-"`
 	ContextFeatures map[string][]string `json:"context_features,omitempty"`
+	profileMS       float64
+	manifestFiles   int
 }
 type Hit struct {
 	ID               string   `json:"id"`

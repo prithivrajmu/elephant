@@ -136,3 +136,13 @@ func ProfileProject(root, project string) (Profile, error) {
 	}
 	return p, nil
 }
+
+func profileManifestCount(p Profile) int {
+	files := map[string]bool{}
+	for _, paths := range p.Evidence {
+		for _, path := range paths {
+			files[path] = true
+		}
+	}
+	return len(files)
+}

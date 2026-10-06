@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "ceilings": {
+    "mcp_tools_payload_bytes": 8192,
+    "palace_memory_nodes_from_120": 120,
+    "profile_manifest_files": 6,
+    "recall_1000_allocations": 53000,
+    "recall_context_bytes": 4000,
+    "scoped_candidates_1000": 100
+  }
+}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	memory "github.com/prithivrajmu/elephant"
 )
@@ -45,6 +46,7 @@ func run() error {
 	taskID := f.String("task-id", "", "task receipt ID supplied by a hook")
 	reviewComplete := f.Bool("review-complete", false, "acknowledge that the requested lesson review completed")
 	jsonOutput := f.Bool("json", false, "structured task/update status instead of one line")
+	traceRecall := f.Bool("trace", false, "include local recall phase timings for diagnostics")
 	updateCheck := f.Bool("check", false, "check published releases now")
 	updateDismiss := f.Bool("dismiss", false, "dismiss the current release notice")
 	initialize := f.Bool("initialize", false, "include project conventions in an explicit recall")
@@ -398,6 +400,7 @@ func run() error {
 		if originalCommand == "why" && *task == "" {
 			return fmt.Errorf("why requires --task; it explains Recall for the current task")
 		}
+		profileStart := time.Now()
 		p, e := svc.Profile()
 		if e != nil {
 			return e
@@ -423,7 +426,15 @@ func run() error {
 				p.Features[k] = v
 			}
 		}
-		r, e := svc.Store.Recall(svc.Identity, memory.Request{Profile: p, Task: *task, ByteBudget: *budget, Limit: *limit, Initialize: *initialize})
+		request := memory.Request{Profile: p, Task: *task, ByteBudget: *budget, Limit: *limit, Initialize: *initialize}
+		if *traceRecall {
+			r, trace, e := svc.RecallWithTrace(request, time.Since(profileStart))
+			if e != nil {
+				return e
+			}
+			return printJSON(map[string]any{"result": r, "trace": trace})
+		}
+		r, _, e := svc.RecallWithTrace(request, time.Since(profileStart))
 		if e != nil {
 			return e
 		}
