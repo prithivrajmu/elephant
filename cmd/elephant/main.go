@@ -250,14 +250,19 @@ func run() error {
 		if seenFlags["enabled"] {
 			change = enabled
 		}
-		r, e := svc.Store.Updates(memory.UpdateOptions{Check: *updateCheck, Force: *updateCheck, Notify: true, Dismiss: *updateDismiss, Enabled: change})
+		// An interactive update request must not report a stale cached result.
+		// Keep status reads and preference changes offline unless --check is set.
+		check := *updateCheck || (!seenFlags["check"] && !*jsonOutput && !*updateDismiss && change == nil)
+		r, e := svc.Store.Updates(memory.UpdateOptions{Check: check, Force: check, Notify: true, Dismiss: *updateDismiss, Enabled: change})
 		if e != nil {
 			return e
 		}
 		if *jsonOutput {
 			return printJSON(r)
 		}
-		if r.Line != "" {
+		if check && r.State == "available" && r.Latest != nil {
+			fmt.Printf("Elephant update: %s available — %s. Upgrade: %s\n", r.Latest.Version, r.Latest.Summary, r.Latest.URL)
+		} else if r.Line != "" {
 			fmt.Println(r.Line)
 		} else {
 			fmt.Printf("Elephant: %s\n", r.Message)

@@ -2,10 +2,22 @@
 
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Elephant is in
-pre-release; versions carry a `-beta` suffix and compatibility is not yet
-guaranteed.
+pre-1.0 development; compatibility is not yet guaranteed. Version 0.9.1 uses a
+regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
+
+## [0.9.1]
+
+Full notes: [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md).
+
+### Fixed
+
+- Plain `elephant update` checks published releases immediately instead of reading
+  a cached result that can predate a new release.
+- Repeated explicit checks show the available version and release link, even
+  after a background hook has already announced the release.
+- Cached JSON reads and update preferences remain offline unless `--check` is set.
 
 ## [0.9.0-beta]
 
@@ -93,7 +105,8 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 - Older binaries cannot read a migrated store.
 - Memories and backups are not encrypted by Elephant.
 
-[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.9.0-beta...HEAD
+[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/prithivrajmu/elephant/compare/v0.9.0-beta...v0.9.1
 [0.9.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.8.0-beta...v0.9.0-beta
 [0.8.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.7.0-pilot...v0.8.0-beta
 [0.7.0-pilot]: https://github.com/prithivrajmu/elephant/compare/v0.6.0-pilot...v0.7.0-pilot

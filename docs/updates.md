@@ -37,12 +37,21 @@ how to disable it. A notice includes the version, release title and upgrade link
 announced once per local journal. It never installs an update automatically.
 
 ```sh
-elephant update --check       # Force a check and print one line
+elephant update               # Force a fresh check and print one line
+elephant update --check       # Same explicit check (also works with --json)
 elephant update --json        # Read cached status
 elephant update --dismiss     # Dismiss the available version
 elephant update --enabled=false
 elephant update --enabled=true
 ```
+
+The command checks availability; it does not replace the installed binary.
+To install the latest release with the checksum-verified npm launcher, run
+`npx --yes elephant-memory@latest`, then confirm with `elephant version`.
+Restart running agents and Memory Palace to load the new binary. Older releases
+require `elephant update --check` for a fresh lookup; plain `update` reads their cache.
+Explicit checks print the available version and release link every time, even
+when a background hook has already announced it. Disabled checks stay disabled.
 
 Memory Palace shows cached availability, the last check time, an upgrade link,
 and Check, Dismiss and Enable/Disable controls. Dashboard polling does not make
