@@ -13,7 +13,7 @@
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/client": "2.2.0",
     "@modelcontextprotocol/server": "2.0.0",
     "agents": "0.26.0",
     "jose": "6.2.12",
