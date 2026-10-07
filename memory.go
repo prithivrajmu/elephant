@@ -13,10 +13,11 @@ import (
 )
 
 type Profile struct {
-	Project      string              `json:"project"`
-	Conversation string              `json:"conversation,omitempty"`
-	Features     map[string][]string `json:"features"`
-	Evidence     map[string][]string `json:"evidence,omitempty"`
+	Project       string              `json:"project"`
+	Conversation  string              `json:"conversation,omitempty"`
+	Features      map[string][]string `json:"features"`
+	Evidence      map[string][]string `json:"evidence,omitempty"`
+	manifestFiles int
 }
 type Identity struct {
 	Tenant string `json:"tenant"`
@@ -56,6 +57,8 @@ type Request struct {
 	Limit           int                 `json:"limit"`
 	Initialize      bool                `json:"-"`
 	ContextFeatures map[string][]string `json:"context_features,omitempty"`
+	profileMS       float64
+	manifestFiles   int
 }
 type Hit struct {
 	ID               string   `json:"id"`

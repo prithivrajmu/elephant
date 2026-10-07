@@ -78,6 +78,11 @@ SQLite WAL allows readers to retain a consistent snapshot during a write. Writer
 
 Recall scans visible, applicable current memories for exact corpus statistics. Alternative-advice metadata uses a shared subject index with bounded ID samples. Diversity comparisons cache lesson words and update once per selected result. The dashboard still loads the user's usage history. Peer imports validate up front but commit individual records; rerun after a partial import to deduplicate.
 
+Use `recall --trace` for an explicit local performance diagnosis. It wraps the
+normal Recall result with profile, store-open, candidate-load, rank/render,
+receipt, commit and total timings plus bounded work counts. It does not change
+normal Recall or MCP output. See [Performance measurement and ratchets](performance.md).
+
 Saving a memory checks only matching evidence in the same owner's scope and project. Label order, duplicate label values, and case differences do not create a new memory on retry. Original evidence is retained; different sources, applicability conditions, and project origins remain separate.
 
 ## Conversations without a project

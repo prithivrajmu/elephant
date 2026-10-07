@@ -249,11 +249,12 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 	if err = svc.Store.observe(x); err != nil {
 		return out, err
 	}
+	profileStart := time.Now()
 	p, err := svc.Profile()
 	if err != nil {
 		return out, err
 	}
-	result, err := svc.Store.Recall(c.Identity, Request{Profile: p, Task: h.Prompt, Initialize: h.Event == "SessionStart", ByteBudget: c.Budget, Limit: 6})
+	result, err := svc.Store.Recall(c.Identity, Request{Profile: p, Task: h.Prompt, Initialize: h.Event == "SessionStart", ByteBudget: c.Budget, Limit: 6, profileMS: elapsedMS(profileStart), manifestFiles: profileManifestCount(p)})
 	if err != nil {
 		return out, err
 	}

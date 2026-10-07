@@ -105,7 +105,7 @@ Open the local dashboard with `elephant palace`. For Windows, other MCP clients,
 - [Memory Palace](docs/dashboard.md)
 - [Storage, migration, and recovery](docs/storage.md)
 - [Update notifications](docs/updates.md)
-- [Architecture](docs/architecture.md), [validation](docs/validation.md), and [roadmap](docs/roadmap.md)
+- [Architecture](docs/architecture.md), [performance](docs/performance.md), [validation](docs/validation.md), and [roadmap](docs/roadmap.md)
 - [Release notes](https://github.com/prithivrajmu/elephant/releases), [pilot feedback template](docs/pilot-feedback.md)
 - [Experimental Cloudflare MCP service](docs/cloudflare.md), [sync and sharing](docs/cloud-sync.md), and [evidence connectors](docs/mcp-evidence.md)
 

@@ -7,6 +7,18 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Added
+
+- Local recall phase traces, p50/p75/p95 Memory Palace metrics, deterministic
+  performance ratchets, and synthetic setup/recall/capture/Palace journey reports.
+- A scheduled performance workflow that publishes scale evidence without using
+  noisy wall-clock timing as a pull-request gate.
+
+### Changed
+
+- Recall receipts now retain local profile, store-open, candidate-load and
+  rank/render timings plus bounded work counts. Task text remains excluded.
+
 ## [0.9.1]
 
 Full notes: [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md).

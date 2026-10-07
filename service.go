@@ -3,6 +3,7 @@ package memory
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type Service struct {
@@ -24,6 +25,12 @@ func (s Service) Profile() (Profile, error) {
 	p.Conversation = s.Conversation
 	return p, err
 }
+
+func (s Service) RecallWithTrace(q Request, profileElapsed time.Duration) (Result, RecallTrace, error) {
+	q.profileMS = float64(profileElapsed) / float64(time.Millisecond)
+	q.manifestFiles = profileManifestCount(q.Profile)
+	return s.Store.RecallWithTrace(s.Identity, q)
+}
 func decode(data json.RawMessage, v any) error {
 	if len(data) == 0 {
 		data = json.RawMessage("{}")
@@ -39,11 +46,14 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 		if err := decode(args, &q); err != nil {
 			return nil, err
 		}
+		profileStart := time.Now()
 		p, err := s.Profile()
 		if err != nil {
 			return nil, err
 		}
 		q.Profile = p
+		q.profileMS = elapsedMS(profileStart)
+		q.manifestFiles = profileManifestCount(p)
 		if e := ValidateLabels(q.ContextFeatures); e != nil {
 			return nil, e
 		}
