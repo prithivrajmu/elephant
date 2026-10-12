@@ -51,6 +51,8 @@ type hookState struct {
 	Recalled  []string `json:"recalled,omitempty"`
 	// Signal marks a task with a failed tool call or a file edit; only those get a review.
 	Signal bool `json:"signal,omitempty"`
+	// Pending is the previous task when a new prompt interrupted its requested review.
+	Pending *hookState `json:"pending,omitempty"`
 }
 
 // editTools change files. Claude names first, then Codex.
@@ -240,7 +242,19 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 				return nil, e
 			}
 			x.Task = newID()
-			return nil, writeTaskState(c, sessionKey, hookState{Task: x.Task, Context: taskContext(c), Agent: agent})
+			next := hookState{Task: x.Task, Context: taskContext(c), Agent: agent}
+			if prev, e := readTaskState(c, sessionKey); e == nil {
+				if prev.Reviewed && !prev.Completed {
+					// A new prompt interrupted this review. ponytail: one slot; a newer interrupted review replaces it.
+					prev.Pending = nil
+					next.Pending = &prev
+				} else if !prev.Reviewed {
+					// No review ran: keep the interrupted review and carry unreviewed work.
+					// Hosts skip Stop after a user interrupt and can start turns on their own.
+					next.Pending, next.Signal = prev.Pending, prev.Signal
+				}
+			}
+			return nil, writeTaskState(c, sessionKey, next)
 		})
 		if err != nil {
 			return out, err

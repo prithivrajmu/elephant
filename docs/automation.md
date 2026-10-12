@@ -22,7 +22,7 @@ After that, work normally. You do not need to ask for recall or remind the agent
 | Agent finishes | Request one review only when the task had a failed tool call or a file edit and no background task is still running. Read-only tasks are not reviewed. The agent can save zero to three useful lessons, then emit one factual task-status line. |
 | Next related task | Recall the saved lesson if its scope, task terms and conditions match. |
 
-The finish hook continues the agent once to perform its review. It does not repeatedly block completion. It respects the host's `stop_hook_active` guard and also keeps a local per-session review guard. A new user task resets the guard. Hook errors report a warning and let the agent continue.
+The finish hook continues the agent once to perform its review. It does not repeatedly block completion. It respects the host's `stop_hook_active` guard and also keeps a local per-session review guard. A new user task resets the guard. If a new prompt interrupts a requested review, Elephant keeps that one review so its lessons save under its own task. If the host skips the finish hook, unreviewed edits carry to the next task. Hook errors report a warning and let the agent continue.
 
 The engine does not derive a lesson from an exit code. The agent uses evidence already in its context. A test failure may produce a Warning or Scar only when the agent can explain what failed and what the evidence supports. Project scope is the default in review instructions. Personal scope is for transferable knowledge. Team promotion still requires review.
 
@@ -85,4 +85,4 @@ Hook contracts checked against official documentation on 2026-10-03:
 
 ## User updates
 
-The review supplies task-specific record and `task-status` commands. Saved counts use transactional SQLite receipts, and stale review commands fail instead of recording into a new task. Session-start hooks also check cached release availability and can show one update notice per version. See [Update notifications](updates.md) for controls, privacy and native-test instructions.
+The review supplies task-specific record and `task-status` commands. Saved counts use transactional SQLite receipts, and a stale `remember` command fails with a clear message instead of recording into a new task. A stale `task-status` command prints a read-only line. Session-start hooks also check cached release availability and can show one update notice per version. See [Update notifications](updates.md) for controls, privacy and native-test instructions.
