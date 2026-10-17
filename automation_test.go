@@ -369,3 +369,39 @@ func TestStopReviewsOnlyFinishedTasksWithSignal(t *testing.T) {
 		t.Fatal("nonzero exit lacks review", r)
 	}
 }
+
+func TestDoctorNotesGuidanceOlderThanThisVersion(t *testing.T) {
+	svc, _, binary := autoFixture(t)
+	if _, err := InitAutomation(svc, binary, "claude", 4000); err != nil {
+		t.Fatal(err)
+	}
+	has := func() bool {
+		d, err := Doctor(svc)
+		if err != nil || !d.OK {
+			t.Fatalf("old guidance must stay a note, not a failure: %+v %v", d, err)
+		}
+		for _, n := range d.Notes {
+			if strings.Contains(n, "guidance is older") && strings.Contains(n, "elephant init") {
+				return true
+			}
+		}
+		return false
+	}
+	if has() {
+		t.Fatal("fresh guidance reported as old")
+	}
+	path := filepath.Join(svc.Root, "CLAUDE.md")
+	old, _ := managedText(nil, "## Elephant automatic memory\n\nElephant hooks recall relevant experience at session start.\n")
+	if err := os.WriteFile(path, old, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if !has() {
+		t.Fatal("old guidance not reported")
+	}
+	if _, err := InitAutomation(svc, binary, "claude", 4000); err != nil {
+		t.Fatal(err)
+	}
+	if has() {
+		t.Fatal("init did not refresh guidance")
+	}
+}

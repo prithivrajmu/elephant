@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish verified portable assets after the native CI gates pass."""
+"""Publish verified portable assets after the native CI gates pass. Runs only for a pushed vVERSION tag."""
 import argparse
 import hashlib
 import json
@@ -43,6 +43,8 @@ def main():
     repo = os.environ['GITHUB_REPOSITORY']
     commit = os.environ['GITHUB_SHA']
     tag = f'v{VERSION}'
+    if os.environ.get('GITHUB_REF_NAME') != tag:
+        raise RuntimeError(f"Pushed tag {os.environ.get('GITHUB_REF_NAME')} does not match Version {VERSION} in onboarding.go; expected {tag}.")
     view = subprocess.run(['gh', 'release', 'view', tag, '--repo', repo, '--json', 'isDraft,targetCommitish'], text=True, capture_output=True)
     if view.returncode == 0:
         release = json.loads(view.stdout)

@@ -186,7 +186,7 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		}
 		return out, svc.Store.observe(x)
 	case "Stop":
-		// ponytail: a long-lived background task (e.g. a dev server) defers the review until the next task resets state.
+		// ponytail: a long-lived background task (e.g. a dev server) defers the review; unreviewed work stays in state and carries to the next task.
 		if h.StopActive || len(h.Background) > 0 {
 			return out, nil
 		}

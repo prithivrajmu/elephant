@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	memory "github.com/prithivrajmu/elephant"
@@ -66,5 +67,34 @@ func TestAutomaticSetupRejectsConflictingModes(t *testing.T) {
 		if err := run(); err == nil {
 			t.Fatalf("accepted conflicting mode: %v", args)
 		}
+	}
+}
+
+func TestFailedHookShowsTheErrorToTheUser(t *testing.T) {
+	dir := t.TempDir()
+	stdin, err := os.Create(filepath.Join(dir, "stdin"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdin.WriteString(`{"hook_event_name":"UserPromptSubmit","session_id":"s","prompt":"x"}`)
+	stdin.Seek(0, 0)
+	stdout, err := os.Create(filepath.Join(dir, "stdout"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	previousArgs, previousIn, previousOut, previousErr := os.Args, os.Stdin, os.Stdout, os.Stderr
+	t.Cleanup(func() { os.Args, os.Stdin, os.Stdout, os.Stderr = previousArgs, previousIn, previousOut, previousErr })
+	os.Args = []string{"elephant", "hook", "--agent", "claude", "--config", filepath.Join(dir, "missing.json")}
+	os.Stdin, os.Stdout, os.Stderr = stdin, stdout, stdout
+	if err = run(); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(stdout.Name())
+	var out struct{ SystemMessage string }
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		json.Unmarshal([]byte(line), &out)
+	}
+	if !strings.Contains(out.SystemMessage, "elephant init in this project") || strings.Contains(out.SystemMessage, "hook stderr") {
+		t.Fatalf("hook failure hides its cause: %q", data)
 	}
 }
