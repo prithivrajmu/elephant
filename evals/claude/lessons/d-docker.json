@@ -1,0 +1,13 @@
+{
+  "scope": "project",
+  "outcome": "good",
+  "subject": "docker-layer-cache",
+  "incident": "A Docker build re-installed all npm packages on every change.",
+  "lesson": "Copy package.json and the lockfile before the source so the install layer stays cached.",
+  "source": "build log comparison, 41s to 6s",
+  "features": {
+    "language": [
+      "python"
+    ]
+  }
+}

@@ -22,7 +22,7 @@ Filter tenant, visibility, retirement, team approval and applicability first. A 
 
 Every required dimension must match at least one authored value. Unknown required dimensions reject. Any exclusion match rejects. Mere origin-profile differences are not invented requirements. Query facts supplied through `context_features` are asserted facts, not verified production architecture.
 
-For an explicit task, tokenize Unicode letters/digits, deduplicate, remove the documented small English stopword/boilerplate set in `memory.go`, and require at least one remaining exact term in incident, lesson or subject. If there are no content terms, abstain. Project similarity cannot rescue an unrelated task. This is lexical admission, not semantic understanding.
+For an explicit task, tokenize Unicode letters/digits, deduplicate, remove the documented small English stopword/boilerplate set in `memory.go`, fold simple plurals (`models` matches `model`), and require at least one remaining exact term in incident, lesson or subject that is not a generic term. Generic terms (file extensions such as `py`, and words every coding task contains such as `run`, `test` and `fix`) still add to the BM25 score, but a memory that shares only generic terms with the task is not admitted. If there are no content terms, abstain. Project similarity cannot rescue an unrelated task. This is lexical admission, not semantic understanding.
 
 An explicitly requested `recall --initialize`/`init_memory` with a blank task permits profile discovery with agreement-times-coverage >= 0.15. Plain `recall` does not silently browse. Initialization with no task and no known features returns no memories.
 
@@ -46,7 +46,7 @@ Use zero for empty denominators. Unknown fields reduce the profile bonus, not ta
 
 Use k1=1.2 and b=0.75. Compute corpus statistics over visible, applicable memories only; sort query terms before summing. The same task-first formula applies with or without a project. With no known profile, R=L. Profile corroboration supplies at most a 20% bonus.
 
-BM25 and its transform drift with the candidate corpus and are not calibrated correctness probabilities. In version 0.1, L below 0.15 could reject a one-term memory until an unrelated document changed IDF. Version 0.3 removes that admission threshold. This still doesn't provide synonyms, multilingual stopword sets, phrase indexes, stemming or embeddings.
+BM25 and its transform drift with the candidate corpus and are not calibrated correctness probabilities. In version 0.1, L below 0.15 could reject a one-term memory until an unrelated document changed IDF. Version 0.3 removes that admission threshold. This still doesn't provide synonyms, multilingual stopword sets, phrase indexes, full stemming or embeddings. The hosted Cloudflare worker keeps its own ranking in `cloudflare/src/recall.ts` and does not yet have the generic-term gate or plural folding; adding them there needs a token re-index.
 
 ### 4. Reported usefulness and age
 

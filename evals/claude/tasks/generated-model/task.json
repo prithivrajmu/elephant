@@ -1,0 +1,2 @@
+{"category": "discoverable", "lesson": "generated-model",
+ "prompt": "Add a required string field `email` to the User model, then run the tests."}

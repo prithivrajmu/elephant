@@ -72,6 +72,8 @@ diagnostic measurements, not a stable public wire contract.
 - MCP tool-schema payload bytes;
 - Memory Palace memory nodes in the 120-memory fixture.
 
+Recall relevance has its own ratchet in `retrieval_relevance_test.go`: a 14-memory, 8-task fixture counts lessons injected that the task does not need, and fails if a needed lesson is missing. The ceiling was 43 before the generic-term gate and is 8 now. The count is deterministic, so it is a hard gate. Lower the ceiling after an improvement; never raise it.
+
 Normal tests fail when a value exceeds its ceiling. The performance workflow
 runs these checks on relevant pull requests. Scheduled and manual runs also
 publish a 100/1,000/10,000-memory timing report. Shared CI wall-clock values are

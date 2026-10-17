@@ -1,0 +1,13 @@
+{
+  "scope": "project",
+  "outcome": "good",
+  "subject": "generated-models",
+  "incident": "A hand edit to models_gen.py passed unit tests but failed python3 gen.py --check in CI.",
+  "lesson": "models_gen.py is generated from schema.json by gen.py. Edit schema.json, then run python3 gen.py. Hand edits are overwritten and fail python3 gen.py --check.",
+  "source": "CI run 4412, gen.py --check exit 1",
+  "features": {
+    "language": [
+      "python"
+    ]
+  }
+}

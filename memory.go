@@ -93,14 +93,37 @@ func words(s string) []string {
 
 var stopwords = set(strings.Fields("a an the and or but to of for in on at by from with without is are was were be been being it its this that these those as if then than so i we you they he she my our your their can could would should will do does did have has had please help task work need want implement improve use using code"))
 
+// genericTerms appear in almost every coding task or lesson (file extensions, "run the tests", "fix").
+// They still add to the BM25 score, but a memory is admitted only if it shares at least one other term.
+// Entries use the folded form, so write "test", not "tests".
+var genericTerms = set(strings.Fields("py go js ts jsx tsx md json yaml yml toml txt sh run running fix test check add update make change return error bug fail pass file command output result issue problem function method class"))
+
+// fold merges simple plurals so "model" matches "models". It is not a stemmer.
+func fold(w string) string {
+	if n := len(w); n > 3 && w[n-1] == 's' && !strings.HasSuffix(w, "ss") && !strings.HasSuffix(w, "us") && !strings.HasSuffix(w, "is") {
+		return w[:n-1]
+	}
+	return w
+}
+
 func contentWords(s string) []string {
 	out := []string{}
 	for _, w := range words(s) {
 		if !stopwords[w] {
-			out = append(out, w)
+			out = append(out, fold(w))
 		}
 	}
 	return out
+}
+
+// specific reports whether any matched term is more than a generic one.
+func specific(tf map[string]int) bool {
+	for term := range tf {
+		if !genericTerms[term] {
+			return true
+		}
+	}
+	return false
 }
 func set(v []string) map[string]bool {
 	m := map[string]bool{}
@@ -328,7 +351,7 @@ func Recall(all []Memory, id Identity, q Request, now time.Time) Result {
 	}
 	rank := []ranked{}
 	for i, m := range candidates {
-		if len(query) > 0 && len(docs[i].tf) == 0 {
+		if len(query) > 0 && !specific(docs[i].tf) {
 			continue
 		}
 		sim, coverage, matches := similarityDetails(m.Features, q.Profile.Features)
@@ -451,7 +474,7 @@ func discoveryEligible(m Memory, q Request) bool {
 	query := set(contentWords(q.Task))
 	if len(query) > 0 {
 		for _, w := range contentWords(m.Incident + " " + m.Lesson + " " + m.Subject) {
-			if query[w] {
+			if query[w] && !genericTerms[w] {
 				return true
 			}
 		}
