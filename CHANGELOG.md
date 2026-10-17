@@ -21,6 +21,12 @@ Full notes: [docs/releases/v0.9.2.md](docs/releases/v0.9.2.md).
 - Dashboard and `stats` no longer present "context tokens avoided" as a saving. The
   figure compares against loading every memory, not against using no memory.
 
+### Security
+
+- Release builds use Go 1.27.2. It fixes nine standard-library vulnerabilities that
+  `govulncheck` reports against Go 1.27.1 in `net/http`, `crypto/tls` and
+  `net/textproto`, which Elephant's cloud sync and dashboard use.
+
 ### Added
 
 - Local recall phase traces, p50/p75/p95 Memory Palace metrics, deterministic

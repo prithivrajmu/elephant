@@ -82,6 +82,7 @@ func TestFailedHookShowsTheErrorToTheUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { stdin.Close(); stdout.Close() }) // Windows cannot remove open files
 	previousArgs, previousIn, previousOut, previousErr := os.Args, os.Stdin, os.Stdout, os.Stderr
 	t.Cleanup(func() { os.Args, os.Stdin, os.Stdout, os.Stderr = previousArgs, previousIn, previousOut, previousErr })
 	os.Args = []string{"elephant", "hook", "--agent", "claude", "--config", filepath.Join(dir, "missing.json")}
