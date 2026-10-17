@@ -2,10 +2,30 @@
 
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Elephant is in
-pre-1.0 development; compatibility is not yet guaranteed. Version 0.9.1 uses a
+pre-1.0 development; compatibility is not yet guaranteed. Versions from 0.9.1 use a
 regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
-## [Unreleased]
+## [0.9.2]
+
+Full notes: [docs/releases/v0.9.2.md](docs/releases/v0.9.2.md).
+
+### Fixed
+
+- A review that a new prompt interrupts now saves its lessons under its own task.
+  Before, `remember` and `task-status` failed with "task changed before capture"
+  and the lesson was lost.
+- A stale `task-status` command now prints a read-only line instead of failing.
+  The new states are `superseded` and `already_reported`.
+- When a hook fails, Claude Code now shows the error text. Before, it showed only
+  "See hook stderr for details".
+- Dashboard and `stats` no longer present "context tokens avoided" as a saving. The
+  figure compares against loading every memory, not against using no memory.
+
+### Security
+
+- Release builds use Go 1.27.2. It fixes nine standard-library vulnerabilities that
+  `govulncheck` reports against Go 1.27.1 in `net/http`, `crypto/tls` and
+  `net/textproto`, which Elephant's cloud sync and dashboard use.
 
 ### Added
 
@@ -13,11 +33,21 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
   performance ratchets, and synthetic setup/recall/capture/Palace journey reports.
 - A scheduled performance workflow that publishes scale evidence without using
   noisy wall-clock timing as a pull-request gate.
+- `doctor` reports agent guidance that is older than the installed version, with
+  the command that updates it.
+- Releases publish when a `vX.Y.Z` tag is pushed, not on every merge to `main`.
 
 ### Changed
 
 - Recall receipts now retain local profile, store-open, candidate-load and
   rank/render timings plus bounded work counts. Task text remains excluded.
+- Unreviewed edits and failed tool calls carry to the next task when the host
+  skips the finish hook, for example after a user interrupt. The next finish hook
+  then requests the review.
+- Refusals from `remember` and `task-status` say what happened and what to do.
+- The guidance text now tells the agent to report `capture status unavailable`
+  with the error in one sentence. Run `elephant init` again to update it.
+- `saved 1 lesson` is no longer written as `saved 1 lessons` after a capture failure.
 
 ## [0.9.1]
 

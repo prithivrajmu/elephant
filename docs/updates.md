@@ -11,6 +11,8 @@ Elephant: recalled 2 memories · saved 1 lesson.
 Elephant: recalled 0 memories · no reusable lesson found.
 Elephant: recalled 1 memory · review incomplete.
 Elephant: recalled 0 memories · saved 0 lessons · capture failed.
+Elephant: saved 1 lesson · a newer task replaced this review.
+Elephant: saved 1 lesson · this review was already reported.
 Elephant: automation paused.
 ```
 
@@ -18,14 +20,16 @@ Recalled counts are the unique hits delivered by the pre-task hook. Saved counts
 are distinct Memory IDs acknowledged for this task. The record and its receipt
 are appended together. Repeating an identical lesson can reuse a Memory ID;
 repeating its save does not inflate the task count. Other tasks, sessions and
-manual records do not increase this count. Old review commands cannot complete
-or record into the next task. A review request alone is not completion or a save.
+manual records do not increase this count. An old review command cannot complete
+or record into a later task. One interrupted review keeps its own task, so its
+lessons still save. The two lines above come from a stale `task-status` command.
+They show a saved count and no recalled count. A review request alone is not completion or a save.
 
 `task-status` uses the config, hashed session and task ID supplied by the hook.
 Add `--json` to inspect counts, IDs and state. `--review-complete` acknowledges
 that the agent finished review; it does not independently verify lesson quality.
-If the journal cannot be read, the agent must report `Elephant: capture status
-unavailable.` rather than invent a count. The host still controls whether it runs
+If the `task-status` command fails, the agent must report `Elephant: capture status
+unavailable.` and the error in one sentence, rather than invent a count. The host still controls whether it runs
 hooks and follows the output instructions. Native verification is separate from
 the subprocess acceptance test.
 

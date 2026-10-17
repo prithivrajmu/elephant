@@ -30,7 +30,7 @@ func taskContext(c AutomationConfig) string {
 }
 func taskStatePath(c AutomationConfig, session string) (string, error) {
 	if !sessionPattern.MatchString(session) {
-		return "", fmt.Errorf("invalid task session")
+		return "", fmt.Errorf("invalid task session: use the exact command from the review hook")
 	}
 	p := c.Store + ".sessions/" + session + ".json"
 	if err := safeParents(filepath.Dir(c.Store), p); err != nil {
@@ -49,13 +49,16 @@ func readTaskState(c AutomationConfig, session string) (hookState, error) {
 		return state, err
 	}
 	if len(b) == 0 {
-		return state, fmt.Errorf("no active task")
+		return state, fmt.Errorf("no active Elephant task in this session: the next prompt starts one")
 	}
 	if err = json.Unmarshal(b, &state); err != nil {
 		return state, err
 	}
-	if state.Context != taskContext(c) || state.Task == "" {
-		return state, fmt.Errorf("task context does not match installed project")
+	if state.Task == "" {
+		return state, fmt.Errorf("no active Elephant task in this session: the next prompt starts one")
+	}
+	if state.Context != taskContext(c) {
+		return state, fmt.Errorf("this task belongs to a different Elephant setup: use the command from this project's review hook")
 	}
 	return state, nil
 }
@@ -70,24 +73,68 @@ func writeTaskState(c AutomationConfig, session string, state hookState) error {
 	}
 	return atomicLocalFile(p, b, 0600)
 }
+
+// reviewTarget returns the task a hook-issued review command names: the current
+// task, or the previous task whose review a new prompt interrupted. Nil otherwise.
+func reviewTarget(state *hookState, taskID []string) *hookState {
+	if len(taskID) == 0 || taskID[0] == "" || taskID[0] == state.Task {
+		return state
+	}
+	if state.Pending != nil && state.Pending.Task == taskID[0] {
+		return state.Pending
+	}
+	return nil
+}
+
+// staleReview explains a task ID that is neither the current nor the pending task.
+func staleReview(tx *sql.Tx, c AutomationConfig, session, task string) (string, error) {
+	rows, err := tx.Query(`SELECT json_extract(data,'$.status') FROM experiences WHERE tenant=? AND user=? AND session=? AND task=?
+		AND json_extract(data,'$.status') IN ('review_requested','review_completed')`, c.Identity.Tenant, c.Identity.User, session, task)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	state := ""
+	for rows.Next() {
+		var status string
+		if err = rows.Scan(&status); err != nil {
+			return "", err
+		}
+		if state != "already_reported" {
+			state = map[string]string{"review_requested": "superseded", "review_completed": "already_reported"}[status]
+		}
+	}
+	if err = rows.Err(); err == nil && state == "" {
+		err = fmt.Errorf("unknown task ID for this session: use the --task-id from the review hook")
+	}
+	return state, err
+}
 func CaptureForTask(configPath, session string, taskID ...string) (AutomationConfig, *TaskCapture, error) {
 	c, err := ReadAutomation(configPath)
 	if err != nil {
 		return c, nil, err
 	}
 	var capture *TaskCapture
-	err = c.Service().Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
+	err = c.Service().Store.transactSQL(false, nil, func(tx *sql.Tx, _ []Memory, _ map[string]bool) (*Event, error) {
 		state, e := readTaskState(c, session)
 		if e != nil {
 			return nil, e
 		}
 		if !c.Enabled {
-			return nil, fmt.Errorf("automatic memory is paused")
+			return nil, fmt.Errorf("automatic memory is paused: lesson not saved. Resume with elephant automation --enabled=true")
 		}
-		if len(taskID) > 0 && taskID[0] != "" && state.Task != taskID[0] {
-			return nil, fmt.Errorf("task changed before capture")
+		t := reviewTarget(&state, taskID)
+		if t == nil {
+			why, e := staleReview(tx, c, session, taskID[0])
+			if e != nil {
+				return nil, e
+			}
+			if why == "already_reported" {
+				return nil, fmt.Errorf("this review was already reported: lesson not saved")
+			}
+			return nil, fmt.Errorf("a newer task replaced this review: lesson not saved. Run the task-status command and report its line")
 		}
-		capture = &TaskCapture{Session: session, Task: state.Task, Agent: state.Agent}
+		capture = &TaskCapture{Session: session, Task: t.Task, Agent: t.Agent}
 		return nil, nil
 	})
 	return c, capture, err
@@ -114,19 +161,31 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 		if e != nil {
 			return nil, e
 		}
-		if len(taskID) > 0 && taskID[0] != "" && state.Task != taskID[0] {
-			return nil, fmt.Errorf("task changed before status acknowledgement")
-		}
-		if complete {
-			if !state.Reviewed {
-				return nil, fmt.Errorf("lesson review has not been requested")
-			}
-			state.Completed = true
-			if e = writeTaskState(c, session, state); e != nil {
+		t := reviewTarget(&state, taskID)
+		task := ""
+		var done *Event
+		if t == nil {
+			// Read-only: a stale review never completes or counts toward a later task.
+			task = taskID[0]
+			if d.State, e = staleReview(tx, c, session, task); e != nil {
 				return nil, e
 			}
+		} else {
+			task = t.Task
+			if complete {
+				if !t.Reviewed {
+					return nil, fmt.Errorf("no lesson review was requested for this task: run task-status only after the review hook asks")
+				}
+				if !t.Completed {
+					done = &Event{Kind: "experience", Experience: &Experience{ID: newID(), Identity: c.Identity, Project: c.Project, Agent: t.Agent, Session: session, Task: t.Task, Event: "LessonReview", Status: "review_completed", At: time.Now().UTC()}}
+				}
+				t.Completed = true
+				if e = writeTaskState(c, session, state); e != nil {
+					return nil, e
+				}
+			}
+			d.Recalled = len(t.Recalled)
 		}
-		d.Recalled = len(state.Recalled)
 		ownedIDs := map[string]bool{}
 		for _, m := range all {
 			if owned(m, c.Identity) && m.Project == c.Project && m.Conversation == c.Conversation {
@@ -135,7 +194,7 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 		}
 		seen := map[string]bool{}
 		failed := false
-		rows, e := tx.Query("SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq", c.Identity.Tenant, c.Identity.User, session, state.Task)
+		rows, e := tx.Query("SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq", c.Identity.Tenant, c.Identity.User, session, task)
 		if e != nil {
 			return nil, e
 		}
@@ -162,31 +221,41 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 		}
 		d.Saved = len(d.MemoryIDs)
 		switch {
+		case t == nil:
 		case failed:
 			d.State = "capture_failed"
-		case !state.Completed:
+		case !t.Completed:
 			d.State = "review_incomplete"
 		case d.Saved == 0:
 			d.State = "no_lesson"
 		default:
 			d.State = "saved"
 		}
-		return nil, nil
+		return done, nil
 	})
 	if err != nil {
 		return d, err
+	}
+	saved := fmt.Sprintf("saved %d lessons", d.Saved)
+	if d.Saved == 1 {
+		saved = "saved 1 lesson"
+	}
+	switch d.State {
+	case "superseded":
+		d.Line = "Elephant: " + saved + " · a newer task replaced this review."
+		return d, nil
+	case "already_reported":
+		d.Line = "Elephant: " + saved + " · this review was already reported."
+		return d, nil
 	}
 	ending := "review incomplete"
 	switch d.State {
 	case "no_lesson":
 		ending = "no reusable lesson found"
 	case "saved":
-		ending = fmt.Sprintf("saved %d lessons", d.Saved)
-		if d.Saved == 1 {
-			ending = "saved 1 lesson"
-		}
+		ending = saved
 	case "capture_failed":
-		ending = fmt.Sprintf("saved %d lessons · capture failed", d.Saved)
+		ending = saved + " · capture failed"
 	}
 	noun := "memories"
 	if d.Recalled == 1 {

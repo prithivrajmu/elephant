@@ -15,7 +15,7 @@ The embedded, dependency-free UI includes:
 - Active memory count, draft/retired totals, and a 14-day cumulative memory chart.
 - Searchable incident cards with source, project fingerprint and applicability.
 - Observed helpful/unhelpful feedback, retrieval counts, core p50/p75/p95, and local phase timings.
-- Estimated context tokens avoided against loading all visible, applicable summaries.
+- Estimated context tokens that recall added, with the all-summaries baseline as a comparison. This is not a saving against using no memory.
 - A recall playground with byte budget and outcome feedback controls.
 - A form to Imprint a Memory with source evidence.
 - A brain-inspired Memory Palace with four regions for wins, lessons, warnings and scars.

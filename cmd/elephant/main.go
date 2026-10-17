@@ -111,7 +111,7 @@ func run() error {
 		out, e := memory.RunHook(*configPath, *agent, bytes.NewReader(payload))
 		if e != nil {
 			fmt.Fprintln(os.Stderr, "Elephant automatic memory:", e)
-			out = map[string]any{"systemMessage": "Elephant automatic memory failed. Run elephant automation and elephant doctor. See hook stderr for details."}
+			out = map[string]any{"systemMessage": "Elephant automatic memory failed: " + e.Error() + ". Run elephant automation and elephant doctor."}
 		}
 		if e == nil {
 			var h memory.HookInput
@@ -334,7 +334,7 @@ func run() error {
 		case "map":
 			return printJSON(memory.BuildMemoryMap(d.Memories))
 		case "stats":
-			return printJSON(map[string]any{"memories": len(d.Memories), "recalls": len(d.Usage), "helpful": d.Helpful, "unhelpful": d.Unhelpful, "estimated_tokens_avoided": d.EstimatedTokensAvoided, "recall_tokens_injected_estimate": d.InjectedTokens, "baseline": "all eligible memory summaries; not historical conversations"})
+			return printJSON(map[string]any{"memories": activeMemories(d.Memories), "recalls": len(d.Usage), "helpful": d.Helpful, "unhelpful": d.Unhelpful, "estimated_tokens_avoided": d.EstimatedTokensAvoided, "recall_tokens_injected_estimate": d.InjectedTokens, "baseline": "all eligible memory summaries; not historical conversations. estimated_tokens_avoided compares recall against loading all of them. It is not a saving against using no memory."})
 		case "scars":
 			scars := []memory.Memory{}
 			for _, m := range d.Memories {
@@ -515,4 +515,15 @@ func run() error {
 		return printJSON(ids)
 	}
 	return fmt.Errorf("unknown command %q", command)
+}
+
+// activeMemories counts memories that recall can still use; retired ones stay in the history.
+func activeMemories(all []memory.Memory) int {
+	n := 0
+	for _, m := range all {
+		if !m.Retired {
+			n++
+		}
+	}
+	return n
 }

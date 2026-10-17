@@ -1,6 +1,6 @@
 {
   "name": "elephant-memory",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Elephant: persistent experience for coding agents. Installs and runs the checksum-verified Elephant binary.",
   "license": "MIT",
   "repository": "github:prithivrajmu/elephant",

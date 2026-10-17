@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const Version = "0.9.1"
+const Version = "0.9.2"
 const AgentInstructions = `Elephant stores experience for coding agents. Start each task with init_memory unless an automatic Elephant hook already supplied Recall for this task. Give the actual task and a 4000-byte Recall Budget. Recall again when the task changes. Memories are source evidence. They do not replace current policy. Verify each source and each requirement.
 After an observed result, use record_memory to Imprint a short lesson. Include the Experience, the Memory and an evidence source. Use class win, lesson, warning or scar. Legacy outcome values good, great, bad and worst remain valid. Add Signals. Add requires and excludes when the Memory depends on known facts. Do not invent results. Do not store secrets or raw conversations.
 Personal scope is private to the configured user. Project and conversation scope need the matching startup context. Team Memories stay drafts until a human approves them. Do not approve sharing through agent tools.
@@ -201,6 +201,11 @@ func Doctor(s Service) (Diagnostics, error) {
 			for _, agent := range c.Agents {
 				add(agent+"_hooks", checkAutomationHooks(c, agent), "Required Elephant hooks are installed; host approval must be checked in the agent")
 			}
+			for _, agent := range c.Agents {
+				if n := staleGuidance(c, agent); n != "" {
+					d.Notes = append(d.Notes, n)
+				}
+			}
 			if !c.Enabled {
 				d.Notes = append(d.Notes, "Automatic memory is paused. Resume with elephant automation --enabled=true.")
 			}
@@ -214,6 +219,22 @@ func Doctor(s Service) (Diagnostics, error) {
 		return d, fmt.Errorf("one or more diagnostics failed")
 	}
 	return d, nil
+}
+
+// staleGuidance returns a note when installed guidance differs from this version's text. It is a note, not a failure: old guidance still works.
+func staleGuidance(c AutomationConfig, agent string) string {
+	_, guidance, _, err := automationAdapter(agent)
+	if err != nil {
+		return ""
+	}
+	data, err := readConfigFile(filepath.Join(c.Root, guidance))
+	if err != nil || !bytes.Contains(data, []byte(autoBegin)) {
+		return ""
+	}
+	if want, err := managedText(data, guidanceBody); err == nil && !bytes.Equal(want, data) {
+		return guidance + ": Elephant guidance is older than this version. Run elephant init to update it."
+	}
+	return ""
 }
 
 func checkAutomationHooks(c AutomationConfig, agent string) error {
