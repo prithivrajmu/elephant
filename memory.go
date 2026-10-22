@@ -49,6 +49,10 @@ type Memory struct {
 	Helpful      int                 `json:"helpful"`
 	Unhelpful    int                 `json:"unhelpful"`
 	Retired      bool                `json:"retired"`
+	// Supersedes lists the lessons this one retired when it was saved.
+	Supersedes []string `json:"supersedes,omitempty"`
+	// DistinctFrom is input only: saved lessons the author checked and found different.
+	DistinctFrom []string `json:"distinct_from,omitempty"`
 }
 type Request struct {
 	Profile         Profile             `json:"profile"`

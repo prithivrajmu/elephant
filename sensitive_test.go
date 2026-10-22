@@ -163,8 +163,9 @@ func TestScreenSensitiveRecallContracts(t *testing.T) {
 	if len(contracts.Memories) == 0 {
 		t.Fatal("no contract memories checked")
 	}
-	store := Store{Path: filepath.Join(t.TempDir(), "memories.sqlite")}
+	// The contracts are deliberate variants of one lesson, so each gets its own store.
 	for _, m := range contracts.Memories {
+		store := Store{Path: filepath.Join(t.TempDir(), "memories.sqlite")}
 		if _, err := store.Record(m); err != nil {
 			t.Fatalf("contract memory %s failed to record: %v", m.ID, err)
 		}

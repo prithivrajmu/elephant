@@ -3,6 +3,7 @@ package memory
 import (
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -27,18 +28,24 @@ func TestRecordDeduplicatesEquivalentLabelsWithoutChangingEvidence(t *testing.T)
 	if !reflect.DeepEqual(again.Features, m.Features) || !reflect.DeepEqual(retry.Features["language"], []string{"TYPESCRIPT", " go ", "go"}) {
 		t.Fatal("retry changed original evidence or caller labels")
 	}
-	// Different sources, conditions, and project origins remain independent.
-	for _, change := range []func(*Memory){
-		func(n *Memory) { n.Source += " new evidence" },
-		func(n *Memory) { n.Project += "-other" },
-		func(n *Memory) { n.Requires = map[string][]string{"database": {"mysql"}} },
-	} {
-		n := retry
-		change(&n)
-		got, err := s.Record(n)
-		if err != nil || got.ID == first.ID {
-			t.Fatalf("distinct evidence collapsed: %+v %v", got, err)
-		}
+	// The same lesson with new evidence is a near-duplicate, not a new memory.
+	resourced := retry
+	resourced.Source += " new evidence"
+	if got, err := s.Record(resourced); err == nil || !strings.Contains(err.Error(), first.ID) {
+		t.Fatalf("same lesson with new source saved again: %+v %v", got, err)
+	}
+	// A personal lesson is recalled in every project, so a copy saved from
+	// another project is refused with the original listed, not merged into it.
+	elsewhere := retry
+	elsewhere.Project += "-other"
+	if got, err := s.Record(elsewhere); err == nil || !strings.Contains(err.Error(), first.ID) {
+		t.Fatalf("personal copy from another project saved again: %+v %v", got, err)
+	}
+	// Different conditions remain independent.
+	conditioned := retry
+	conditioned.Requires = map[string][]string{"database": {"mysql"}}
+	if got, err := s.Record(conditioned); err != nil || got.ID == first.ID {
+		t.Fatalf("distinct conditions collapsed: %+v %v", got, err)
 	}
 	if err := s.Retire(Identity{Tenant: m.Tenant, User: m.Owner}, first.ID); err != nil {
 		t.Fatal(err)
