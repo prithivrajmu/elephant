@@ -75,6 +75,7 @@ func TestConcurrentJournalUsers(t *testing.T) {
 				x := m
 				x.ID = ""
 				x.Lesson = string(rune('A'+i)) + " concurrent lesson"
+				x.Scope, x.Project = "project", "project-"+string(rune('A'+i)) // near-copies the author can recall are refused
 				_, err := s.Record(x)
 				failures <- err
 			} else {

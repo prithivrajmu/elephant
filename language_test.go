@@ -36,6 +36,7 @@ func TestLanguagePolicyAndEvidence(t *testing.T) {
 		t.Fatal("strict target accepted a known phrase")
 	}
 	m.Lesson = "Bound active queries to the pool limit. Keep `Promise.all()` unchanged."
+	m.DistinctFrom = []string{saved.ID} // same incident, different lesson
 	good, err := fresh.Record(m)
 	if err != nil || good.Incident != m.Incident {
 		t.Fatal(good, err)

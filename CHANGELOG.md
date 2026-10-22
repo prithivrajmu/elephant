@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format is based on
 pre-1.0 development; compatibility is not yet guaranteed. Versions from 0.9.1 use a
 regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
+## [0.10.0]
+
+Full notes: [docs/releases/v0.10.0.md](docs/releases/v0.10.0.md).
+
+### Changed
+
+- `record_memory` and `remember` refuse a lesson that is similar to one you can
+  already recall here, including your personal lessons, and list up to three of them.
+  Before, only a byte-identical lesson in the same scope was caught. Resend with
+  `supersedes` to retire the listed lessons in the same save, or with `distinct_from`
+  to save a different lesson. In a replay of 159 real saves, the check caught 72% of
+  repeated or updated lessons; 9% of saves were refused with no duplicate listed.
+
 ## [0.9.2]
 
 Full notes: [docs/releases/v0.9.2.md](docs/releases/v0.9.2.md).
@@ -147,7 +160,9 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 - Older binaries cannot read a migrated store.
 - Memories and backups are not encrypted by Elephant.
 
-[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/prithivrajmu/elephant/compare/v0.9.2...v0.10.0
+[0.9.2]: https://github.com/prithivrajmu/elephant/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/prithivrajmu/elephant/compare/v0.9.0-beta...v0.9.1
 [0.9.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.8.0-beta...v0.9.0-beta
 [0.8.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.7.0-pilot...v0.8.0-beta
