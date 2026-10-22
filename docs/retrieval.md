@@ -1,6 +1,6 @@
 # SQL retrieval
 
-Local recall selects tenant, owner, project, conversation and approved team candidates in SQL before decoding payloads. Retired records are excluded. The existing engine rechecks visibility and applicability and uses the complete eligible corpus for BM25. Ranking, alternatives, initialization, abstention, context budgets and the dashboard baseline retain their semantics. No storage migration or candidate truncation is introduced.
+Local recall selects tenant, owner, project, conversation and approved team candidates in SQL before decoding payloads. Retired records are excluded. The existing engine rechecks visibility and applicability and uses the complete eligible corpus for TF-IDF. Ranking, alternatives, initialization, abstention, context budgets and the dashboard baseline retain their semantics. No storage migration or candidate truncation is introduced.
 
 Run `go test -run '^$' -bench BenchmarkSQLCandidateSelection -benchmem`.
 Measured on 2026-10-04 with Go 1.25.8, Linux amd64, AMD EPYC 9V74, three iterations per case, warm database, excluding setup and usage receipt writes:
