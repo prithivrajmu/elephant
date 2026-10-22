@@ -52,7 +52,9 @@ func lessonTerms(m Memory) []string {
 	return terms
 }
 
-// stem folds common English inflections so retry, retried and retries meet.
+// stem folds common English inflections so retried and retries meet. It is not
+// Porter: retry, use and cache stay apart from their -ed forms. contentWords has
+// already folded plain plurals.
 func stem(w string) string {
 	for _, suffix := range []string{"ing", "ed", "es", "s"} {
 		if len(w) > len(suffix)+2 && strings.HasSuffix(w, suffix) {
