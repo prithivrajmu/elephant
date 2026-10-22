@@ -135,6 +135,11 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	if err := ScreenSensitive(screening); err != nil {
 		return m, err
 	}
+	if len(m.DistinctFrom) > 10 || len(m.Supersedes) > 10 {
+		return m, fmt.Errorf("distinct_from and supersedes take at most 10 IDs each")
+	}
+	checked := set(m.DistinctFrom)
+	m.DistinctFrom = nil
 	m.ID = newID()
 	m.Approved = false
 	m.Retired = false
@@ -152,15 +157,13 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 			return nil, fmt.Errorf("STE target 100: %s Revise the summary. Source evidence stays unchanged.", writing.Issues[0].Message)
 		}
 		m.Writing = &writing
-		// Only exact evidence in this owner's scope can be a retry. Keep this
-		// lookup and the write in one transaction so concurrent retries agree.
+		// Only exact evidence can be a retry, and only lessons the author can
+		// recall here can be near-duplicates. Keep this lookup and the write in
+		// one transaction so concurrent saves agree.
 		all, e := readMemoryQuery(tx, `SELECT data FROM memories
-			WHERE tenant=? AND owner=? AND scope=? AND project=?
-			AND json_extract(data,'$.retired')=0
-			AND json_extract(data,'$.incident')=?
-			AND json_extract(data,'$.lesson')=?
-			AND json_extract(data,'$.source')=? ORDER BY id`,
-			m.Tenant, m.Owner, m.Scope, m.Project, m.Incident, m.Lesson, m.Source)
+			WHERE tenant=? AND owner=?
+			AND json_extract(data,'$.retired')=0 ORDER BY id`,
+			m.Tenant, m.Owner)
 		if e != nil {
 			return nil, e
 		}
@@ -179,6 +182,27 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 				return nil, nil
 			}
 		}
+		if m.Scope != "team" { // sharing a lesson with the team is not a duplicate
+			author := Identity{Tenant: m.Tenant, User: m.Owner}
+			recallable := []Memory{}
+			for _, old := range all {
+				if old.Scope != "team" && visible(old, author, m.Project, m.Conversation) {
+					recallable = append(recallable, old)
+				}
+			}
+			replaced, e := supersede(tx, m.Supersedes, recallable)
+			if e != nil {
+				return nil, e
+			}
+			for id := range replaced {
+				checked[id] = true
+			}
+			if near := similarLessons(m, recallable, checked); len(near) > 0 {
+				return nil, duplicateError(near)
+			}
+		} else if len(m.Supersedes) > 0 {
+			return nil, fmt.Errorf("supersedes is not available for team lessons")
+		}
 		if receipt != nil {
 			receipt.MemoryID = m.ID
 		}
@@ -186,6 +210,7 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	})
 	return m, err
 }
+
 func owned(m Memory, id Identity) bool { return m.Tenant == id.Tenant && m.Owner == id.User }
 func (s Store) Feedback(id Identity, project, memoryID, eventID string, helpful bool, conversation ...string) error {
 	if strings.TrimSpace(eventID) == "" || len(eventID) > 256 {

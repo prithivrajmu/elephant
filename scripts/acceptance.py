@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """External stdio MCP + concurrent process acceptance. Synthetic isolated store only."""
-import concurrent.futures, json, pathlib, subprocess, sys, tempfile, urllib.request, time
+import concurrent.futures, hashlib, json, pathlib, subprocess, sys, tempfile, textwrap, urllib.request, time
 BINARY=str(pathlib.Path(sys.argv[1]).resolve())
 class Client:
     def __init__(self, args):
@@ -72,8 +72,8 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
         def worker(n):
             client=Client(args);ids=[]
             try:
-                for i in range(10):
-                    row=json.loads(client.tool('record_memory',{'outcome':'good','incident':f'SYNTHETIC worker {n} run {i}','lesson':f'Validate worker {n} run {i}','source':f'SYNTHETIC {n}/{i}'}));ids.append(row['id'])
+                for i in range(10):  # distinct lesson words, so the near-duplicate check saves each
+                    row=json.loads(client.tool('record_memory',{'outcome':'good','incident':f'SYNTHETIC worker {n} run {i}','lesson':'Validate '+' '.join(textwrap.wrap(hashlib.sha256(f'{n}/{i}'.encode()).hexdigest(),8)),'source':f'SYNTHETIC {n}/{i}'}));ids.append(row['id'])
                 client.tool('feedback_memory',feedback)
             finally:client.close()
             return ids

@@ -11,6 +11,7 @@ import queue
 import socket
 import subprocess
 import tempfile
+import textwrap
 import threading
 import time
 import urllib.request
@@ -187,7 +188,8 @@ def measure_capture(binary, work, samples):
         memory = json.dumps({
             "scope": "project", "class": "win",
             "incident": f"Synthetic capture journey {index}",
-            "lesson": "Use bounded queries in the measured hot path.",
+            # Distinct words per sample, so the near-duplicate check saves each one.
+            "lesson": "Synthetic lesson " + " ".join(textwrap.wrap(hashlib.sha256(str(index).encode()).hexdigest(), 8)) + ".",
             "source": "SYNTHETIC PERFORMANCE FIXTURE",
             "features": {"language": ["go"]},
         })

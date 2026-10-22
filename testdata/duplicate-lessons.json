@@ -1,0 +1,175 @@
+{
+ "note": "Real lessons in save order, copied from one Elephant store on 2026-10-22. duplicates lists [newer, older] pairs a reviewer judged to repeat or update the older lesson.",
+ "lessons": [
+  {
+   "id": "a08674f4",
+   "scope": "project",
+   "incident": "User reported a recurring Stop hook error in Claude Code after every task.",
+   "lesson": "Claude Code labels any Stop hook that returns decision block as Stop hook error. The Elephant review prompt from hooks.go is the expected behavior, not a failure."
+  },
+  {
+   "id": "5da8ef62",
+   "scope": "project",
+   "incident": "Looked for a quieter way to run the Elephant review in Claude Code.",
+   "lesson": "A Claude Code Stop hook that blocks is always shown as hook feedback. Agent hooks have only Read, Grep and Glob, so they cannot run elephant remember. Stop input has background_tasks, which shows that the turn still has work in flight."
+  },
+  {
+   "id": "d1347401",
+   "scope": "personal",
+   "incident": "Piping elephant hook JSON through echo in zsh broke JSON parsing with an invalid control character error.",
+   "lesson": "zsh echo expands backslash-n escapes inside JSON strings. Use printf %s to pass JSON through the shell without changes."
+  },
+  {
+   "id": "d9db783a",
+   "scope": "project",
+   "incident": "The Stop review prompt repeated store, tenant, user, root and project flags in the record command.",
+   "lesson": "elephant remember with --task-session loads the service from --config, so remember --config X --task-session S --task-id T is enough. The hook prompt now uses this short form."
+  },
+  {
+   "id": "8379d941",
+   "scope": "personal",
+   "incident": "Ran gh pr edit --body-file (with inline markdown image references to relative paths like ./01-shot.png) together with --attach <absolute-path>; the images uploaded and appended to the bottom of the PR body, but the inline ![](./01-shot.png) references stayed broken because the attach path string did not match the body's image path string.",
+   "lesson": "gh pr edit/create --attach only rewrites an inline body image reference into the uploaded asset URL when the body's markdown path string exactly matches the --attach argument. If they do not match, do the attach first, read back the uploaded github.com/user-attachments URLs from the PR body, then run a second --body-file edit with those URLs substituted into the markdown."
+  },
+  {
+   "id": "81411221",
+   "scope": "project",
+   "incident": "The Memory Palace redesign was visible in a temporary preview, but installed Elephant dashboard processes still served the old embedded UI.",
+   "lesson": "Rebuild Elephant after editing web/index.html. Install the tested binary and restart the intended palace process to show the changes. Check the running executable path before reporting that an installed dashboard is updated."
+  },
+  {
+   "id": "41281a52",
+   "scope": "personal",
+   "incident": "Elephant's recall usage baseline compared every pair of memories with the same subject. A synthetic 1,000-memory SQLite recall took about 1.8 seconds.",
+   "lesson": "Benchmark the full retrieval path, including metrics and rendering. Index alternative advice by subject and lesson. Keep bounded ID samples and verify ranking parity."
+  },
+  {
+   "id": "159f2779",
+   "scope": "project",
+   "incident": "Elephant 0.8.0-beta reported no newer release because plain update read cached status from before the 0.9.0-beta release.",
+   "lesson": "On releases through 0.9.0-beta, use elephant update --check to refresh availability. The update command does not install binaries. Confirm the installed version after upgrading."
+  },
+  {
+   "id": "16ea4fac",
+   "scope": "personal",
+   "incident": "A Bash command used echo ======= as a separator between git show outputs; zsh treated the leading = as command-path expansion and failed with \"(eval):1: ====== not found\", aborting the chained command.",
+   "lesson": "In this zsh-based Bash tool, never start an unquoted word with = (e.g. echo =====) — zsh EQUALS expansion looks it up as a command. Use quoted separators like echo \"----\" instead."
+  },
+  {
+   "id": "6ab2d445",
+   "scope": "personal",
+   "incident": "A ~270-file vocabulary rename was first planned as four sequential LLM subagents; the user redirected it to a deterministic codemod.",
+   "lesson": "For mechanical renames, use one staged script (word-boundary perl -pi plus git mv, one stage per commit), scope generic names by import source, fix residue directly, and use an LLM agent only for prose rewording in docs. Pipe typecheck/test output through grep/tail and run the full suite once per stage."
+  },
+  {
+   "id": "db0dd2ff",
+   "scope": "personal",
+   "incident": "Two shell slips in one session: an unquoted $F holding a newline-separated file list was passed to perl as one filename in zsh, and a perl replacement \"$15. text\" was read as capture group 15 and deleted text.",
+   "lesson": "In zsh, unquoted variables are not word-split; pipe file lists with git grep -z | xargs -0. In perl replacements, write ${1}5 when a digit follows a capture variable."
+  },
+  {
+   "id": "0dacda6f",
+   "scope": "personal",
+   "incident": "While adding sourceNames to the fulfilment repository I wrote schema.sourceNames?.[assertColumnKnown(column, known)] inside a template string. Tests for 'refuses an absent period' failed with 'No queued Snowflake result' instead of the 'is not a column' error.",
+   "lesson": "Do not put a validation call inside an optional-chain index expression: when the object is undefined, ?.[...] short-circuits and the argument is never evaluated, so the check is skipped. Call the assert on its own line first, then index. Existing negative tests (refuses a column the table does not have) are what caught it, so keep them."
+  },
+  {
+   "id": "57c59c67",
+   "scope": "personal",
+   "incident": "A subagent review of three personal skills found query bugs that only showed when the commands were run.",
+   "lesson": "git log --since with a bare date means that date at the current time of day, so it drops the morning: use --since=\"YYYY-MM-DD 00:00\". The Jira status category Done includes Closed, so a query for recent work needs `status changed DURING (...)` as well as `statusCategory != Done`. Confluence search and getConfluencePage return the page creator as author, not the last editor, so a skill must not claim who edited a page. gh pr list stops at 30 results unless --limit is set."
+  },
+  {
+   "id": "214fa3d7",
+   "scope": "project",
+   "incident": "Automatic memory capture failed with \"task changed before capture\" and the status line read capture status unavailable.",
+   "lesson": "The Stop hook binds the review command to the task ID at review time. Any later UserPromptSubmit in the same session replaces the task ID, so remember and task-status refuse the stale ID. This is a deliberate guard in CaptureForTask and TaskSummary, covered by a test that a stale review must not capture into the next task. It is not a save bug. To keep such lessons, change that design; do not just retry the command."
+  },
+  {
+   "id": "a3828759",
+   "scope": "personal",
+   "incident": "Needed to check a generated standalone HTML mock without seeing it. Reading the PNG screenshot was blocked by a PreToolUse hook that rejects files over 350 lines, and the page's script died with `Identifier 'top' has already been declared`.",
+   "lesson": "To verify a standalone HTML page headlessly on macOS: run Google Chrome with --headless=new --virtual-time-budget=4000 --enable-logging=stderr --v=0 --dump-dom and grep stderr for CONSOLE; this surfaced a top-level `const top` clashing with window.top. Check rendered values and NaN/undefined counts in the dumped DOM. Image reads through the Read tool are blocked by the line-count hook, so do not rely on screenshots there. Avoid top-level const names that match window globals (top, name, parent, status)."
+  },
+  {
+   "id": "2f86e88d",
+   "scope": "personal",
+   "incident": "Playwright checks of hover tooltips and chart clicks returned nothing for charts below the fold.",
+   "lesson": "In Playwright, call locator.scrollIntoViewIfNeeded() before boundingBox() + page.mouse.move/click; coordinates of an off-screen element miss. Derive a chart click index from the click event itself, not from tooltip state set by mousemove."
+  },
+  {
+   "id": "3a079f09",
+   "scope": "personal",
+   "incident": "A sed -i 's/old/new/' edit on CHANGELOG.md in a macOS shell failed.",
+   "lesson": "On macOS, BSD sed -i needs an explicit backup suffix, so sed -i 's/a/b/' file fails with 'invalid command code'. For a small text change use the Edit tool, or write sed -i '' 's/a/b/' file."
+  },
+  {
+   "id": "f8293113",
+   "scope": "project",
+   "incident": "Needed a with-versus-without Elephant cost comparison for Claude Code.",
+   "lesson": "claude -p --output-format json returns total_cost_usd, usage tokens, num_turns and duration_ms. Use --setting-sources project,local to keep user hooks out of both arms. elephant init --agent claude --root DIR --store S writes hooks to DIR/.claude/settings.local.json, and those hooks fire in -p mode with no trust prompt. Seed lessons with elephant remember --file, and use a fresh store per run so captured lessons do not leak between runs."
+  },
+  {
+   "id": "1ea8ec71",
+   "scope": "project",
+   "incident": "In a six-lesson eval store, a control task about a pager off-by-one recalled about 3 unrelated lessons such as terraform and docker.",
+   "lesson": "Recall is not selective inside one project when every lesson shares features such as language=python. Every hit showed matched empty, so irrelevant advice is injected and costs tokens. The eval harness reports irrelevant_recalled per run so this overhead is measured."
+  },
+  {
+   "id": "075e5242",
+   "scope": "project",
+   "incident": "Elephant added about 55% cost per task on trivial Claude Code tasks, and removing irrelevant injected lessons did not lower it.",
+   "lesson": "The end-of-task review (Stop hook) turns cause the overhead: about +$0.025 per run, +48% of the no-Elephant cost, about 2 extra turns and double the output tokens. Guidance and hook plumbing add about +5%. Injected lessons (about 470 tokens) are not detectable. A recall relevance fix is a quality change, not a cost saving. To cut cost, gate the review, and test it with the isolation arms in evals/claude/run.py."
+  },
+  {
+   "id": "198824e6",
+   "scope": "project",
+   "incident": "Recall injected 4 unrelated lessons into every coding task: 43 irrelevant injections over 8 fixture tasks, precision about 10%.",
+   "lesson": "Recall admitted any memory that shared one content word with the task, so py, run, test, add and return matched everything. Admission now needs one non-generic term, and simple plurals fold so model matches models. A relative score cutoff does not help because irrelevant hits scored 0.60 to 0.86 of the best hit. The hosted Cloudflare recall.ts is unchanged, because its contentWords also builds a stored token index."
+  },
+  {
+   "id": "c5ab05b8",
+   "scope": "project",
+   "incident": "Needed to evaluate Elephant against Claude Code's built-in memory, but could not tell whether built-in memory could be switched off or seeded in headless runs.",
+   "lesson": "Claude Code settings autoMemoryEnabled and autoMemoryDirectory control built-in memory. Pass them with claude -p --settings JSON. A probe with a seeded MEMORY.md plus one note returned the stored URL with memory on and NONE with it off. Pin the Elephant build under test with the ELEPHANT environment variable, because the binary on PATH was replaced by 0.9.0-beta mid-session."
+  },
+  {
+   "id": "0c6be60d",
+   "scope": "personal",
+   "incident": "Wrote a PR body edit with a python heredoc that had an unquoted EOF marker. The shell treated each backticked code name as a command, printed 'command not found: growth', and the PR body lost those names. gh pr edit still exited 0.",
+   "lesson": "When a PR body or other text holds backticked code names, write it with the Edit or Write tool, or quote the heredoc marker ('EOF'). After gh pr edit, read the body back with gh pr view --json body and check one backticked name is present, because the exit code stays 0 when the text is wrong."
+  },
+  {
+   "id": "a7e66a1e",
+   "scope": "personal",
+   "incident": "A Bash command used echo ====== as a section separator between git show outputs and failed in zsh.",
+   "lesson": "In zsh, an unquoted word starting with = (like ======) triggers =command expansion and fails with 'not found', aborting the && chain. Quote separators: echo '---'."
+  },
+  {
+   "id": "26c06a28",
+   "scope": "project",
+   "incident": "Record caught duplicate lessons only when incident, lesson and source were byte-identical, so reworded lessons were saved as new memories.",
+   "lesson": "Word overlap cannot separate rewordings from related lessons. In the real store the zsh duplicate scored 0.38 and the Jira duplicate 0.24, but two different release lessons scored 0.22 to 0.24. So Record now refuses a lesson at IDF-weighted overlap 0.2 or more and lists up to three similar lessons. The agent saves nothing or resends with distinct_from set to those IDs. Paraphrases that share few words, such as the two Stop hook lessons at 0.06, still save."
+  },
+  {
+   "id": "1753db13",
+   "scope": "project",
+   "incident": "Python sqlite3 failed with unable to open database file when it opened the Elephant store with a mode=ro URI, also on a copy.",
+   "lesson": "The local Elephant store ~/.elephant/events.jsonl is a SQLite database, not JSONL. To read it, make a copy with sqlite3 ~/.elephant/events.jsonl \".backup <scratch>/copy.sqlite\" and open the copy with a plain sqlite3.connect(path). Do not use the mode=ro URI."
+  }
+ ],
+ "duplicates": [
+  [
+   "a7e66a1e",
+   "16ea4fac"
+  ],
+  [
+   "5da8ef62",
+   "a08674f4"
+  ],
+  [
+   "198824e6",
+   "1ea8ec71"
+  ]
+ ]
+}
