@@ -5,6 +5,18 @@ All notable changes to this project are documented here. The format is based on
 pre-1.0 development; compatibility is not yet guaranteed. Versions from 0.9.1 use a
 regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
+## [Unreleased]
+
+### Changed
+
+- Recall injects fewer unrelated lessons. A memory that shares only generic terms
+  with the task, such as `py`, `run`, `test` or `fix`, is no longer admitted. Simple
+  plurals now match (`models` and `model`). In a 14-memory, 8-task fixture, unrelated
+  injections fell from 43 to 8 with no needed lesson lost, and tasks with nothing
+  relevant in memory now get none. Local recall only; the hosted Cloudflare worker
+  is unchanged.
+- The dashboard's tokens baseline counts only memories that recall can admit.
+
 ## [0.10.0]
 
 Full notes: [docs/releases/v0.10.0.md](docs/releases/v0.10.0.md).

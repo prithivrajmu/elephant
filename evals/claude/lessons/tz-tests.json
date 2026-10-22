@@ -1,0 +1,13 @@
+{
+  "scope": "project",
+  "outcome": "good",
+  "subject": "report-test-timezone",
+  "incident": "test_report.py failed under a non-UTC TZ for every change to report.py.",
+  "lesson": "The hhmm assertion in test_report.py assumes UTC. Run the tests as TZ=UTC python3 test_report.py. A failure under another TZ is not caused by your change; do not edit hhmm or the test.",
+  "source": "local run with TZ=Asia/Kolkata gave 05:30 for epoch 0",
+  "features": {
+    "language": [
+      "python"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "scope": "project",
+  "outcome": "good",
+  "subject": "eslint-ignore",
+  "incident": "ESLint scanned dist/ and reported thousands of errors.",
+  "lesson": "Add dist/ to .eslintignore instead of disabling rules.",
+  "source": "lint run 2026-08-30",
+  "features": {
+    "language": [
+      "python"
+    ]
+  }
+}

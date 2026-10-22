@@ -1,0 +1,2 @@
+{"category": "discoverable", "lesson": "tz-tests",
+ "prompt": "percent() in report.py crashes when total is 0; it should return 0. Fix it and make sure the tests pass."}

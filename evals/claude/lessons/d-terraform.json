@@ -1,0 +1,13 @@
+{
+  "scope": "project",
+  "outcome": "good",
+  "subject": "terraform-state-lock",
+  "incident": "terraform apply hung on a stale state lock after a cancelled run.",
+  "lesson": "Run terraform force-unlock with the lock ID from the error, only after confirming no other apply is running.",
+  "source": "infra ticket 881",
+  "features": {
+    "language": [
+      "python"
+    ]
+  }
+}

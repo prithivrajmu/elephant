@@ -1,0 +1,2 @@
+{"category": "memory-only", "lesson": "api-url",
+ "prompt": "Our client still points at an old API. Update client.py to the current production API base URL, then run the tests."}

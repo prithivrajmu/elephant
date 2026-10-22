@@ -1,0 +1,13 @@
+{
+  "scope": "project",
+  "outcome": "good",
+  "subject": "api-base-url",
+  "incident": "client.py calls to the /v1 API returned HTTP 410 after the platform migration.",
+  "lesson": "The production API base URL is https://api.example.test/v3. v1 and v2 return 410 Gone. Set BASE in client.py to the v3 URL; do not add version negotiation.",
+  "source": "platform migration notice 2026-09-12",
+  "features": {
+    "language": [
+      "python"
+    ]
+  }
+}
