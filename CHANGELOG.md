@@ -18,6 +18,11 @@ Full notes: [docs/releases/v0.10.0.md](docs/releases/v0.10.0.md).
   to save a different lesson. In a replay of 159 real saves, the check caught 72% of
   repeated or updated lessons; 9% of saves were refused with no duplicate listed.
 
+### Security
+
+- Release builds use Go 1.27.3. It fixes GO-2026-6809 in `crypto/x509`, which
+  `govulncheck` reports against Go 1.27.2.
+
 ## [0.9.2]
 
 Full notes: [docs/releases/v0.9.2.md](docs/releases/v0.9.2.md).
