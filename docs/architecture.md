@@ -16,13 +16,13 @@ The MVP stores episodes and their procedural lessons together. Project policy re
 
 ## Implemented math (version 0.3)
 
-### 1. Hard eligibility and exact task admission
+### 1. Hard eligibility and task admission
 
 Filter tenant, visibility, retirement, team approval and applicability first. A project ID is optional, but project scope requires nonempty stored/current IDs. Conversation scope separately requires an exact nonempty conversation ID and the owner. None of these rules is a scoring penalty.
 
 Every required dimension must match at least one authored value. Unknown required dimensions reject. Any exclusion match rejects. Mere origin-profile differences are not invented requirements. Query facts supplied through `context_features` are asserted facts, not verified production architecture.
 
-For an explicit task, tokenize Unicode letters/digits, deduplicate, remove the documented small English stopword/boilerplate set in `memory.go`, fold simple plurals (`models` matches `model`), and require at least one remaining exact term in incident, lesson or subject that is not a generic term. Generic terms (file extensions such as `py`, and words every coding task contains such as `run`, `test` and `fix`) still add to the BM25 score, but a memory that shares only generic terms with the task is not admitted. If there are no content terms, abstain. Project similarity cannot rescue an unrelated task. This is lexical admission, not semantic understanding.
+For an explicit task, tokenize Unicode letters/digits, remove the documented small English stopword/boilerplate set in `memory.go`, fold simple plurals, strip common suffixes as the near-duplicate check does, and keep code identifiers such as `QUERY_CACHE_DISABLED` whole. Admit a memory only if its TF-IDF cosine with the task (section 3) is at least 0.074. If there are no content terms, abstain. Project similarity cannot rescue an unrelated task. This is lexical admission, not semantic understanding.
 
 An explicitly requested `recall --initialize`/`init_memory` with a blank task permits profile discovery with agreement-times-coverage >= 0.15. Plain `recall` does not silently browse. Initialization with no task and no known features returns no memories.
 
@@ -36,17 +36,20 @@ For each comparable dimension, use weighted Jaccard. Let D contain dimensions wi
 
 Use zero for empty denominators. Unknown fields reduce the profile bonus, not task relevance. Extra query-only dimensions do not dilute agreement. Initial heuristic weights remain database 2.5; framework/app 2; cloud/workflow 1.5; language/data model/style 1; reviewer/contributor 0.5. Custom dimensions default to 1. Sort dimensions before summing to make the result independent of Go map order.
 
-### 3. BM25 ranking, not admission probability
+### 3. TF-IDF cosine for admission and ranking
 
-    IDF(t) = ln(1 + (N - df(t) + 0.5) / (df(t) + 0.5))
-    BM25(q,m) = Σ_t IDF(t) · tf(t,m)(k1+1)
-                / [tf(t,m) + k1(1-b+b·|m|/avgLength)]
-    L = BM25 / (BM25 + 2)
+Over incident, lesson and subject of the visible, applicable candidates plus the task, with N documents in all:
+
+    w(t,d) = (1 + ln tf(t,d)) · (ln((N+1)/df(t)) + 0.4)
+    L = cos(q,m) = Σ_t w(t,q) w(t,m) / (‖w(q)‖ ‖w(m)‖)
+    admit if L ≥ 0.074
     R = L · (1 + 0.20 · S_known · Coverage)
 
-Use k1=1.2 and b=0.75. Compute corpus statistics over visible, applicable memories only; sort query terms before summing. The same task-first formula applies with or without a project. With no known profile, R=L. Profile corroboration supplies at most a 20% bonus.
+Terms are summed in sorted order. The near-duplicate check on save uses the same function with no IDF floor. The 0.4 floor keeps a word that every candidate shares from weighing zero, so a task about what the whole store covers still recalls it. With no known profile, R=L; profile corroboration supplies at most a 20% bonus.
 
-BM25 and its transform drift with the candidate corpus and are not calibrated correctness probabilities. In version 0.1, L below 0.15 could reject a one-term memory until an unrelated document changed IDF. Version 0.3 removes that admission threshold. This still doesn't provide synonyms, multilingual stopword sets, phrase indexes, full stemming or embeddings. The hosted Cloudflare worker keeps its own ranking in `cloudflare/src/recall.ts` and does not yet have the generic-term gate or plural folding; adding them there needs a token re-index.
+Version 0.10 ranked with BM25 (k1=1.2, b=0.75) and L = BM25/(BM25+2), and admitted any memory sharing one non-generic term. That transform shifts with every query, so no fixed threshold worked, and 94% of real recalls injected something. On 78 agent-labelled tasks over a real 167-lesson store, the cosine threshold injected 161 lessons instead of 265, 52 useful instead of 48, 65 unhelpful instead of 158; 38 tasks got a useful lesson instead of 36, and nDCG@3 rose from 0.44 to 0.49. It held on each half of the tasks, except that one half lost one useful lesson. Agent judges, not users, labelled the set, and tasks were written from topics, so treat it as directional. BM25F, store-wide IDF, key-term query reduction, normalized BM25 and Dirichlet likelihood ratios did no better.
+
+Cosine is resemblance, not a calibrated correctness probability. This still doesn't provide synonyms, multilingual stopword sets, phrase indexes, full stemming or embeddings; paraphrased lessons that share few words with the task are missed. The hosted Cloudflare worker keeps BM25 ranking in `cloudflare/src/recall.ts`; moving it needs a token re-index.
 
 ### 4. Reported usefulness and age
 

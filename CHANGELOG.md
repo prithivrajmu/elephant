@@ -15,6 +15,12 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
   injections fell from 43 to 8 with no needed lesson lost, and tasks with nothing
   relevant in memory now get none. Local recall only; the hosted Cloudflare worker
   is unchanged.
+- Recall scores lessons with TF-IDF cosine, the measure the near-duplicate check
+  already uses, and admits only lessons at or above 0.074. BM25 and the
+  generic-term gate are gone. On 78 labelled tasks over a real store, recall
+  injected 161 lessons instead of 265, more of them useful (52 vs 48) and far
+  fewer unhelpful (65 vs 158); 6 of 20 off-topic tasks now get nothing. The
+  relevance fixture's unrelated injections fell from 8 to 4. Local recall only.
 - The dashboard's tokens baseline counts only memories that recall can admit.
 
 ## [0.10.0]

@@ -37,11 +37,15 @@ var (
 // lessonTerms keeps identifiers such as QUERY_CACHE_DISABLED or
 // ~/.cache/pr-screenshots whole: they are rare, so they carry most of the
 // signal that two lessons describe the same fix.
-func lessonTerms(m Memory) []string {
-	text := m.Incident + " " + m.Lesson
-	terms := []string{}
-	for _, w := range contentWords(text) {
-		terms = append(terms, stem(w))
+func lessonTerms(m Memory) []string { return textTerms(m.Incident + " " + m.Lesson) }
+
+func textTerms(text string) []string {
+	terms := contentWords(text)
+	for i, w := range terms {
+		terms[i] = stem(w)
+	}
+	if !identifierShape.MatchString(text) {
+		return terms // no token can be an identifier
 	}
 	for _, t := range identifierToken.FindAllString(text, -1) {
 		t = strings.Trim(t, ".:-/")
@@ -68,44 +72,22 @@ func stem(w string) string {
 // similar first. Candidates under other conditions, or named in checked, are
 // not returned but still count toward idf.
 func similarLessons(m Memory, candidates []Memory, checked map[string]bool) []Memory {
-	tfs := make([]map[string]float64, 0, len(candidates)+1)
-	df := map[string]int{}
-	for _, c := range append(append([]Memory{}, candidates...), m) {
-		tf := map[string]float64{}
-		for _, t := range lessonTerms(c) {
-			tf[t]++
-		}
-		for t := range tf {
-			df[t]++
-		}
-		tfs = append(tfs, tf)
+	docs := make([][]string, len(candidates))
+	for i, c := range candidates {
+		docs[i] = lessonTerms(c)
 	}
-	n := float64(len(tfs))
-	weigh := func(tf map[string]float64) (map[string]float64, float64) {
-		w, norm := map[string]float64{}, 0.0
-		for t, f := range tf {
-			w[t] = (1 + math.Log(f)) * math.Log((n+1)/float64(df[t]))
-			norm += w[t] * w[t]
-		}
-		return w, math.Sqrt(norm)
-	}
-	query, queryNorm := weigh(tfs[len(candidates)])
 	type scored struct {
 		m Memory
 		s float64
 	}
 	near := []scored{}
-	for i, c := range candidates {
+	for i, s := range cosines(lessonTerms(m), docs, 0) {
+		c := candidates[i]
 		if checked[c.ID] || !reflect.DeepEqual(canonicalLabels(c.Requires), canonicalLabels(m.Requires)) || !reflect.DeepEqual(canonicalLabels(c.Excludes), canonicalLabels(m.Excludes)) {
 			continue
 		}
-		doc, docNorm := weigh(tfs[i])
-		dot := 0.0
-		for t, w := range query {
-			dot += w * doc[t]
-		}
-		if queryNorm > 0 && docNorm > 0 && dot/(queryNorm*docNorm) >= duplicateThreshold {
-			near = append(near, scored{c, dot / (queryNorm * docNorm)})
+		if s >= duplicateThreshold {
+			near = append(near, scored{c, s})
 		}
 	}
 	sort.Slice(near, func(i, j int) bool {
@@ -114,6 +96,62 @@ func similarLessons(m Memory, candidates []Memory, checked map[string]bool) []Me
 	out := []Memory{}
 	for _, s := range near[:min(3, len(near))] {
 		out = append(out, s.m)
+	}
+	return out
+}
+
+// cosines returns the TF-IDF cosine of query with each doc: sublinear tf, and
+// idf over the docs plus the query, plus idfFloor. Recall and the near-duplicate
+// check share it. Terms are summed in sorted order so results are reproducible.
+// It sorts the given slices in place.
+func cosines(query []string, docs [][]string, idfFloor float64) []float64 {
+	type term struct {
+		t string
+		w float64
+	}
+	bags := make([][]term, 0, len(docs)+1)
+	df := map[string]int{}
+	for _, d := range append(docs[:len(docs):len(docs)], query) {
+		sort.Strings(d)
+		bag := make([]term, 0, len(d))
+		for _, t := range d {
+			if n := len(bag); n > 0 && bag[n-1].t == t {
+				bag[n-1].w++
+				continue
+			}
+			bag = append(bag, term{t, 1})
+			df[t]++
+		}
+		bags = append(bags, bag)
+	}
+	n := float64(len(bags))
+	norms := make([]float64, len(bags))
+	for i, bag := range bags {
+		for k := range bag {
+			bag[k].w = (1 + math.Log(bag[k].w)) * (math.Log((n+1)/float64(df[bag[k].t])) + idfFloor)
+			norms[i] += bag[k].w * bag[k].w
+		}
+		norms[i] = math.Sqrt(norms[i])
+	}
+	q, qNorm := bags[len(docs)], norms[len(docs)]
+	out := make([]float64, len(docs))
+	for i, doc := range bags[:len(docs)] {
+		dot := 0.0
+		for a, b := 0, 0; a < len(q) && b < len(doc); {
+			switch {
+			case q[a].t < doc[b].t:
+				a++
+			case q[a].t > doc[b].t:
+				b++
+			default:
+				dot += q[a].w * doc[b].w
+				a++
+				b++
+			}
+		}
+		if qNorm > 0 && norms[i] > 0 {
+			out[i] = dot / (qNorm * norms[i])
+		}
 	}
 	return out
 }

@@ -12,9 +12,11 @@ import (
 // Reproduce: go test -run TestRecallRelevanceRatchet -v
 //
 // Baseline before the generic-term gate: 43 irrelevant, 0 missing (every task got the full 6 lessons).
-// After: 8 irrelevant, 0 missing. The rest match on ordinary words such as "after" or "install"; a relative
-// score cutoff does not separate them (irrelevant hits scored 0.6-0.86 of the best hit).
-const irrelevantCeiling = 8
+// After: 8 irrelevant, 0 missing. The rest matched on ordinary words such as "after" or "install"; a relative
+// score cutoff did not separate them (irrelevant hits scored 0.6-0.86 of the best hit).
+// TF-IDF cosine with an absolute threshold: 4 irrelevant, 0 missing. The needed lessons that share the
+// fewest words with their task (generated-model, tz-tests) sit just above the threshold.
+const irrelevantCeiling = 4
 
 type relevanceCase struct {
 	name, task string
