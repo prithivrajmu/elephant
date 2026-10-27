@@ -65,7 +65,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 	case "record_memory":
 		var m Memory
 		if err := decode(args, &m); err != nil {
-			return nil, err
+			return nil, reject("invalid", err)
 		}
 		m.Tenant = s.Identity.Tenant
 		m.Owner = s.Identity.User

@@ -4,6 +4,7 @@ package memory
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -172,7 +173,7 @@ func TestTaskStatusFailurePauseAndIsolation(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if e = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, capture); e != nil {
+	if e = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, capture, errors.New("disk full")); e != nil {
 		t.Fatal(e)
 	}
 	d, e := TaskSummary(config, session, true)
@@ -197,6 +198,45 @@ func TestTaskStatusFailurePauseAndIsolation(t *testing.T) {
 	}
 	d, e = TaskSummary(config, session, false)
 	if e != nil || d.Line != "Elephant: automation paused." {
+		t.Fatal(d, e)
+	}
+}
+
+// A refused lesson is an answer to the author, not a lost capture.
+func TestCaptureRejectionIsNotFailure(t *testing.T) {
+	svc, config, session := taskFixture(t)
+	editCall(t, config, "codex")
+	hookCall(t, config, "codex", "Stop", nil)
+	_, capture, e := CaptureForTask(config, session)
+	if e != nil {
+		t.Fatal(e)
+	}
+	svc.Task = capture
+	record := func(lesson string, kind string) {
+		t.Helper()
+		_, e := svc.Call("record_memory", json.RawMessage(lesson))
+		var r *Rejection
+		if kind == "" && e != nil || kind != "" && (!errors.As(e, &r) || r.Kind != kind) {
+			t.Fatalf("want %q, got %v", kind, e)
+		}
+		if e != nil {
+			svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, capture, e)
+		}
+	}
+	record(`{}`, "invalid")
+	d, e := TaskSummary(config, session, true)
+	if e != nil || d.State != "rejected" || d.Line != "Elephant: recalled 0 memories · saved 0 lessons · 1 attempt rejected." {
+		t.Fatal(d, e)
+	}
+	record(`{"scope":"project","class":"warning","incident":"A Bash command used echo ======= as a separator between git show outputs; zsh treated the leading = as command-path expansion and failed.","lesson":"In this zsh-based Bash tool, never start an unquoted word with =. Zsh EQUALS expansion looks it up as a command. Use quoted separators.","source":"first task"}`, "")
+	record(`{"scope":"project","class":"warning","incident":"A Bash command used echo ====== as a section separator between git show outputs and failed in zsh.","lesson":"In zsh, an unquoted word starting with = triggers =command expansion and fails with not found. Quote separators.","source":"another task"}`, "duplicate")
+	d, e = TaskSummary(config, session, true)
+	if e != nil || d.State != "saved" || d.Rejected != 2 || d.Line != "Elephant: recalled 0 memories · saved 1 lesson." {
+		t.Fatal(d, e)
+	}
+	// A store error still fails capture, even after a save.
+	svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, capture, errors.New("disk I/O error"))
+	if d, e = TaskSummary(config, session, true); e != nil || d.State != "capture_failed" || d.Line != "Elephant: recalled 0 memories · saved 1 lesson · capture failed." {
 		t.Fatal(d, e)
 	}
 }

@@ -10,6 +10,7 @@ status. The agent includes the exact status line once in its final response:
 Elephant: recalled 2 memories · saved 1 lesson.
 Elephant: recalled 0 memories · no reusable lesson found.
 Elephant: recalled 1 memory · review incomplete.
+Elephant: recalled 0 memories · saved 0 lessons · 1 attempt rejected.
 Elephant: recalled 0 memories · saved 0 lessons · capture failed.
 Elephant: saved 1 lesson · a newer task replaced this review.
 Elephant: saved 1 lesson · this review was already reported.
@@ -24,6 +25,14 @@ manual records do not increase this count. An old review command cannot complete
 or record into a later task. One interrupted review keeps its own task, so its
 lessons still save. The two lines above come from a stale `task-status` command.
 They show a saved count and no recalled count. A review request alone is not completion or a save.
+
+A rejected attempt is a lesson that Elephant refused on purpose: invalid fields,
+sensitive content, the writing check or a near-duplicate. The agent gets the
+reason and can resend or drop the lesson, so a rejection is not a failure. The
+line shows rejections only when no lesson was saved. `capture failed` means that
+a record call failed for another reason, such as a store or input error. It
+stays on the line after a later save, because that save can be a different
+lesson. Each event keeps a fixed reason code, never the error text.
 
 `task-status` uses the config, hashed session and task ID supplied by the hook.
 Add `--json` to inspect counts, IDs and state. `--review-complete` acknowledges

@@ -450,21 +450,16 @@ func run() error {
 		return printJSON(r)
 	case "record":
 		b, e := input()
-		if e != nil {
-			if svc.Task != nil {
-				_ = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, svc.Task)
+		if e == nil {
+			var v any
+			if v, e = svc.Call("record_memory", b); e == nil {
+				return printJSON(v)
 			}
-			return e
 		}
-		v, e := svc.Call("record_memory", b)
-		if e != nil {
-			if svc.Task != nil {
-				t := svc.Task
-				_ = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, t)
-			}
-			return e
+		if svc.Task != nil {
+			_ = svc.Store.ObserveCaptureFailure(svc.Identity, svc.Project, svc.Task, e)
 		}
-		return printJSON(v)
+		return e
 	case "feedback":
 		return svc.Store.Feedback(svc.Identity, *project, *id, *feedbackID, *helpful, *conversation)
 	case "forget":
