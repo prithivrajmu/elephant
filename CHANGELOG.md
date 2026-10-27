@@ -7,6 +7,10 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.11.0]
+
+Full notes: [docs/releases/v0.11.0.md](docs/releases/v0.11.0.md).
+
 ### Changed
 
 - Recall injects fewer unrelated lessons. A memory that shares only generic terms
@@ -22,6 +26,15 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
   fewer unhelpful (65 vs 158); 6 of 20 off-topic tasks now get nothing. The
   relevance fixture's unrelated injections fell from 8 to 4. Local recall only.
 - The dashboard's tokens baseline counts only memories that recall can admit.
+
+### Fixed
+
+- A lesson that Elephant refuses on purpose (near-duplicate, writing check,
+  sensitive content or invalid fields) no longer makes the task status read
+  `capture failed`. It is journalled as `capture_rejected` with a reason code.
+  A save after a refusal reads `saved 1 lesson`. Refusals with no save read
+  `saved 0 lessons · 1 attempt rejected`. A store or input error still reads
+  `capture failed`. `task-status --json` adds a `rejected` count.
 
 ## [0.10.0]
 
@@ -183,7 +196,8 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 - Older binaries cannot read a migrated store.
 - Memories and backups are not encrypted by Elephant.
 
-[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/prithivrajmu/elephant/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/prithivrajmu/elephant/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/prithivrajmu/elephant/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/prithivrajmu/elephant/compare/v0.9.0-beta...v0.9.1
