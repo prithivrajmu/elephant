@@ -166,7 +166,7 @@ func supersede(tx *sql.Tx, ids []string, recallable []Memory) (map[string]bool, 
 	ordered := []string{}
 	for id := range replaced {
 		if !found[id] {
-			return nil, fmt.Errorf("supersedes names %s, which is not an active lesson you can recall here: lesson not saved", id)
+			return nil, reject("invalid", fmt.Errorf("supersedes names %s, which is not an active lesson you can recall here: lesson not saved", id))
 		}
 		ordered = append(ordered, id)
 	}
@@ -185,5 +185,5 @@ func duplicateError(near []Memory) error {
 	for _, m := range near {
 		fmt.Fprintf(&b, "\n[%s] scope=%s incident=%q lesson=%q", m.ID, m.Scope, m.Incident, m.Lesson)
 	}
-	return fmt.Errorf("%s", b.String())
+	return reject("duplicate", fmt.Errorf("%s", b.String()))
 }

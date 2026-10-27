@@ -121,6 +121,23 @@ func canonicalLabels(labels map[string][]string) map[string][]string {
 	}
 	return out
 }
+
+// Rejection is a lesson the store refused on purpose. The author got the
+// reason and can resend or drop it, so it is not a capture failure.
+type Rejection struct {
+	Kind string // invalid, sensitive, writing or duplicate; never lesson text
+	err  error
+}
+
+func (r *Rejection) Error() string { return r.err.Error() }
+func (r *Rejection) Unwrap() error { return r.err }
+func reject(kind string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &Rejection{Kind: kind, err: err}
+}
+
 func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	if m.Outcome == "" {
 		m.Outcome = OutcomeForClass(m.Class)
@@ -130,13 +147,13 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	screening := m
 	m.Subject = strings.ToLower(strings.Join(strings.Fields(m.Subject), " "))
 	if err := Validate(m); err != nil {
-		return m, err
+		return m, reject("invalid", err)
 	}
 	if err := ScreenSensitive(screening); err != nil {
-		return m, err
+		return m, reject("sensitive", err)
 	}
 	if len(m.DistinctFrom) > 10 || len(m.Supersedes) > 10 {
-		return m, fmt.Errorf("distinct_from and supersedes take at most 10 IDs each")
+		return m, reject("invalid", fmt.Errorf("distinct_from and supersedes take at most 10 IDs each"))
 	}
 	checked := set(m.DistinctFrom)
 	m.DistinctFrom = nil
@@ -154,7 +171,7 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 		}
 		writing := CheckLanguage(policy, m.Lesson)
 		if !writing.Accepted {
-			return nil, fmt.Errorf("STE target 100: %s Revise the summary. Source evidence stays unchanged.", writing.Issues[0].Message)
+			return nil, reject("writing", fmt.Errorf("STE target 100: %s Revise the summary. Source evidence stays unchanged.", writing.Issues[0].Message))
 		}
 		m.Writing = &writing
 		// Only exact evidence can be a retry, and only lessons the author can
@@ -201,7 +218,7 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 				return nil, duplicateError(near)
 			}
 		} else if len(m.Supersedes) > 0 {
-			return nil, fmt.Errorf("supersedes is not available for team lessons")
+			return nil, reject("invalid", fmt.Errorf("supersedes is not available for team lessons"))
 		}
 		if receipt != nil {
 			receipt.MemoryID = m.ID

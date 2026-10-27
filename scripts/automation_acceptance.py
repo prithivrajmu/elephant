@@ -93,7 +93,8 @@ with tempfile.TemporaryDirectory(prefix="elephant auto '") as tmp:
         assert failed.returncode != 0
         status_args = shlex.split(failed_review["reason"].split("final response:\n", 1)[1].strip())
         failed_status = subprocess.run(status_args + ["--json"], capture_output=True, text=True, check=True)
-        assert json.loads(failed_status.stdout)["state"] == "capture_failed"
+        failed_status = json.loads(failed_status.stdout)
+        assert failed_status["state"] == "rejected" and failed_status["rejected"] == 1  # A refused lesson is not a failed capture.
     status = cli("automation")
     assert status["experiences"] > 0
     assert len(cli("status")["memories"]) == 1  # Independent identical saves deduplicate.

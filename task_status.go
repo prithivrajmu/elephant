@@ -3,6 +3,7 @@ package memory
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -15,14 +16,22 @@ type TaskStatus struct {
 	Recalled  int      `json:"recalled"`
 	Saved     int      `json:"saved"`
 	MemoryIDs []string `json:"memory_ids"`
+	Rejected  int      `json:"rejected"`
 	State     string   `json:"state"`
 	Line      string   `json:"line"`
 }
 
 var sessionPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
-func (s Store) ObserveCaptureFailure(id Identity, project string, t *TaskCapture) error {
-	return s.observe(Experience{ID: newID(), Identity: id, Project: project, Agent: t.Agent, Session: t.Session, Task: t.Task, Event: "LessonReview", Status: "capture_failed", At: time.Now().UTC()})
+// ObserveCaptureFailure records why a task's record call did not save.
+// A Rejection is a normal answer to the author, so it does not fail capture.
+func (s Store) ObserveCaptureFailure(id Identity, project string, t *TaskCapture, cause error) error {
+	status, reason := "capture_failed", "error"
+	var r *Rejection
+	if errors.As(cause, &r) {
+		status, reason = "capture_rejected", r.Kind
+	}
+	return s.observe(Experience{ID: newID(), Identity: id, Project: project, Agent: t.Agent, Session: t.Session, Task: t.Task, Event: "LessonReview", Status: status, Reason: reason, At: time.Now().UTC()})
 }
 func taskContext(c AutomationConfig) string {
 	b, _ := json.Marshal([]string{c.Root, c.Project, c.Conversation, c.Identity.Tenant, c.Identity.User, c.Identity.Team})
@@ -208,8 +217,11 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 			if e = json.Unmarshal([]byte(data), &x); e != nil {
 				return nil, e
 			}
-			if x.Status == "capture_failed" {
+			switch x.Status {
+			case "capture_failed":
 				failed = true
+			case "capture_rejected":
+				d.Rejected++
 			}
 			if x.Status == "memory_saved" && ownedIDs[x.MemoryID] && !seen[x.MemoryID] {
 				seen[x.MemoryID] = true
@@ -226,6 +238,8 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 			d.State = "capture_failed"
 		case !t.Completed:
 			d.State = "review_incomplete"
+		case d.Saved == 0 && d.Rejected > 0:
+			d.State = "rejected"
 		case d.Saved == 0:
 			d.State = "no_lesson"
 		default:
@@ -256,6 +270,11 @@ func TaskSummary(configPath, session string, complete bool, taskID ...string) (T
 		ending = saved
 	case "capture_failed":
 		ending = saved + " · capture failed"
+	case "rejected":
+		ending = fmt.Sprintf("%s · %d attempts rejected", saved, d.Rejected)
+		if d.Rejected == 1 {
+			ending = saved + " · 1 attempt rejected"
+		}
 	}
 	noun := "memories"
 	if d.Recalled == 1 {

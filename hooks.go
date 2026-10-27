@@ -27,6 +27,8 @@ type Experience struct {
 	At       time.Time `json:"at"`
 	Task     string    `json:"task,omitempty"`
 	MemoryID string    `json:"memory_id,omitempty"`
+	// Reason is a fixed code for a refused or failed capture, never the error text.
+	Reason string `json:"reason,omitempty"`
 }
 
 type HookInput struct {
