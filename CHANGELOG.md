@@ -7,6 +7,14 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Added
+
+- Offline memory-tax evaluation experiments: explicit synthetic/sanitized fixtures,
+  a store-free helper for the actual recall engine, raw BM25 and optional local
+  dense/reranked baselines, combined retrieval ablations, bounded follow-up QA
+  adapters, and span-aware retrieval diagnostics. This does not enable transcript
+  collection or change production recall. See `experiments/memory_tax/README.md`.
+
 ## [0.11.0]
 
 Full notes: [docs/releases/v0.11.0.md](docs/releases/v0.11.0.md).
