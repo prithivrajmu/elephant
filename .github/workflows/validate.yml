@@ -79,6 +79,13 @@ jobs:
           ./elephant-test selftest
           python scripts/acceptance.py ./elephant-test
           python scripts/storage_acceptance.py ./elephant-test
+      - name: Offline memory-tax contracts
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          go build -o "$RUNNER_TEMP/memory-tax-baseline" ./cmd/memory-tax-baseline
+          ELEPHANT_EVAL_BINARY="$RUNNER_TEMP/memory-tax-baseline" python -m unittest discover -s experiments/memory_tax -p 'test_*.py' -v
       - name: Automatic hook acceptance
         if: runner.os != 'Windows'
         run: python scripts/automation_acceptance.py ./elephant-test
