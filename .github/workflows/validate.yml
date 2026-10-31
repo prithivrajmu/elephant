@@ -147,7 +147,7 @@ jobs:
           curl -fsSL -o "$work/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
           echo "${expected}  ${archive}" | (cd "$work" && sha256sum -c -)
           tar -xzf "$work/$archive" -C "$work" gitleaks
-          "$work/gitleaks" detect --source "$GITHUB_WORKSPACE" --config "$GITHUB_WORKSPACE/.gitleaks.toml" --redact --no-banner --exit-code 1
+          "$work/gitleaks" detect --source "$GITHUB_WORKSPACE" --config "$GITHUB_WORKSPACE/.gitleaks.toml" --redact --verbose --no-banner --exit-code 1
   publish:
     needs: [native, packages, package-native, cloudflare, minimum-go, secrets]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
