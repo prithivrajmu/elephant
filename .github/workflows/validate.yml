@@ -167,3 +167,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/publish_release.py
+  npm:
+    # After the GitHub release, because the launcher downloads its assets.
+    # Trusted publishing: npmjs.com trusts this workflow; no token is stored.
+    needs: [publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: elephant-npm
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install npm with trusted publishing
+        run: npm install -g npm@11.21.0
+      - name: Publish launcher
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          test "$(node -p 'require("./package.json").version')" = "$version"
+          if npm view "elephant-memory@$version" version >/dev/null 2>&1; then
+            echo "::notice::elephant-memory@$version is already on npm; publish skipped."
+            exit 0
+          fi
+          case "$version" in *-*) tag=beta;; *) tag=latest;; esac
+          npm publish --access public --tag "$tag"

@@ -3,7 +3,10 @@
   "version": "0.11.0",
   "description": "Elephant: persistent experience for coding agents. Installs and runs the checksum-verified Elephant binary.",
   "license": "MIT",
-  "repository": "github:prithivrajmu/elephant",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prithivrajmu/elephant.git"
+  },
   "bin": {
     "elephant-memory": "bin/elephant-memory.js"
   },
