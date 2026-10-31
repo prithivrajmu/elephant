@@ -44,3 +44,8 @@ node_modules/
 /.pi/
 /.serena/
 /CLAUDE.md
+
+# Offline memory-tax model caches, generated contexts and experiment binaries
+/.cache/
+/experiments/memory_tax/local-results/
+/memory-tax-baseline

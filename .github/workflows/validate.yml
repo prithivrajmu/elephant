@@ -79,6 +79,13 @@ jobs:
           ./elephant-test selftest
           python scripts/acceptance.py ./elephant-test
           python scripts/storage_acceptance.py ./elephant-test
+      - name: Offline memory-tax contracts
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          go build -o "$RUNNER_TEMP/memory-tax-baseline" ./cmd/memory-tax-baseline
+          ELEPHANT_EVAL_BINARY="$RUNNER_TEMP/memory-tax-baseline" python -m unittest discover -s experiments/memory_tax -p 'test_*.py' -v
       - name: Automatic hook acceptance
         if: runner.os != 'Windows'
         run: python scripts/automation_acceptance.py ./elephant-test
@@ -140,7 +147,7 @@ jobs:
           curl -fsSL -o "$work/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
           echo "${expected}  ${archive}" | (cd "$work" && sha256sum -c -)
           tar -xzf "$work/$archive" -C "$work" gitleaks
-          "$work/gitleaks" detect --source "$GITHUB_WORKSPACE" --config "$GITHUB_WORKSPACE/.gitleaks.toml" --redact --no-banner --exit-code 1
+          "$work/gitleaks" detect --source "$GITHUB_WORKSPACE" --config "$GITHUB_WORKSPACE/.gitleaks.toml" --redact --verbose --no-banner --exit-code 1
   publish:
     needs: [native, packages, package-native, cloudflare, minimum-go, secrets]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -167,3 +174,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python scripts/publish_release.py
+  npm:
+    # After the GitHub release, because the launcher downloads its assets.
+    # Trusted publishing: npmjs.com trusts this workflow; no token is stored.
+    needs: [publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: elephant-npm
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install npm with trusted publishing
+        run: npm install -g npm@11.21.0
+      - name: Publish launcher
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          test "$(node -p 'require("./package.json").version')" = "$version"
+          if npm view "elephant-memory@$version" version >/dev/null 2>&1; then
+            echo "::notice::elephant-memory@$version is already on npm; publish skipped."
+            exit 0
+          fi
+          case "$version" in *-*) tag=beta;; *) tag=latest;; esac
+          npm publish --access public --tag "$tag"
