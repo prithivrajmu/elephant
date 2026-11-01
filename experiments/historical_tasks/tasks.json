@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "update_refresh",
+      "fix": "7fb9e326a5312d825a32b7a26e9f7959b11b669e",
+      "test_overlay": ["cmd/elephant/update_test.go"],
+      "allowed_changes": ["cmd/elephant/main.go", "updates.go"],
+      "regression_package": "./cmd/elephant",
+      "regression_regex": "TestUpdateCommandRefreshesCachedStatus",
+      "prompt": "Fix stale results from the interactive elephant update command. A plain update invocation must fetch fresh release information even when a recent cached status exists. Explicit --check and --json --check must fetch; --json alone, --check=false, --dismiss, and --enabled preference changes must remain offline unless explicitly requesting a check. A disabled update setting must remain respected. Repeated interactive checks that find an available release must each print its version and upgrade URL, even if a previous notification was dismissed or already delivered. This command must not open or create the memory SQLite store. Preserve other commands. Change only cmd/elephant/main.go and/or updates.go."
+    },
+    {
+      "id": "interrupted_review",
+      "fix": "8fe897c438cef7dd42fea7a81240d5367084e304",
+      "test_overlay": ["task_status_test.go"],
+      "allowed_changes": ["task_status.go", "hooks.go", "automation.go"],
+      "regression_package": ".",
+      "regression_regex": "TestTaskStatus|TestUnreviewedWorkCarriesToNextTask",
+      "prompt": "Fix review capture when a new user prompt arrives while an agent is reviewing a completed task. The outstanding review's supplied task ID must still allow its lesson to be saved and acknowledged under that original task, without completing or assigning receipts to the newer task. Keep one pending interrupted review across read-only prompts; a newer interrupted review may replace it. Unknown task IDs must fail (error includes 'unknown task ID'); already-reported captures must fail (includes 'already reported'); replaced review captures must fail (includes 'newer task replaced'). Repeating status for an already acknowledged old review must be read-only, with state already_reported and line 'Elephant: saved 1 lesson · this review was already reported.' A replaced review's status is superseded with line 'Elephant: saved 0 lessons · a newer task replaced this review.' Current task status and saved counts must stay independent. Work edited before a prompt interruption that skips Stop must still trigger exactly one later review. Paused capture must return guidance containing 'lesson not saved'. Preserve receipt durability and idempotency. Old visible tests may expect stale-status errors; the requested read-only states supersede those expectations. Change only task_status.go, hooks.go and/or automation.go."
+    }
+  ]
+}

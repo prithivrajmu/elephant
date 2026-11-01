@@ -1,4 +1,5 @@
 import copy
+import builtins
 import importlib.util
 import json
 import os
@@ -6,6 +7,7 @@ from pathlib import Path
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('run', Path(__file__).with_name('run.py'))
 r = importlib.util.module_from_spec(spec)
@@ -13,6 +15,28 @@ spec.loader.exec_module(r)
 
 
 class Contracts(unittest.TestCase):
+    def test_model_imports_happen_after_telemetry_opt_out(self):
+        original_import = builtins.__import__
+        observed = []
+        def checked_import(name, *args, **kwargs):
+            if name in ('fastembed', 'fastembed.rerank.cross_encoder'):
+                self.assertEqual(os.environ.get('ORT_DISABLE_TELEMETRY'), '1')
+                self.assertEqual(os.environ.get('HF_HUB_DISABLE_TELEMETRY'), '1')
+                observed.append(name)
+                return types.SimpleNamespace(TextEmbedding=lambda *a, **k: None,
+                                             TextCrossEncoder=lambda *a, **k: None)
+            return original_import(name, *args, **kwargs)
+        with patch.dict(os.environ, {'ORT_DISABLE_TELEMETRY': '1', 'HF_HUB_DISABLE_TELEMETRY': '0'}):
+            with patch('builtins.__import__', side_effect=checked_import):
+                r.Models(Path('/unused-cache'))
+        self.assertEqual(len(observed), 2)
+
+    def test_already_initialized_runtime_requires_process_restart(self):
+        with patch.dict('sys.modules', {'onnxruntime': types.ModuleType('onnxruntime')}):
+            with patch.dict(os.environ, {'ORT_DISABLE_TELEMETRY': '0'}):
+                with self.assertRaisesRegex(RuntimeError, 'Restart with ORT_DISABLE_TELEMETRY'):
+                    r.Models(Path('/unused-cache'))
+
     def setUp(self):
         self.data = r.load_dataset(Path(__file__).with_name('smoke.json'))
         self.case = copy.deepcopy(self.data['cases'][0])
