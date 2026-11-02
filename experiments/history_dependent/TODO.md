@@ -8,6 +8,7 @@
 - [x] Run control/contract tests and local retrieval experiments; save exact results.
 - [x] Obtain an independent review and fix blocking findings.
 - [x] Publish follow-through changes in PR #52 and check CI.
+- [x] Supply provider adapter, local setup helper, cost-estimate limit and private history intake validator.
 - [ ] Run repeated reserved coding trials through a pinned provider model (blocked: no provider credentials).
 - [ ] Validate on authentic history-dependent workflow tasks (blocked: no consented raw workflow dataset supplied; synthetic contracts cannot substitute for it).
 

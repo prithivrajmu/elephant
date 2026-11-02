@@ -49,3 +49,6 @@ node_modules/
 /.cache/
 /experiments/memory_tax/local-results/
 /memory-tax-baseline
+
+# Private, manually approved evaluation histories and local provider setup
+/.private-evals/

@@ -112,6 +112,11 @@ class Contracts(unittest.TestCase):
             rows=[json.loads(p.read_text()) for p in (root/'output').glob('[0-9]*.json')]
             self.assertEqual(len(rows),15);self.assertTrue(all(r['success'] for r in rows))
             self.assertEqual(json.loads((root/'output/status.json').read_text())['status'],'complete')
+            limited=copy.deepcopy(m);limited['max_estimated_usd']=.001
+            with patch.object(runner.engine,'Models',Models),patch.object(runner,'context',return_value=('',[])),patch.object(runner,'adapter_call',return_value=dict(response,billed_cost_usd=.002)):
+                runner.run(data,limited,root/'limited')
+            status=json.loads((root/'limited/status.json').read_text())
+            self.assertEqual(status['status'],'cost_limit_reached');self.assertEqual(status['completed'],1)
             bad=copy.deepcopy(m);bad['calibration']['selected']['threshold']=-5
             with self.assertRaisesRegex(ValueError,'artifacts changed'):runner.run(data,bad,root/'bad')
             adapter.write_text('changed')

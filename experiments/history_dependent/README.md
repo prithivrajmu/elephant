@@ -1,5 +1,7 @@
 # History-dependent evaluation follow-through
 
+[Exact remaining manual steps](MANUAL_STEPS.md), including the supplied OpenAI adapter and private-history intake.
+
 See [TODO.md](TODO.md) for completion and blockers. This is a separate experiment;
 the historical pilot and its frozen engine/results remain unchanged.
 
@@ -54,10 +56,11 @@ request from stdin and returns one JSON object on stdout:
 ```
 
 Use a fresh provider conversation for each request. The response must identify the
-configured snapshot and echo the decoding settings. Token counts and cost must come
-from provider usage/billing data; unknown values are rejected rather than reported
-as zero. These remain trusted adapter reports, not an independent billing audit.
-No provider SDK or credentials are embedded in this repository.
+configured snapshot and echo the decoding settings. Token counts must come from provider usage data. Confirmed cost may remain null
+when a finite estimated_cost_usd and explicit cost_basis are provided; unknown
+values are never reported as zero. These remain trusted adapter reports, not an independent billing audit.
+The included stdlib OpenAI adapter requires a local API key and explicit rate card;
+credentials are never embedded in this repository.
 
 The adapter lock declares all runtime dependencies and explicit model settings:
 

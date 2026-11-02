@@ -19,7 +19,7 @@ CONDITIONS = ['none','elephant','raw_bm25','raw_hybrid','combined']
 
 
 def sources():
-    paths = ['fixtures.py','fixtures.json','runner.py','retrieval.py','calibrate.py']
+    paths = ['fixtures.py','fixtures.json','runner.py','retrieval.py','calibrate.py','openai_adapter.py']
     result = {p:hashlib.sha256((HERE/p).read_bytes()).hexdigest() for p in paths}
     result['memory_tax/run.py'] = hashlib.sha256((HERE.parent/'memory_tax/run.py').read_bytes()).hexdigest()
     return result
@@ -85,8 +85,13 @@ def adapter_call(argv, payload, model):
     if not isinstance(usage,dict) or any(type(usage.get(k)) is not int or usage[k]<0 for k in ['input_tokens','output_tokens']):
         raise ValueError('adapter requires measured token counts')
     cost = response.get('billed_cost_usd')
-    if type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
-        raise ValueError('adapter requires explicit nonnegative billed_cost_usd')
+    estimate=response.get('estimated_cost_usd')
+    if cost is None:
+        if (type(estimate) not in (int,float) or not math.isfinite(estimate) or estimate<0
+            or not isinstance(response.get('cost_basis'),str) or not response['cost_basis']):
+            raise ValueError('adapter requires confirmed cost or a labelled estimate')
+    elif type(cost) not in (int,float) or not math.isfinite(cost) or cost<0:
+        raise ValueError('invalid billed_cost_usd')
     if not isinstance(response.get('files'),dict):raise ValueError('adapter requires files')
     return response
 
@@ -144,9 +149,12 @@ def run(data, manifest, output):
     cases={c['id']:c for c in data['cases']};models=engine.Models(Path(manifest['model_cache']))
     if models.manifest()!=manifest['models']:raise ValueError('retrieval model artifacts changed')
     # Compute context once per case/condition. Repeats receive byte-identical input.
-    cached={}
+    cached={};spent=0.0
     (output/'status.json').write_text(json.dumps(dict(status='running',expected=len(manifest['cells']),completed=0)))
     for i,cell in enumerate(manifest['cells']):
+        if manifest.get('max_estimated_usd') is not None and spent>=manifest['max_estimated_usd']:
+            (output/'status.json').write_text(json.dumps(dict(status='cost_limit_reached',expected=len(manifest['cells']),completed=i,accounted_cost_usd=spent)))
+            return
         c=cases[cell['case']]; key=(c['id'],cell['condition'])
         if key not in cached:cached[key]=context(c,cell['condition'],cfg,models)
         text,ids=cached[key]
@@ -156,6 +164,7 @@ def run(data, manifest, output):
         response=adapter_call(manifest['adapter']['argv'],payload,manifest['model_id'])
         try: success=evaluate(response['files'],c['expected']);invalid=None
         except ValueError as e:success=False;invalid=str(e)
+        spent+=response['billed_cost_usd'] if response.get('billed_cost_usd') is not None else response['estimated_cost_usd']
         row=dict(cell,success=success,invalid_submission=invalid,context_sha256=hashlib.sha256(text.encode()).hexdigest(),
                  context_bytes=len(text.encode()),selected_ids=ids,response=response)
         (output/f'{i:04}.json').write_text(json.dumps(row,indent=2)+'\n')
@@ -164,7 +173,7 @@ def run(data, manifest, output):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['controls','prepare','run'])
-    p.add_argument('--adapter-lock',type=Path);p.add_argument('--state',type=Path,required=True);p.add_argument('--model-id');p.add_argument('--adapter-command')
+    p.add_argument('--max-estimated-usd',type=float);p.add_argument('--adapter-lock',type=Path);p.add_argument('--state',type=Path,required=True);p.add_argument('--model-id');p.add_argument('--adapter-command')
     p.add_argument('--helper',type=Path);p.add_argument('--model-cache',type=Path);p.add_argument('--repeats',type=int,default=3)
     a=p.parse_args();data=json.loads((HERE/'fixtures.json').read_text());a.state.mkdir(parents=True,exist_ok=True)
     if a.action=='controls':
@@ -173,6 +182,9 @@ def main():
         if (a.state/'manifest.json').exists():raise ValueError('manifest already frozen')
         if not all([a.model_id,a.adapter_command,a.helper,a.model_cache,a.adapter_lock]):p.error('explicit model, adapter, helper and model cache required')
         result=prepare(data,json.loads((a.state/'controls.json').read_text()),json.loads((a.state/'calibration.json').read_text()),a.helper,a.model_id,json.loads(a.adapter_command),a.repeats,json.loads(a.adapter_lock.read_text()))
+        if a.max_estimated_usd is not None:
+            if not math.isfinite(a.max_estimated_usd) or a.max_estimated_usd<=0:raise ValueError('positive cost estimate limit required')
+            result['max_estimated_usd']=a.max_estimated_usd
         models=engine.Models(a.model_cache)
         calibration=json.loads((a.state/'calibration.json').read_text())
         if calibration['models']!=models.manifest():raise ValueError('calibration retrieval model artifacts changed')
