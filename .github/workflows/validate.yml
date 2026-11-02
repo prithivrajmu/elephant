@@ -95,6 +95,7 @@ jobs:
             git fetch --unshallow --no-tags
           fi
           python -m unittest discover -s experiments/historical_tasks -p 'test_*.py' -v
+          python -m unittest discover -s experiments/history_dependent -p 'test_*.py' -v
       - name: Automatic hook acceptance
         if: runner.os != 'Windows'
         run: python scripts/automation_acceptance.py ./elephant-test

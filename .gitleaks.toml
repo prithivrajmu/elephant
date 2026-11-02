@@ -33,3 +33,30 @@ regexes = [
   '''^\s*"models--qdrant--bge-small-en-v1\.5-onnx-q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55/tokenizer\.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",?$''',
   '''^\s*"models--qdrant--bge-small-en-v1\.5-onnx-q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55/tokenizer_config\.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53",?$''',
 ]
+
+[[allowlists]]
+description = "Verified public model artifact checksums in historical and development manifests"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^experiments/historical_tasks/results/pilot-2026-11-01/(initial-manifest|manifest)\.json$''', '''^experiments/history_dependent/results/dev/calibration\.json$''']
+regexes = [
+  '''^\s*"models--Xenova--ms-marco-MiniLM-L-6-v2/snapshots/a09144355adeed5f58c8ed011d209bf8ee5a1fec/special_tokens_map\.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",?$''',
+  '''^\s*"models--Xenova--ms-marco-MiniLM-L-6-v2/snapshots/a09144355adeed5f58c8ed011d209bf8ee5a1fec/tokenizer\.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",?$''',
+  '''^\s*"models--Xenova--ms-marco-MiniLM-L-6-v2/snapshots/a09144355adeed5f58c8ed011d209bf8ee5a1fec/tokenizer_config\.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53",?$''',
+  '''^\s*"models--qdrant--bge-small-en-v1\.5-onnx-q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55/special_tokens_map\.json": "5d5b662e421ea9fac075174bb0688ee0d9431699900b90662acd44b2a350503a",?$''',
+  '''^\s*"models--qdrant--bge-small-en-v1\.5-onnx-q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55/tokenizer\.json": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66",?$''',
+  '''^\s*"models--qdrant--bge-small-en-v1\.5-onnx-q/snapshots/aa8f8b060edb00e03bfdd08813a2949946c8ba55/tokenizer_config\.json": "0b29c7bfc889e53b36d9dd3e686dd4300f6525110eaa98c76a5dafceb2029f53",?$''',
+]
+
+# Exact Git-base file digests verified against git show; these are not credentials.
+[[allowlists]]
+description = "Verified auth source file SHA-256 inventory entries"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''^experiments/historical_tasks/results/pilot-2026-11-01/(initial-manifest|manifest)\.json$''']
+regexes = [
+  '''^\s*"cloudflare/scripts/dev\-auth\.mjs":\ "5a6de253da6fbfcec0bfbc3087160950547ff325e1cc3dbb780aff23e353eb5e",?$''',
+  '''^\s*"cloudflare/src/auth\.ts":\ "4bdc25bf8c9aa7a0275700dffcf607cadcf035d197060660d5bb11aa7b5492a8",?$''',
+]
