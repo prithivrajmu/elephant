@@ -1,0 +1,40 @@
+{
+  "valid_submission": true,
+  "changed_paths": [
+    "hooks.go",
+    "task_status.go"
+  ],
+  "regression": {
+    "command": [
+      "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+      "test",
+      "-count=1",
+      "-timeout=90s",
+      "-run",
+      "TestTaskStatus|TestUnreviewedWorkCarriesToNextTask",
+      "."
+    ],
+    "exit_code": 0,
+    "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t0.414s\n",
+    "stderr": "",
+    "elapsed_seconds": 2.7535326299998815
+  },
+  "suite": {
+    "command": [
+      "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+      "test",
+      "-count=1",
+      "-timeout=90s",
+      "./..."
+    ],
+    "exit_code": 0,
+    "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t10.116s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.084s\n",
+    "stderr": "",
+    "elapsed_seconds": 12.135272180999891
+  },
+  "task_success": true,
+  "patches": {
+    "hooks.go": "--- a/hooks.go\n+++ b/hooks.go\n@@ -43,12 +43,15 @@\n \tBackground []any           `json:\"background_tasks\"`\n }\n type hookState struct {\n-\tReviewed  bool     `json:\"reviewed\"`\n-\tCompleted bool     `json:\"completed,omitempty\"`\n-\tTask      string   `json:\"task,omitempty\"`\n-\tContext   string   `json:\"context,omitempty\"`\n-\tAgent     string   `json:\"agent,omitempty\"`\n-\tRecalled  []string `json:\"recalled,omitempty\"`\n+\t// Past retains task identities; only Pending remains open for interrupted capture.\n+\tPast      map[string]*hookState `json:\"past,omitempty\"`\n+\tPending   string                `json:\"pending,omitempty\"`\n+\tReviewed  bool                  `json:\"reviewed\"`\n+\tCompleted bool                  `json:\"completed,omitempty\"`\n+\tTask      string                `json:\"task,omitempty\"`\n+\tContext   string                `json:\"context,omitempty\"`\n+\tAgent     string                `json:\"agent,omitempty\"`\n+\tRecalled  []string              `json:\"recalled,omitempty\"`\n \t// Signal marks a task with a failed tool call or a file edit; only those get a review.\n \tSignal bool `json:\"signal,omitempty\"`\n }\n@@ -239,8 +242,34 @@\n \t\t\tif e := safeParents(filepath.Dir(c.Store), statePath); e != nil {\n \t\t\t\treturn nil, e\n \t\t\t}\n+\t\t\tvar previous hookState\n+\t\t\tb, e := readConfigFile(statePath)\n+\t\t\tif e != nil {\n+\t\t\t\treturn nil, e\n+\t\t\t}\n+\t\t\tif len(b) > 0 {\n+\t\t\t\tif e = json.Unmarshal(b, &previous); e != nil {\n+\t\t\t\t\treturn nil, e\n+\t\t\t\t}\n+\t\t\t}\n \t\t\tx.Task = newID()\n-\t\t\treturn nil, writeTaskState(c, sessionKey, hookState{Task: x.Task, Context: taskContext(c), Agent: agent})\n+\t\t\tnext := hookState{Task: x.Task, Context: taskContext(c), Agent: agent}\n+\t\t\tif previous.Context == next.Context {\n+\t\t\t\tnext.Past, next.Pending = previous.Past, previous.Pending\n+\t\t\t\t// Work interrupted before Stop still needs one later review.\n+\t\t\t\tnext.Signal = previous.Signal && !previous.Reviewed\n+\t\t\t\tif previous.Task != \"\" {\n+\t\t\t\t\tif next.Past == nil {\n+\t\t\t\t\t\tnext.Past = map[string]*hookState{}\n+\t\t\t\t\t}\n+\t\t\t\t\tif previous.Reviewed && !previous.Completed {\n+\t\t\t\t\t\tnext.Pending = previous.Task\n+\t\t\t\t\t}\n+\t\t\t\t\tprevious.Past, previous.Pending = nil, \"\"\n+\t\t\t\t\tnext.Past[previous.Task] = &previous\n+\t\t\t\t}\n+\t\t\t}\n+\t\t\treturn nil, writeTaskState(c, sessionKey, next)\n \t\t})\n \t\tif err != nil {\n \t\t\treturn out, err\n",
+    "task_status.go": "--- a/task_status.go\n+++ b/task_status.go\n@@ -70,6 +70,25 @@\n \t}\n \treturn atomicLocalFile(p, b, 0600)\n }\n+\n+// selectTask resolves explicit IDs without ever falling back to the current task.\n+func selectTask(state *hookState, taskID []string) (*hookState, string, error) {\n+\tif len(taskID) == 0 || taskID[0] == \"\" || taskID[0] == state.Task {\n+\t\treturn state, \"\", nil\n+\t}\n+\tprevious := state.Past[taskID[0]]\n+\tif previous == nil {\n+\t\treturn nil, \"\", fmt.Errorf(\"unknown task ID: %s\", taskID[0])\n+\t}\n+\tif previous.Completed {\n+\t\treturn previous, \"already_reported\", nil\n+\t}\n+\tif state.Pending != previous.Task {\n+\t\treturn previous, \"superseded\", nil\n+\t}\n+\treturn previous, \"\", nil\n+}\n+\n func CaptureForTask(configPath, session string, taskID ...string) (AutomationConfig, *TaskCapture, error) {\n \tc, err := ReadAutomation(configPath)\n \tif err != nil {\n@@ -82,12 +101,19 @@\n \t\t\treturn nil, e\n \t\t}\n \t\tif !c.Enabled {\n-\t\t\treturn nil, fmt.Errorf(\"automatic memory is paused\")\n-\t\t}\n-\t\tif len(taskID) > 0 && taskID[0] != \"\" && state.Task != taskID[0] {\n-\t\t\treturn nil, fmt.Errorf(\"task changed before capture\")\n-\t\t}\n-\t\tcapture = &TaskCapture{Session: session, Task: state.Task, Agent: state.Agent}\n+\t\t\treturn nil, fmt.Errorf(\"automatic memory is paused; lesson not saved\")\n+\t\t}\n+\t\ttarget, status, e := selectTask(&state, taskID)\n+\t\tif e != nil {\n+\t\t\treturn nil, e\n+\t\t}\n+\t\tif target.Completed {\n+\t\t\treturn nil, fmt.Errorf(\"review already reported; lesson not saved\")\n+\t\t}\n+\t\tif status == \"superseded\" {\n+\t\t\treturn nil, fmt.Errorf(\"a newer task replaced this review; lesson not saved\")\n+\t\t}\n+\t\tcapture = &TaskCapture{Session: session, Task: target.Task, Agent: target.Agent}\n \t\treturn nil, nil\n \t})\n \treturn c, capture, err\n@@ -114,19 +140,20 @@\n \t\tif e != nil {\n \t\t\treturn nil, e\n \t\t}\n-\t\tif len(taskID) > 0 && taskID[0] != \"\" && state.Task != taskID[0] {\n-\t\t\treturn nil, fmt.Errorf(\"task changed before status acknowledgement\")\n-\t\t}\n-\t\tif complete {\n-\t\t\tif !state.Reviewed {\n-\t\t\t\treturn nil, fmt.Errorf(\"lesson review has not been requested\")\n-\t\t\t}\n-\t\t\tstate.Completed = true\n-\t\t\tif e = writeTaskState(c, session, state); e != nil {\n-\t\t\t\treturn nil, e\n-\t\t\t}\n-\t\t}\n-\t\td.Recalled = len(state.Recalled)\n+\t\ttarget, status, e := selectTask(&state, taskID)\n+\t\tif e != nil {\n+\t\t\treturn nil, e\n+\t\t}\n+\t\tif status == \"superseded\" {\n+\t\t\td.State = status\n+\t\t\td.Line = \"Elephant: saved 0 lessons \u00b7 a newer task replaced this review.\"\n+\t\t\treturn nil, nil\n+\t\t}\n+\t\tacknowledge := complete && status == \"\" && !target.Completed\n+\t\tif acknowledge && !target.Reviewed {\n+\t\t\treturn nil, fmt.Errorf(\"lesson review has not been requested\")\n+\t\t}\n+\t\td.Recalled = len(target.Recalled)\n \t\townedIDs := map[string]bool{}\n \t\tfor _, m := range all {\n \t\t\tif owned(m, c.Identity) && m.Project == c.Project && m.Conversation == c.Conversation {\n@@ -135,7 +162,7 @@\n \t\t}\n \t\tseen := map[string]bool{}\n \t\tfailed := false\n-\t\trows, e := tx.Query(\"SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq\", c.Identity.Tenant, c.Identity.User, session, state.Task)\n+\t\trows, e := tx.Query(\"SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq\", c.Identity.Tenant, c.Identity.User, session, target.Task)\n \t\tif e != nil {\n \t\t\treturn nil, e\n \t\t}\n@@ -161,10 +188,28 @@\n \t\t\treturn nil, e\n \t\t}\n \t\td.Saved = len(d.MemoryIDs)\n+\t\tif status == \"already_reported\" {\n+\t\t\td.State = status\n+\t\t\tnoun := \"lessons\"\n+\t\t\tif d.Saved == 1 {\n+\t\t\t\tnoun = \"lesson\"\n+\t\t\t}\n+\t\t\td.Line = fmt.Sprintf(\"Elephant: saved %d %s \u00b7 this review was already reported.\", d.Saved, noun)\n+\t\t\treturn nil, nil\n+\t\t}\n+\t\tif acknowledge {\n+\t\t\ttarget.Completed = true\n+\t\t\tif state.Pending == target.Task {\n+\t\t\t\tstate.Pending = \"\"\n+\t\t\t}\n+\t\t\tif e = writeTaskState(c, session, state); e != nil {\n+\t\t\t\treturn nil, e\n+\t\t\t}\n+\t\t}\n \t\tswitch {\n \t\tcase failed:\n \t\t\td.State = \"capture_failed\"\n-\t\tcase !state.Completed:\n+\t\tcase !target.Completed:\n \t\t\td.State = \"review_incomplete\"\n \t\tcase d.Saved == 0:\n \t\t\td.State = \"no_lesson\"\n@@ -175,6 +220,9 @@\n \t})\n \tif err != nil {\n \t\treturn d, err\n+\t}\n+\tif d.Line != \"\" {\n+\t\treturn d, nil\n \t}\n \tending := \"review incomplete\"\n \tswitch d.State {\n"
+  }
+}

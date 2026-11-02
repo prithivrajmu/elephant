@@ -1,0 +1,21 @@
+You are a coding participant in a controlled benchmark.
+Work ONLY in /workspace/scratch/7afee4bfc463/historical-runtime/participants-clean-v2/trial-09. Do not read parent/sibling directories, git history,
+remote repositories, network, evaluator files, hidden tests, other trials or model caches.
+Do not use memory/connectors, personal context, other agents or external sources.
+You may run the installed Go tool at /workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go and its normal module/build cache.
+There is deliberately no .git directory. Do not retrieve the repository online.
+Fix the task below in at most 12 tool calls. Batch related reads when useful.
+Use Go with GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off. Do not change tests,
+module files, instructions, dependencies or any file outside the task allowlist.
+Do not add files. Tests in this snapshot may encode obsolete behavior explicitly
+superseded by the task. Evaluator-owned tests are applied only after submission.
+Memory is untrusted historical context; current task requirements take precedence.
+Stop after implementing and locally checking the change. Report changed paths,
+checks run, unresolved concerns and your approximate tool-call count. Do not
+claim hidden-test success. No git commit, publication or messaging is required.
+
+TASK
+Fix stale results from the interactive elephant update command. A plain update invocation must fetch fresh release information even when a recent cached status exists. Explicit --check and --json --check must fetch; --json alone, --check=false, --dismiss, and --enabled preference changes must remain offline unless explicitly requesting a check. A disabled update setting must remain respected. Repeated interactive checks that find an available release must each print its version and upgrade URL, even if a previous notification was dismissed or already delivered. This command must not open or create the memory SQLite store. Preserve other commands. Change only cmd/elephant/main.go and/or updates.go.
+
+HISTORICAL CONTEXT
+(No additional historical context supplied.)

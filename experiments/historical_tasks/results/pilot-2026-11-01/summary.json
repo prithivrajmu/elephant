@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "task_groups": 2,
+  "completed_trials": 10,
+  "passed_trials": 10,
+  "tokens": null,
+  "billed_cost": null,
+  "per_trial": {
+    "update_refresh-none": true,
+    "interrupted_review-none": true,
+    "update_refresh-elephant": true,
+    "interrupted_review-elephant": true,
+    "update_refresh-raw_bm25": true,
+    "interrupted_review-raw_bm25": true,
+    "update_refresh-raw_hybrid": true,
+    "interrupted_review-raw_hybrid": true,
+    "update_refresh-combined": true,
+    "interrupted_review-combined": true
+  }
+}

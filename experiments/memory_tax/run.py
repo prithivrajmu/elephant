@@ -8,6 +8,7 @@ from datetime import datetime
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -150,6 +151,12 @@ def cosine(a, b):
 
 class Models:
     def __init__(self, cache, allow_download=False):
+        # Opt out before the native runtime initializes; the API-only opt-out
+        # can be too late for initialization events in recent ORT builds.
+        if 'onnxruntime' in sys.modules and os.environ.get('ORT_DISABLE_TELEMETRY') != '1':
+            raise RuntimeError('Restart with ORT_DISABLE_TELEMETRY=1 before importing onnxruntime')
+        os.environ['ORT_DISABLE_TELEMETRY'] = '1'
+        os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
         from fastembed import TextEmbedding
         from fastembed.rerank.cross_encoder import TextCrossEncoder
         self.embedding_name = 'BAAI/bge-small-en-v1.5'

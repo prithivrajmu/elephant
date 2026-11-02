@@ -1,0 +1,116 @@
+{
+  "pilot_01": {
+    "tool_calls_self_reported": 9,
+    "changed_paths_reported": [
+      "cmd/elephant/main.go"
+    ],
+    "checks_reported": [
+      "targeted update/setup tests passed",
+      "go test ./... passed"
+    ],
+    "concerns_reported": "Existing tests do not directly cover complete CLI flag matrix; no hidden-test claim.",
+    "summary": "Fresh plain/explicit checks; offline status/preferences; repeated version and URL output; return before SQLite-opening language settings."
+  },
+  "pilot_04": {
+    "tool_calls_self_reported": 6,
+    "changed_paths_reported": [
+      "cmd/elephant/main.go"
+    ],
+    "checks_reported": [
+      "go test ./... passed",
+      "offline JSON and disabled-check CLI smoke checks with --ste-target 90 passed"
+    ],
+    "concerns_reported": "No known unresolved issues; hidden tests not run.",
+    "summary": "Fresh plain checks; explicit flag semantics; repeated version/URL; return before language policy store writes."
+  },
+  "pilot_02": {
+    "tool_calls_self_reported": 8,
+    "changed_paths_reported": [
+      "hooks.go",
+      "task_status.go"
+    ],
+    "checks_reported": [
+      "gofmt",
+      "go vet ./... passed",
+      "remaining tests passed; full suite failed only explicitly superseded stale-status expectation in TestTaskStatusAcknowledgedSavesAndRestart"
+    ],
+    "concerns_reported": "No hidden tests run.",
+    "summary": "Pending original-task review; read-only historical statuses and required errors; carried edit signals; paused capture guidance."
+  },
+  "clean_03": {
+    "tool_calls_self_reported": 8,
+    "changed_paths_reported": [
+      "hooks.go",
+      "task_status.go"
+    ],
+    "checks_reported": [
+      "formatted; full tests failed only obsolete stale-status expectation; remaining suite passed"
+    ],
+    "concerns_reported": "New interruption scenarios lack dedicated local tests; hidden tests not run."
+  },
+  "clean_05": {
+    "tool_calls_self_reported": 10,
+    "changed_paths_reported": [
+      "hooks.go",
+      "task_status.go"
+    ],
+    "checks_reported": [
+      "full suite failed obsolete stale-status expectation; remaining tests and go vet passed"
+    ],
+    "concerns_reported": "No hidden-test claim."
+  },
+  "clean_07": {
+    "tool_calls_self_reported": 4,
+    "changed_paths_reported": [
+      "cmd/elephant/main.go"
+    ],
+    "checks_reported": [
+      "gofmt and full offline Go suite passed"
+    ],
+    "concerns_reported": "No known unresolved concern; hidden tests not run."
+  },
+  "clean_08": {
+    "tool_calls_self_reported": 8,
+    "changed_paths_reported": [
+      "hooks.go",
+      "task_status.go"
+    ],
+    "checks_reported": [
+      "formatted; full suite failed only obsolete stale-status expectation; remaining suite passed"
+    ],
+    "concerns_reported": "Historical task metadata grows with session; no hidden-test verification."
+  },
+  "clean_09": {
+    "tool_calls_self_reported": 7,
+    "changed_paths_reported": [
+      "cmd/elephant/main.go"
+    ],
+    "checks_reported": [
+      "gofmt and go test ./cmd/elephant ./... passed offline"
+    ],
+    "concerns_reported": "No unresolved concern; hidden tests not run."
+  },
+  "clean_06": {
+    "tool_calls_self_reported": 9,
+    "changed_paths_reported": [
+      "hooks.go",
+      "task_status.go"
+    ],
+    "checks_reported": [
+      "gofmt; full suite failed only obsolete stale-status expectation; remaining suite passed"
+    ],
+    "concerns_reported": "No hidden-test success claimed."
+  },
+  "final_trial": {
+    "tool_calls_self_reported": 10,
+    "changed_paths_reported": [
+      "cmd/elephant/main.go",
+      "updates.go"
+    ],
+    "checks_reported": [
+      "go test ./... passed",
+      "JSON-only invocation with --ste-target 90 succeeded at unwritable store location"
+    ],
+    "concerns_reported": "No known unresolved issues; hidden tests not run."
+  }
+}

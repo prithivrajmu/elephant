@@ -1,0 +1,40 @@
+{
+  "valid_submission": true,
+  "changed_paths": [
+    "hooks.go",
+    "task_status.go"
+  ],
+  "regression": {
+    "command": [
+      "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+      "test",
+      "-count=1",
+      "-timeout=90s",
+      "-run",
+      "TestTaskStatus|TestUnreviewedWorkCarriesToNextTask",
+      "."
+    ],
+    "exit_code": 0,
+    "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t0.428s\n",
+    "stderr": "",
+    "elapsed_seconds": 2.89438157900031
+  },
+  "suite": {
+    "command": [
+      "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+      "test",
+      "-count=1",
+      "-timeout=90s",
+      "./..."
+    ],
+    "exit_code": 0,
+    "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t10.099s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.057s\n",
+    "stderr": "",
+    "elapsed_seconds": 12.041664869000215
+  },
+  "task_success": true,
+  "patches": {
+    "hooks.go": "--- a/hooks.go\n+++ b/hooks.go\n@@ -43,12 +43,15 @@\n \tBackground []any           `json:\"background_tasks\"`\n }\n type hookState struct {\n-\tReviewed  bool     `json:\"reviewed\"`\n-\tCompleted bool     `json:\"completed,omitempty\"`\n-\tTask      string   `json:\"task,omitempty\"`\n-\tContext   string   `json:\"context,omitempty\"`\n-\tAgent     string   `json:\"agent,omitempty\"`\n-\tRecalled  []string `json:\"recalled,omitempty\"`\n+\t// History retains review identities; only one uncompleted review remains active.\n+\tHistory    map[string]*hookState `json:\"history,omitempty\"`\n+\tSuperseded bool                  `json:\"superseded,omitempty\"`\n+\tReviewed   bool                  `json:\"reviewed\"`\n+\tCompleted  bool                  `json:\"completed,omitempty\"`\n+\tTask       string                `json:\"task,omitempty\"`\n+\tContext    string                `json:\"context,omitempty\"`\n+\tAgent      string                `json:\"agent,omitempty\"`\n+\tRecalled   []string              `json:\"recalled,omitempty\"`\n \t// Signal marks a task with a failed tool call or a file edit; only those get a review.\n \tSignal bool `json:\"signal,omitempty\"`\n }\n@@ -239,8 +242,37 @@\n \t\t\tif e := safeParents(filepath.Dir(c.Store), statePath); e != nil {\n \t\t\t\treturn nil, e\n \t\t\t}\n+\t\t\tvar previous hookState\n+\t\t\tb, e := readConfigFile(statePath)\n+\t\t\tif e != nil {\n+\t\t\t\treturn nil, e\n+\t\t\t}\n+\t\t\tif len(b) > 0 {\n+\t\t\t\tif e = json.Unmarshal(b, &previous); e != nil {\n+\t\t\t\t\treturn nil, e\n+\t\t\t\t}\n+\t\t\t}\n+\t\t\thistory := previous.History\n+\t\t\tif history == nil {\n+\t\t\t\thistory = make(map[string]*hookState)\n+\t\t\t}\n+\t\t\tif previous.Task != \"\" {\n+\t\t\t\tif previous.Reviewed && !previous.Completed {\n+\t\t\t\t\tfor _, review := range history {\n+\t\t\t\t\t\tif !review.Completed {\n+\t\t\t\t\t\t\treview.Superseded = true\n+\t\t\t\t\t\t}\n+\t\t\t\t\t}\n+\t\t\t\t}\n+\t\t\t\tprevious.History = nil\n+\t\t\t\tprevious.Superseded = !previous.Reviewed\n+\t\t\t\thistory[previous.Task] = &previous\n+\t\t\t}\n \t\t\tx.Task = newID()\n-\t\t\treturn nil, writeTaskState(c, sessionKey, hookState{Task: x.Task, Context: taskContext(c), Agent: agent})\n+\t\t\treturn nil, writeTaskState(c, sessionKey, hookState{\n+\t\t\t\tTask: x.Task, Context: taskContext(c), Agent: agent, History: history,\n+\t\t\t\tSignal: previous.Signal && !previous.Reviewed,\n+\t\t\t})\n \t\t})\n \t\tif err != nil {\n \t\t\treturn out, err\n",
+    "task_status.go": "--- a/task_status.go\n+++ b/task_status.go\n@@ -70,6 +70,18 @@\n \t}\n \treturn atomicLocalFile(p, b, 0600)\n }\n+\n+// reviewForTask resolves only identities retained in this session's trusted state.\n+func reviewForTask(state *hookState, taskID []string) (*hookState, bool, error) {\n+\tif len(taskID) == 0 || taskID[0] == \"\" || taskID[0] == state.Task {\n+\t\treturn state, false, nil\n+\t}\n+\tif review := state.History[taskID[0]]; review != nil {\n+\t\treturn review, true, nil\n+\t}\n+\treturn nil, false, fmt.Errorf(\"unknown task ID\")\n+}\n+\n func CaptureForTask(configPath, session string, taskID ...string) (AutomationConfig, *TaskCapture, error) {\n \tc, err := ReadAutomation(configPath)\n \tif err != nil {\n@@ -82,12 +94,19 @@\n \t\t\treturn nil, e\n \t\t}\n \t\tif !c.Enabled {\n-\t\t\treturn nil, fmt.Errorf(\"automatic memory is paused\")\n-\t\t}\n-\t\tif len(taskID) > 0 && taskID[0] != \"\" && state.Task != taskID[0] {\n-\t\t\treturn nil, fmt.Errorf(\"task changed before capture\")\n-\t\t}\n-\t\tcapture = &TaskCapture{Session: session, Task: state.Task, Agent: state.Agent}\n+\t\t\treturn nil, fmt.Errorf(\"automatic memory is paused; lesson not saved\")\n+\t\t}\n+\t\treview, _, e := reviewForTask(&state, taskID)\n+\t\tif e != nil {\n+\t\t\treturn nil, e\n+\t\t}\n+\t\tif review.Completed {\n+\t\t\treturn nil, fmt.Errorf(\"review already reported; lesson not saved\")\n+\t\t}\n+\t\tif review.Superseded {\n+\t\t\treturn nil, fmt.Errorf(\"a newer task replaced this review; lesson not saved\")\n+\t\t}\n+\t\tcapture = &TaskCapture{Session: session, Task: review.Task, Agent: review.Agent}\n \t\treturn nil, nil\n \t})\n \treturn c, capture, err\n@@ -114,19 +133,19 @@\n \t\tif e != nil {\n \t\t\treturn nil, e\n \t\t}\n-\t\tif len(taskID) > 0 && taskID[0] != \"\" && state.Task != taskID[0] {\n-\t\t\treturn nil, fmt.Errorf(\"task changed before status acknowledgement\")\n-\t\t}\n-\t\tif complete {\n-\t\t\tif !state.Reviewed {\n-\t\t\t\treturn nil, fmt.Errorf(\"lesson review has not been requested\")\n-\t\t\t}\n-\t\t\tstate.Completed = true\n-\t\t\tif e = writeTaskState(c, session, state); e != nil {\n-\t\t\t\treturn nil, e\n-\t\t\t}\n-\t\t}\n-\t\td.Recalled = len(state.Recalled)\n+\t\treview, old, e := reviewForTask(&state, taskID)\n+\t\tif e != nil {\n+\t\t\treturn nil, e\n+\t\t}\n+\t\talreadyReported := old && review.Completed\n+\t\tif review.Superseded {\n+\t\t\td.State = \"superseded\"\n+\t\t\treturn nil, nil\n+\t\t}\n+\t\tif complete && !alreadyReported && !review.Reviewed {\n+\t\t\treturn nil, fmt.Errorf(\"lesson review has not been requested\")\n+\t\t}\n+\t\td.Recalled = len(review.Recalled)\n \t\townedIDs := map[string]bool{}\n \t\tfor _, m := range all {\n \t\t\tif owned(m, c.Identity) && m.Project == c.Project && m.Conversation == c.Conversation {\n@@ -135,7 +154,7 @@\n \t\t}\n \t\tseen := map[string]bool{}\n \t\tfailed := false\n-\t\trows, e := tx.Query(\"SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq\", c.Identity.Tenant, c.Identity.User, session, state.Task)\n+\t\trows, e := tx.Query(\"SELECT data FROM experiences WHERE tenant=? AND user=? AND session=? AND task=? ORDER BY seq\", c.Identity.Tenant, c.Identity.User, session, review.Task)\n \t\tif e != nil {\n \t\t\treturn nil, e\n \t\t}\n@@ -161,10 +180,18 @@\n \t\t\treturn nil, e\n \t\t}\n \t\td.Saved = len(d.MemoryIDs)\n+\t\tif complete && !review.Completed {\n+\t\t\treview.Completed = true\n+\t\t\tif e = writeTaskState(c, session, state); e != nil {\n+\t\t\t\treturn nil, e\n+\t\t\t}\n+\t\t}\n \t\tswitch {\n+\t\tcase alreadyReported:\n+\t\t\td.State = \"already_reported\"\n \t\tcase failed:\n \t\t\td.State = \"capture_failed\"\n-\t\tcase !state.Completed:\n+\t\tcase !review.Completed:\n \t\t\td.State = \"review_incomplete\"\n \t\tcase d.Saved == 0:\n \t\t\td.State = \"no_lesson\"\n@@ -175,6 +202,18 @@\n \t})\n \tif err != nil {\n \t\treturn d, err\n+\t}\n+\tif d.State == \"superseded\" {\n+\t\td.Line = \"Elephant: saved 0 lessons \u00b7 a newer task replaced this review.\"\n+\t\treturn d, nil\n+\t}\n+\tif d.State == \"already_reported\" {\n+\t\tnoun := \"lessons\"\n+\t\tif d.Saved == 1 {\n+\t\t\tnoun = \"lesson\"\n+\t\t}\n+\t\td.Line = fmt.Sprintf(\"Elephant: saved %d %s \u00b7 this review was already reported.\", d.Saved, noun)\n+\t\treturn d, nil\n \t}\n \tending := \"review incomplete\"\n \tswitch d.State {\n"
+  }
+}
