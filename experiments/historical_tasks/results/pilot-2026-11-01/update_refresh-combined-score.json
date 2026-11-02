@@ -1,0 +1,40 @@
+{
+  "valid_submission": true,
+  "changed_paths": [
+    "cmd/elephant/main.go",
+    "updates.go"
+  ],
+  "regression": {
+    "command": [
+      "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+      "test",
+      "-count=1",
+      "-timeout=90s",
+      "-run",
+      "TestUpdateCommandRefreshesCachedStatus",
+      "./cmd/elephant"
+    ],
+    "exit_code": 0,
+    "stdout": "ok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.024s\n",
+    "stderr": "",
+    "elapsed_seconds": 1.0560842530000514
+  },
+  "suite": {
+    "command": [
+      "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+      "test",
+      "-count=1",
+      "-timeout=90s",
+      "./..."
+    ],
+    "exit_code": 0,
+    "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t9.357s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.055s\n",
+    "stderr": "",
+    "elapsed_seconds": 10.533873487999983
+  },
+  "task_success": true,
+  "patches": {
+    "cmd/elephant/main.go": "--- a/cmd/elephant/main.go\n+++ b/cmd/elephant/main.go\n@@ -190,7 +190,7 @@\n \t\tsvc = c.Service()\n \t\tsvc.Task = capture\n \t}\n-\tif *steTarget != 0 {\n+\tif *steTarget != 0 && command != \"update\" {\n \t\tif _, e := svc.Store.SetLanguagePolicy(*steTarget); e != nil {\n \t\t\treturn e\n \t\t}\n@@ -250,7 +250,13 @@\n \t\tif seenFlags[\"enabled\"] {\n \t\t\tchange = enabled\n \t\t}\n-\t\tr, e := svc.Store.Updates(memory.UpdateOptions{Check: *updateCheck, Force: *updateCheck, Notify: true, Dismiss: *updateDismiss, Enabled: change})\n+\t\t// Interactive status requests always check; explicit cache reads and\n+\t\t// preference changes stay offline unless --check requests a refresh.\n+\t\tcheck := *updateCheck\n+\t\tif !seenFlags[\"check\"] && !*jsonOutput && !seenFlags[\"dismiss\"] && change == nil {\n+\t\t\tcheck = true\n+\t\t}\n+\t\tr, e := svc.Store.Updates(memory.UpdateOptions{Check: check, Force: check, Notify: true, Dismiss: *updateDismiss, Enabled: change})\n \t\tif e != nil {\n \t\t\treturn e\n \t\t}\n",
+    "updates.go": "--- a/updates.go\n+++ b/updates.go\n@@ -353,7 +353,9 @@\n \t\t}\n \t\tif d.State == \"available\" && d.Latest != nil {\n \t\t\td.Line = \"\"\n-\t\t\tif opts.Notify && d.Notified != d.Latest.Version {\n+\t\t\t// Forced interactive checks report the release every time, while\n+\t\t\t// automatic notifications remain limited to one per version.\n+\t\t\tif opts.Notify && (opts.Force || d.Notified != d.Latest.Version) {\n \t\t\t\td.Line = fmt.Sprintf(\"Elephant update: %s available \u2014 %s. Upgrade: %s\", d.Latest.Version, d.Latest.Summary, d.Latest.URL)\n \t\t\t\td.Notified = d.Latest.Version\n \t\t\t}\n"
+  }
+}

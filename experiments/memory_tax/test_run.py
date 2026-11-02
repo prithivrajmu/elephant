@@ -3,6 +3,7 @@ import builtins
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 import tempfile
 import types
@@ -26,9 +27,11 @@ class Contracts(unittest.TestCase):
                 return types.SimpleNamespace(TextEmbedding=lambda *a, **k: None,
                                              TextCrossEncoder=lambda *a, **k: None)
             return original_import(name, *args, **kwargs)
-        with patch.dict(os.environ, {'ORT_DISABLE_TELEMETRY': '1', 'HF_HUB_DISABLE_TELEMETRY': '0'}):
-            with patch('builtins.__import__', side_effect=checked_import):
-                r.Models(Path('/unused-cache'))
+        with patch.dict(sys.modules):
+            sys.modules.pop('onnxruntime', None)
+            with patch.dict(os.environ, {'ORT_DISABLE_TELEMETRY': '0', 'HF_HUB_DISABLE_TELEMETRY': '0'}):
+                with patch('builtins.__import__', side_effect=checked_import):
+                    r.Models(Path('/unused-cache'))
         self.assertEqual(len(observed), 2)
 
     def test_already_initialized_runtime_requires_process_restart(self):

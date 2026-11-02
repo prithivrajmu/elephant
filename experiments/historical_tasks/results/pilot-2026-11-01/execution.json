@@ -1,0 +1,85 @@
+{
+  "status": "complete",
+  "attempt": "fresh restart after quota interruption and temporary workspace loss",
+  "prior_attempt_outcomes_included": false,
+  "published_source_commit": "29507a1a089114cf8a033f4c2a243fdedfdb4f0b",
+  "source_tree": "824d27975df02eb8280d04014c33c81247b6a8d5",
+  "source_equivalence": "Published source tree exactly matches local frozen revision 632fa259fefda5162fedd59f3319bcbfa109a22a. Git commit metadata differs.",
+  "solver_model": "inherited session default; exact identifier/settings unavailable",
+  "execution": "Fresh agent sessions, no conversation fork, no model override, 12 implementation tool calls plus one bootstrap read",
+  "environment": {
+    "ORT_DISABLE_TELEMETRY": "1",
+    "HF_HUB_DISABLE_TELEMETRY": "1",
+    "GOTOOLCHAIN": "local",
+    "ELEPHANT_UPDATE_CHECKS": "0",
+    "participant_GOPROXY": "off",
+    "participant_GOSUMDB": "off"
+  },
+  "tokens": null,
+  "billed_cost": null,
+  "recorded_at_utc": "2026-11-01T07:33:36.095466+00:00",
+  "agent_map": {
+    "pilot_01": "update_refresh-raw_bm25",
+    "pilot_02": "interrupted_review-raw_hybrid",
+    "pilot_03": "interrupted_review-none",
+    "pilot_04": "update_refresh-elephant",
+    "pilot_05": "interrupted_review-raw_bm25",
+    "pilot_06": "interrupted_review-combined",
+    "pilot_07": "update_refresh-none",
+    "pilot_08": "interrupted_review-elephant",
+    "pilot_09": "update_refresh-raw_hybrid",
+    "pilot_10": "update_refresh-combined"
+  },
+  "second_interruption": {
+    "reason": "quota errors; agent sessions unavailable after reset",
+    "valid_completed_submissions_retained": 3,
+    "unfinished_trials_restarted_from_pristine_snapshots": [
+      "update_refresh-none",
+      "update_refresh-raw_hybrid",
+      "update_refresh-combined",
+      "interrupted_review-none",
+      "interrupted_review-elephant",
+      "interrupted_review-raw_bm25",
+      "interrupted_review-combined"
+    ],
+    "unfinished_patches_scored": false,
+    "exact_model_identity_across_resets_verifiable": false
+  },
+  "resumption_integrity": {
+    "observation": "Three reused participant paths unexpectedly contained prior incomplete changes when fresh participants read them, despite matching baseline hashes immediately after reset.",
+    "cause": "undetermined; do not assume security isolation on shared host",
+    "invalid_submissions_excluded": [
+      "resume_03",
+      "resume_05",
+      "resume_06"
+    ],
+    "remediation": "All seven unfinished trials use newly allocated unique directories, verified against original baseline inventory. Original contexts/task definitions/budgets retained. Normal Go module cache warmed before launch.",
+    "new_manifest_sha256": "fe70a2da80adc63da925f234fbd2719d3eb834231b17dc53e1150cb687e0db65"
+  },
+  "accepted_agent_map": {
+    "pilot_01": "update_refresh-raw_bm25",
+    "pilot_02": "interrupted_review-raw_hybrid",
+    "pilot_04": "update_refresh-elephant",
+    "clean_03": "interrupted_review-none",
+    "clean_05": "interrupted_review-raw_bm25",
+    "clean_06": "interrupted_review-combined",
+    "clean_07": "update_refresh-none",
+    "clean_08": "interrupted_review-elephant",
+    "clean_09": "update_refresh-raw_hybrid",
+    "final_trial": "update_refresh-combined"
+  },
+  "third_interruption": {
+    "trial": "update_refresh-combined",
+    "reason": "quota failure before submission",
+    "excluded_unscored": true,
+    "new_unique_workspace": "/workspace/scratch/7afee4bfc463/historical-runtime/final-clean-20261102"
+  },
+  "completed_at_utc": "2026-11-02T02:46:10.265271+00:00",
+  "validation": {
+    "python_contracts": 22,
+    "python_passed": true,
+    "go_race_suite_passed": true,
+    "go_vet_passed": true,
+    "git_diff_check_passed": true
+  }
+}

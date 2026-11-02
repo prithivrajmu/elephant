@@ -1,5 +1,7 @@
 # Historical coding workflow pilot
 
+[Saved pilot results and next experiment](results/pilot-2026-11-01/REPORT.md).
+
 This experiment measures whether retrieved context helps an agent repair two real
 Elephant regressions. It complements the synthetic retrieval contracts in
 `../memory_tax`; it is not a LongMemEval replication or a production-quality claim.
