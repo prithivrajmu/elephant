@@ -7,8 +7,15 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.12.0]
+
+Full notes: [docs/releases/v0.12.0.md](docs/releases/v0.12.0.md).
+
 ### Added
 
+- Hooks print a one-line status the user can see (`systemMessage`): how many
+  lessons were recalled on each prompt, and when an end-of-task review starts.
+  Hook context stays invisible to the user, so Elephant looked inactive.
 - Offline memory-tax evaluation experiments: explicit synthetic/sanitized fixtures,
   a store-free helper for the actual recall engine, raw BM25 and optional local
   dense/reranked baselines, combined retrieval ablations, bounded follow-up QA
