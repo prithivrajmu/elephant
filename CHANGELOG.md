@@ -7,6 +7,10 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.12.0]
+
+Full notes: [docs/releases/v0.12.0.md](docs/releases/v0.12.0.md).
+
 ### Added
 
 - Hooks print a one-line status the user can see (`systemMessage`): how many
