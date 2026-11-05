@@ -405,3 +405,19 @@ func TestDoctorNotesGuidanceOlderThanThisVersion(t *testing.T) {
 		t.Fatal("init did not refresh guidance")
 	}
 }
+
+func TestHooksShowOneLineStatus(t *testing.T) {
+	_, config, _ := autoFixture(t)
+	r := hookCall(t, config, "claude", "UserPromptSubmit", map[string]any{"prompt": "Fix query pool concurrency"})
+	if r["systemMessage"] != "Elephant: recalled 0 lessons" {
+		t.Fatalf("prompt status: %v", r["systemMessage"])
+	}
+	editCall(t, config, "claude")
+	r = hookCall(t, config, "claude", "Stop", nil)
+	if r["systemMessage"] != "Elephant: reviewing this task for lessons to save" {
+		t.Fatalf("stop status: %v", r["systemMessage"])
+	}
+	if recallStatus(1) != "Elephant: recalled 1 lesson" {
+		t.Fatal("singular form")
+	}
+}

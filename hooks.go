@@ -234,6 +234,7 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		}
 		record := shellQuote(c.Binary) + " remember --config " + shellQuote(configPath) + " --task-session " + shellQuote(sessionKey) + " --task-id " + shellQuote(x.Task)
 		out["decision"] = "block"
+		out["systemMessage"] = "Elephant: reviewing this task for lessons to save"
 		reason := reviewPrefix + " Save 0-3 lessons from this task: a tested approach, a verified fix, or a confirmed convention. Use only observed evidence; no secrets, no transcripts. A tool exit code alone is not a lesson. For each lesson, pipe JSON on stdin to:\n" + record +
 			"\nFields: incident, lesson, source (real test, review or tool evidence), class (win, lesson, warning or scar), scope (" + scope + " by default; personal only if transferable, never team), features (signal name to string array), optional requires/excludes. Then run this and put its one-line output once in your final response:\n" + c.taskStatusCommand(sessionKey, x.Task)
 		out["reason"] = reason
@@ -278,6 +279,8 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 		out["hookSpecificOutput"] = map[string]any{"hookEventName": h.Event, "additionalContext": result.Context}
 	}
 	if h.Event == "UserPromptSubmit" {
+		// Visible to the user, not the model: hook context is otherwise silent.
+		out["systemMessage"] = recallStatus(len(result.Hits))
 		err = svc.Store.transactState(func(_ []Memory, _ map[string]bool) (*Event, error) {
 			state, e := readTaskState(c, sessionKey)
 			if e != nil {
@@ -316,4 +319,12 @@ func ConfigForRoot(root string) (AutomationConfig, bool, error) {
 		root = parent
 	}
 	return AutomationConfig{}, false, nil
+}
+
+// recallStatus is the one-line status shown to the user on each prompt.
+func recallStatus(n int) string {
+	if n == 1 {
+		return "Elephant: recalled 1 lesson"
+	}
+	return fmt.Sprintf("Elephant: recalled %d lessons", n)
 }
