@@ -41,9 +41,9 @@ curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/
 irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
 ```
 
-Pin a version with `ELEPHANT_VERSION=v0.12.0`. See the [0.12.0 release notes](docs/releases/v0.12.0.md). Or install manually:
+Pin a version with `ELEPHANT_VERSION=v0.13.0`. See the [0.13.0 release notes](docs/releases/v0.13.0.md). Or install manually:
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.12.0 uses a regular release tag; the project's beta limitations still apply.
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.13.0 uses a regular release tag; the project's beta limitations still apply.
 
 | Computer | Archive platform |
 | --- | --- |
