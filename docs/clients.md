@@ -15,7 +15,7 @@ Run `elephant setup` to generate configuration, or use the direct registration c
 
 Add the emitted `AGENT_INSTRUCTIONS.md` content to the project's existing agent guidance (for example AGENTS.md or CLAUDE.md, as appropriate). Keep existing policies. The generated text tells the agent when to recall, record evidence and give observed feedback; current policy takes precedence over remembered lessons.
 
-Reload the client, approve the server if requested, and confirm all six tools. Test `profile_memory` and `init_memory` before relying on capture. MCP prompt support is optional to the user experience; direct tool requests work without slash commands. A local stdio server must run on the machine/container where the executable and project paths exist; it is not a remote URL service.
+Reload the client, approve the server if requested, and confirm all eight tools. Test `profile_memory` and `init_memory` before relying on capture. MCP prompt support is optional to the user experience; direct tool requests work without slash commands. A local stdio server must run on the machine/container where the executable and project paths exist; it is not a remote URL service.
 
 ## Direct CLI registration
 
@@ -80,4 +80,5 @@ Official references, consulted 2026-10-03:
 - Cursor MCP and configuration locations: https://prod.cursor.com/docs/mcp
 
 Client formats may change. Report actual host/version plus sanitized setup failure output during the pilot. Do not treat these recipes as cross-client certification.
+
 

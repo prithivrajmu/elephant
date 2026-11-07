@@ -140,4 +140,3 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 	}
 	return nil, fmt.Errorf("unknown tool %s", name)
 }
-

@@ -572,4 +572,3 @@ func readOwnedSyncMemories(tx *sql.Tx, id Identity) ([]Memory, error) {
 	}
 	return out, rows.Err()
 }
-

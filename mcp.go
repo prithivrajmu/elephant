@@ -202,4 +202,3 @@ func ServeMCP(s Service, in io.Reader, out io.Writer) error {
 	}
 	return scanner.Err()
 }
-

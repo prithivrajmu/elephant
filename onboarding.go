@@ -341,4 +341,3 @@ func SelfTest() (Diagnostics, error) {
 	}
 	return d, nil
 }
-

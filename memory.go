@@ -447,4 +447,3 @@ func admission(candidates []Memory, q Request) []float64 {
 	}
 	return out
 }
-

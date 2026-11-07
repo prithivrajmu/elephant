@@ -150,14 +150,17 @@ func TestDreamConsolidatesCompatibleInputs(t *testing.T) {
 
 func TestDreamRejectsUnsafeChangesWithoutRetiringInputs(t *testing.T) {
 	for name, mutate := range map[string]func(*Memory){
-		"stale":              func(m *Memory) { m.Dream.Checks[0].Revision = strings.Repeat("0", 64) },
-		"scope":              func(m *Memory) { m.Scope = "personal" },
-		"project":            func(m *Memory) { m.Project = "other" },
-		"conditions":         func(m *Memory) { m.Requires = nil },
-		"features":           func(m *Memory) { m.Features = nil },
-		"source":             func(m *Memory) { m.Source = "unchecked-source" },
-		"missing-check":      func(m *Memory) { m.Dream.Checks = nil },
-		"duplicate-check":    func(m *Memory) { m.Dream.Checks = append(m.Dream.Checks, m.Dream.Checks[0]); m.Dream.Kind = "consolidate" },
+		"stale":         func(m *Memory) { m.Dream.Checks[0].Revision = strings.Repeat("0", 64) },
+		"scope":         func(m *Memory) { m.Scope = "personal" },
+		"project":       func(m *Memory) { m.Project = "other" },
+		"conditions":    func(m *Memory) { m.Requires = nil },
+		"features":      func(m *Memory) { m.Features = nil },
+		"source":        func(m *Memory) { m.Source = "unchecked-source" },
+		"missing-check": func(m *Memory) { m.Dream.Checks = nil },
+		"duplicate-check": func(m *Memory) {
+			m.Dream.Checks = append(m.Dream.Checks, m.Dream.Checks[0])
+			m.Dream.Kind = "consolidate"
+		},
 		"missing-retirement": func(m *Memory) { m.Supersedes = nil },
 		"foreign-input":      func(m *Memory) { m.Dream.Checks[0].ID = "missing"; m.Supersedes = []string{"missing"} },
 		"secret":             func(m *Memory) { m.Dream.Checks[0].Observation = "ghp_" + strings.Repeat("A", 40) },

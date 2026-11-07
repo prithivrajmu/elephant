@@ -539,4 +539,3 @@ func activeMemories(all []memory.Memory) int {
 	}
 	return n
 }
-

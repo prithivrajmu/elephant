@@ -297,4 +297,3 @@ func (s Store) readSQL(fn func(*sql.Tx, []Memory) error) error {
 	}
 	return tx.Commit()
 }
-

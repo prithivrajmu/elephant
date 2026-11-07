@@ -170,10 +170,13 @@ def measure_setup(binary, work):
     discovery_ms = (time.perf_counter_ns() - start) / 1_000_000
     responses = {response.get("id"): response for response in map(json.loads, stdout.splitlines())}
     initialize, tools = responses.get(1, {}), responses.get(2, {})
-    if mcp.returncode or "result" not in initialize or len(tools.get("result", {}).get("tools", [])) != 6:
-        raise RuntimeError("MCP discovery did not return six tools")
+    discovered = tools.get("result", {}).get("tools", [])
+    expected = {"profile_memory", "init_memory", "recall_memory", "record_memory",
+                "feedback_memory", "forget_memory", "dream_memory", "commit_dream"}
+    if mcp.returncode or "result" not in initialize or {tool["name"] for tool in discovered} != expected:
+        raise RuntimeError("MCP discovery did not return the expected lifecycle and dreaming tools")
     return {"init_ms": round(init_ms, 3), "mcp_discovery_ms": round(discovery_ms, 3),
-            "total_ms": round((time.perf_counter_ns() - journey_start) / 1_000_000, 3), "tool_count": 6}
+            "total_ms": round((time.perf_counter_ns() - journey_start) / 1_000_000, 3), "tool_count": len(discovered)}
 
 
 def measure_capture(binary, work, samples):
@@ -276,6 +279,8 @@ def main():
                 "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
             },
             "journeys": {
+                # Keep the historical key for baseline comparisons; tool_count
+                # reports the current discovery size (including dreaming).
                 "setup_to_six_tools": measure_setup(binary, work),
                 "task_to_recall": recalls,
                 "capture_to_durable_receipt": measure_capture(binary, work, args.samples),
@@ -292,3 +297,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
