@@ -61,9 +61,12 @@ type IdleDreamState struct {
 }
 
 type IdleDreamStatus struct {
-	Config  *IdleDreamConfig `json:"config"`
-	State   IdleDreamState   `json:"state"`
-	Running bool             `json:"watcher_running"`
+	Config         *IdleDreamConfig `json:"config"`
+	State          IdleDreamState   `json:"state"`
+	Running        bool             `json:"watcher_running"`
+	Ready          bool             `json:"ready"`
+	WaitReason     string           `json:"wait_reason"`
+	NextEligibleAt *time.Time       `json:"next_eligible_at,omitempty"`
 }
 
 const idleTable = `CREATE TABLE IF NOT EXISTS dream_idle(context TEXT PRIMARY KEY, data TEXT NOT NULL)`
@@ -189,10 +192,20 @@ func DreamScheduleStatus(path string) (IdleDreamStatus, error) {
 	}
 	out := IdleDreamStatus{Config: c.IdleDream}
 	err = idleState(c, func(_ *sql.Tx, state *IdleDreamState) error {
+		now := time.Now().UTC()
 		out.State = *state
-		out.Running = state.Lease != "" && state.LeaseUntil.After(time.Now())
-		if out.State.Day != time.Now().UTC().Format("2006-01-02") {
+		out.Running = state.Lease != "" && state.LeaseUntil.After(now)
+		if out.State.Day != now.Format("2006-01-02") {
 			out.State.Attempts = 0
+		}
+		switch {
+		case !c.Enabled:
+			out.WaitReason = "automation_disabled"
+		case c.IdleDream == nil:
+			out.WaitReason = "not_configured"
+		default:
+			out.WaitReason, out.NextEligibleAt = idleEligibility(*state, *c.IdleDream, now)
+			out.Ready = out.WaitReason == "ready"
 		}
 		return nil
 	})
@@ -261,13 +274,41 @@ func startIdleWatcher(c AutomationConfig, path string) error {
 }
 
 func idleReady(state IdleDreamState, config IdleDreamConfig, now time.Time) bool {
-	attempts := state.Attempts
-	if state.Day != now.UTC().Format("2006-01-02") {
-		attempts = 0
+	reason, _ := idleEligibility(state, config, now)
+	return reason == "ready"
+}
+
+// idleEligibility shares the scheduler's gates with status reporting. A future
+// time is meaningful only when the pending work needs no new foreground event.
+// It is a lower bound: later activity or configuration changes can postpone it.
+func idleEligibility(state IdleDreamState, config IdleDreamConfig, now time.Time) (string, *time.Time) {
+	if !config.Enabled {
+		return "disabled", nil
 	}
-	return config.Enabled && len(state.Active) == 0 && state.Generation > state.Reviewed && !state.LastActivity.IsZero() &&
-		!now.Before(state.LastActivity.Add(time.Duration(config.IdleSeconds)*time.Second)) &&
-		!now.Before(state.LastAttempt.Add(time.Duration(config.CooldownSeconds)*time.Second)) && attempts < config.MaxRunsPerDay
+	if len(state.Active) != 0 {
+		return "active_sessions", nil
+	}
+	if state.Generation <= state.Reviewed || state.LastActivity.IsZero() {
+		return "no_pending_activity", nil
+	}
+	now = now.UTC()
+	reason, eligible := "ready", now
+	deferUntil := func(at time.Time, why string) {
+		at = at.UTC()
+		if at.After(now) && !at.Before(eligible) {
+			reason, eligible = why, at
+		}
+	}
+	deferUntil(state.LastActivity.Add(time.Duration(config.IdleSeconds)*time.Second), "idle_delay")
+	deferUntil(state.LastAttempt.Add(time.Duration(config.CooldownSeconds)*time.Second), "cooldown")
+	if state.Day == now.Format("2006-01-02") && state.Attempts >= config.MaxRunsPerDay {
+		year, month, day := now.Date()
+		deferUntil(time.Date(year, month, day+1, 0, 0, 0, 0, time.UTC), "daily_limit")
+	}
+	if reason == "ready" {
+		return reason, nil
+	}
+	return reason, &eligible
 }
 
 // idleCommitGuard is internal: no model or MCP caller can supply one. Every save

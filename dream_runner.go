@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type IdleDreamProposal struct {
@@ -39,13 +41,22 @@ func idleOutputSchema(maxChanges int) map[string]any {
 	return schema(map[string]any{"replacements": map[string]any{"type": "array", "maxItems": maxChanges, "items": proposal}}, "replacements")
 }
 
-type boundedDreamOutput struct{ bytes.Buffer }
+const maxIdleRunnerOutputBytes = 256 * 1024
+
+var errInvalidIdleRunnerOutput = errors.New("invalid idle runner output")
+
+type boundedDreamOutput struct {
+	// Do not embed bytes.Buffer: its promoted ReadFrom lets io.Copy bypass Write.
+	buffer   bytes.Buffer
+	exceeded bool
+}
 
 func (b *boundedDreamOutput) Write(p []byte) (int, error) {
-	if b.Len()+len(p) > 256*1024 {
-		return 0, fmt.Errorf("idle runner output exceeds 256 KiB")
+	if len(p) > maxIdleRunnerOutputBytes-b.buffer.Len() {
+		b.exceeded = true
+		return 0, fmt.Errorf("%w: exceeds 256 KiB", errInvalidIdleRunnerOutput)
 	}
-	return b.Buffer.Write(p)
+	return b.buffer.Write(p)
 }
 
 func executeDreamRunner(ctx context.Context, c AutomationConfig, batch DreamBatch) (IdleDreamOutput, error) {
@@ -83,30 +94,123 @@ func executeDreamRunner(ctx context.Context, c AutomationConfig, batch DreamBatc
 	configureDreamCancellation(cmd)
 	cmd.WaitDelay = 2 * time.Second
 	if err = cmd.Run(); err != nil {
+		if stdout.exceeded {
+			return out, fmt.Errorf("%w: exceeds 256 KiB", errInvalidIdleRunnerOutput)
+		}
 		return out, fmt.Errorf("idle runner failed") // Never retain runner output or credentials.
 	}
-	result := stdout.Bytes()
+	result := stdout.buffer.Bytes()
 	if outputPath != "" {
+		info, e := os.Lstat(outputPath)
+		if e != nil || !info.Mode().IsRegular() {
+			return out, fmt.Errorf("%w: no regular result file", errInvalidIdleRunnerOutput)
+		}
 		f, e := os.Open(outputPath)
 		if e != nil {
-			return out, fmt.Errorf("idle runner did not return a result")
+			return out, fmt.Errorf("%w: no result", errInvalidIdleRunnerOutput)
 		}
 		defer f.Close()
-		result, err = io.ReadAll(io.LimitReader(f, 256*1024+1))
-		if err != nil || len(result) > 256*1024 {
-			return out, fmt.Errorf("idle runner output exceeds 256 KiB")
+		result, err = io.ReadAll(io.LimitReader(f, maxIdleRunnerOutputBytes+1))
+		if err != nil || len(result) > maxIdleRunnerOutputBytes {
+			return out, fmt.Errorf("%w: unreadable or excessive result", errInvalidIdleRunnerOutput)
 		}
 	}
-	decoder := json.NewDecoder(bytes.NewReader(result))
-	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(&out); err != nil || out.Replacements == nil {
-		return out, fmt.Errorf("invalid idle runner JSON")
+	return decodeIdleRunnerOutput(result, config.MaxChanges)
+}
+
+func decodeIdleRunnerOutput(result []byte, maxChanges int) (IdleDreamOutput, error) {
+	var out IdleDreamOutput
+	if !utf8.Valid(result) {
+		return out, errInvalidIdleRunnerOutput
 	}
-	var trailing any
-	if decoder.Decode(&trailing) != io.EOF || len(out.Replacements) > config.MaxChanges {
-		return out, fmt.Errorf("invalid or excessive idle replacements")
+	decoder := json.NewDecoder(bytes.NewReader(result))
+	if err := validateIdleRunnerValue(decoder, idleOutputSchema(maxChanges)); err != nil {
+		return out, errInvalidIdleRunnerOutput
+	}
+	if _, err := decoder.Token(); err != io.EOF {
+		return out, errInvalidIdleRunnerOutput
+	}
+	if err := json.Unmarshal(result, &out); err != nil {
+		return out, errInvalidIdleRunnerOutput
 	}
 	return out, nil
+}
+
+// Validate our small, fixed output schema before decoding into Go structs.
+// encoding/json alone accepts duplicate and case-insensitive keys, null strings
+// and missing fields, which can silently change the meaning of a review result.
+func validateIdleRunnerValue(decoder *json.Decoder, spec map[string]any) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return errInvalidIdleRunnerOutput
+	}
+	switch spec["type"] {
+	case "object":
+		if token != json.Delim('{') {
+			return errInvalidIdleRunnerOutput
+		}
+		properties := spec["properties"].(map[string]any)
+		seen := map[string]bool{}
+		for decoder.More() {
+			key, err := decoder.Token()
+			if err != nil {
+				return errInvalidIdleRunnerOutput
+			}
+			name, ok := key.(string)
+			property, known := properties[name]
+			if !ok || !known || seen[name] {
+				return errInvalidIdleRunnerOutput
+			}
+			seen[name] = true
+			if err := validateIdleRunnerValue(decoder, property.(map[string]any)); err != nil {
+				return err
+			}
+		}
+		for _, required := range spec["required"].([]string) {
+			if !seen[required] {
+				return errInvalidIdleRunnerOutput
+			}
+		}
+		if end, err := decoder.Token(); err != nil || end != json.Delim('}') {
+			return errInvalidIdleRunnerOutput
+		}
+	case "array":
+		if token != json.Delim('[') {
+			return errInvalidIdleRunnerOutput
+		}
+		count := 0
+		for decoder.More() {
+			count++
+			if max, ok := spec["maxItems"].(int); ok && count > max {
+				return errInvalidIdleRunnerOutput
+			}
+			if err := validateIdleRunnerValue(decoder, spec["items"].(map[string]any)); err != nil {
+				return err
+			}
+		}
+		if min, ok := spec["minItems"].(int); ok && count < min {
+			return errInvalidIdleRunnerOutput
+		}
+		if end, err := decoder.Token(); err != nil || end != json.Delim(']') {
+			return errInvalidIdleRunnerOutput
+		}
+	case "string":
+		value, ok := token.(string)
+		if !ok {
+			return errInvalidIdleRunnerOutput
+		}
+		if values, ok := spec["enum"].([]string); ok {
+			for _, allowed := range values {
+				if value == allowed {
+					return nil
+				}
+			}
+			return errInvalidIdleRunnerOutput
+		}
+	default:
+		return errInvalidIdleRunnerOutput
+	}
+	return nil
 }
 
 func idleReplacement(proposal IdleDreamProposal, batch DreamBatch) (Memory, error) {
@@ -262,6 +366,8 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 	output, runnerErr := runner(ctx, c, batch)
 	if ctx.Err() != nil {
 		status = "cancelled"
+	} else if errors.Is(runnerErr, errInvalidIdleRunnerOutput) {
+		status = "invalid_output"
 	} else if runnerErr == nil {
 		status = "no_change"
 		svc := c.Service()

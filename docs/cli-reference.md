@@ -15,6 +15,10 @@ pause. Options include `--idle 10m`, `--cooldown 6h`, `--timeout 2m`, `--max-run
 `--runner-command runner.json`. The private configuration uses the runner's
 existing authentication. `dream-worker --config /absolute/path/automation.json`
 is normally started by hooks; custom supervisors may run it directly.
+Status includes `ready`, `wait_reason`, an optional `next_eligible_at`, the watcher
+lease and the last result. `--reset-sessions` clears inspected abandoned session
+markers; it does not arm a review. See [scheduler troubleshooting](dreaming.md#inspect-settings-and-troubleshoot)
+for wait reasons, failure results and partial saves.
 
 ## Setup and repair
 

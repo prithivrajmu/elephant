@@ -10,7 +10,7 @@ The host agent supplies the semantic review. With idle scheduling enabled,
 Elephant launches a configured local reviewer using its existing authentication.
 It does not read transcripts or independently certify an agent's source checks.
 
-## Run through your agent
+## Quickstart: one review through your agent
 
 Ask your connected agent to run the `memory_dream` MCP prompt, or say:
 
@@ -37,6 +37,7 @@ The queue uses stable ID order, not relevance or an inference that a memory is
 wrong. It includes owned personal memories and the configured project's or
 conversation's private memories. Personal memories retain their original project
 metadata. It excludes team memories and other users. No changes is a valid pass.
+Report saved IDs, skipped IDs and unavailable evidence when the pass ends.
 
 Example commit (replace placeholders with actual returned values and evidence):
 
@@ -87,7 +88,7 @@ To retry skipped memories, start another pass without `after` and increase the
 budget, up to 64000 bytes. A `required_bytes` value above that maximum means the
 full memory cannot be reviewed through this bounded protocol.
 
-## Guarantees and limits
+## Lifecycle and guarantees
 
 - Preparation is read-only. No transcript capture or additional credential store is added.
 - Replacements go through normal validation, credential screening, writing checks
@@ -106,6 +107,10 @@ full memory cannot be reviewed through this bounded protocol.
 - Cloud sync v1 cannot retain dreaming provenance. Sync explicitly refuses scopes
   containing derived memories rather than upload them without lineage. Other
   scopes remain available; use local backup to preserve derived memories.
+
+Each replacement is atomic with retirement of its inputs. A pass with multiple
+replacements is not one transaction. A valid early save can remain if a later
+save is rejected. Review the reported saved IDs before retrying a failed pass.
 
 ## Automatic idle scheduling
 
@@ -179,6 +184,50 @@ machine restart, the next hook restarts it. The machine must be awake and the
 local runner available. Existing automatic hook installation supports macOS/Linux;
 Windows/custom harnesses must deliver the same validated hook events themselves.
 
+### Inspect settings and troubleshoot
+
+Run `elephant dream-schedule --root /path/to/project` in the same configuration
+used by the hooks. Settings live in `.elephant/automation.json`; state lives in
+the configured local SQLite store. `config: null` means idle dreaming has not
+been configured. Set `--enabled=true` to opt in.
+
+The JSON status separates eligibility from the watcher lease:
+
+| Field | Meaning |
+| --- | --- |
+| `ready` | The activity and timing gates permit an attempt now. |
+| `wait_reason` | The gate preventing an attempt, or `ready`. |
+| `next_eligible_at` | Earliest time allowed by the current timing gates, when known. New activity can move it. |
+| `watcher_running` | A watcher holds an unexpired lease; this does not prove a reviewer is running. |
+| `state.last_result` | Result of the last attempt or configuration change. |
+| `state.last_saved_ids` / `state.last_skipped` | Saved replacements and oversized inputs from the latest attempt. |
+
+Use `wait_reason` to choose the next step:
+
+| Reason | Action |
+| --- | --- |
+| `not_configured`, `disabled`, `automation_disabled` | Enable idle dreaming and normal automation if desired. |
+| `active_sessions` | Let tracked work finish. Inspect abandoned sessions before using `--reset-sessions`. |
+| `no_pending_activity` | Complete another foreground task. Enabling or resetting alone does not arm a pass. |
+| `idle_delay`, `cooldown`, `daily_limit` | Wait until `next_eligible_at`; the daily limit resets at UTC midnight. |
+| `ready` | A live watcher can attempt the next page on its next poll. |
+
+`next_eligible_at` is omitted when ready, disabled, unconfigured, active, or
+without pending activity. It accounts for the latest of idle delay, cooldown
+and the daily cap. It is not a promise that a reviewer will start at that time.
+If eligible with no live watcher, the next normal hook restarts it after an
+expired lease. A custom supervisor can run `dream-worker --config` directly.
+
+For `runner_failed`, check that the configured executable exists and its login
+works. For `invalid_output`, check the adapter's JSON contract and replacement
+validation. A timeout or foreground activity can produce `cancelled`.
+`prepare_failed` means the batch could not be prepared; confirm the backend
+supports dreaming and the store is accessible. `commit_rejected` means a save
+failed a current revision, policy, duplicate or activity check. Obtain a fresh
+batch before a manual retry. Failures consume an attempt and retain the cursor.
+Runner diagnostics are deliberately discarded; status does not include a raw
+error log. `last_saved_ids` can be nonempty after a later save fails.
+
 ### Other local runners
 
 Use `--runner-command runner.json` for a trusted executable argument array, e.g.
@@ -186,6 +235,10 @@ Use `--runner-command runner.json` for a trusted executable argument array, e.g.
 directly, without a shell. The process receives JSON on stdin containing
 `instructions`, `batch`, and `output_schema`; it must print one conforming JSON
 object to stdout. Adapters must enforce their own read-only tool permissions.
+All required fields must be present with the specified types. Unknown fields,
+duplicate keys, null values and trailing JSON are rejected.
+Output is limited to 256 KiB. Malformed or excessive output records
+`invalid_output` and saves no replacements.
 Return `{"replacements":[]}` when no change is justified. Each replacement has
 `kind`, `checks`, `incident`, `lesson`, and `source`; checks use the same fields as
 the interactive protocol above. Identity, scope, applicability and classification
@@ -203,3 +256,18 @@ can still leave earlier valid saves in place; `last_saved_ids` reports them.
 Scheduler tests use deterministic fake reviewers and real subprocess fixtures;
 they do not spend model credits. Benchmark improvement remains unmeasured:
 correctness contracts test the lifecycle, not model judgment or downstream accuracy.
+
+## Further improvements (unimplemented)
+
+These are evaluation and implementation opportunities, not current guarantees:
+
+| Opportunity | Evidence required before claiming an improvement |
+| --- | --- |
+| Measure reviewer quality and cost | A fixed source-backed corpus, a no-dreaming baseline, blinded checks of corrections, downstream task results, latency and provider usage. Include unavailable and contradictory sources. |
+| Prioritize useful review candidates | Compare a proposed queue with stable ID order at equal budgets. Check coverage, starvation, inappropriate replacements and downstream usefulness. |
+| Review memories larger than 64000 bytes | Design source-preserving chunking or a separate review path. Prove that omitted context cannot silently change applicability and that revisions still protect the full input. |
+| Preserve lineage through cloud storage and sync | Add a versioned backend protocol, migrations and round-trip tests for checks, revisions, retirement and retry behavior. Do not remove the current sync refusal without them. |
+| Support more local reviewer adapters | Verify isolation, output handling, cancellation and real host authentication for each adapter. Fake subprocess tests alone do not prove provider behavior. |
+
+Keep this guide aligned with `dream.go`, `dream_idle.go`, `dream_runner.go` and
+their tests when these contracts change.
