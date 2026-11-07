@@ -9,6 +9,11 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ### Fixed
 
+- The command reviewer now enforces its 256 KiB stdout limit during subprocess
+  copying. An inherited buffer method previously bypassed the bounded writer.
+- Idle reviewer output must match the JSON contract exactly. Duplicate keys,
+  case-mismatched fields, nulls and malformed results are rejected and reported
+  as `invalid_output`, without retaining raw diagnostics.
 - Dreaming reports oversized memories in a bounded skip list and continues the
   queue. Idle status keeps their IDs and byte requirements. Pages containing only
   skipped memories advance without launching a reviewer.
@@ -18,6 +23,10 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ### Added
 
+- Dream schedule status explains eligibility with `ready`, `wait_reason`, and
+  `next_eligible_at` when only timing gates remain. The estimate accounts for
+  idle delay, cooldown and the UTC daily cap. The dreaming guide covers status
+  troubleshooting and further improvements with explicit evidence requirements.
 - Opt-in automatic idle dreaming through existing hooks: a single leased watcher,
   persisted activity/session tracking, quiet period, cooldown, daily run cap,
   reviewer timeout and cancellation on resumed work. A read-only Codex adapter

@@ -64,13 +64,22 @@ with tempfile.TemporaryDirectory(prefix="elephant-idle-") as tmp:
         cli("remember", body={"class": "lesson", "incident": "SYNTHETIC idle review",
                               "lesson": "Check the pool limit.", "source": "SYNTHETIC test"})
         cli("dream-schedule", "--enabled=true", "--runner-command", str(runner_file))
-        wait_status(lambda s: s["watcher_running"])
+        configured = wait_status(lambda s: s["watcher_running"])
+        assert not configured["ready"] and configured["wait_reason"] == "no_pending_activity"
+        assert "next_eligible_at" not in configured
         assert not marker.exists(), "configuration alone launched a model review"
         for event in ["UserPromptSubmit", "Stop"]:
             cli("hook", "--config", str(config_path), "--agent", "codex", body={
                 "hook_event_name": event, "session_id": "acceptance-session",
                 "cwd": str(root), "prompt": "Inspect the pool limit",
             })
+            status = cli("dream-schedule")
+            assert not status["ready"]
+            if event == "UserPromptSubmit":
+                assert status["wait_reason"] == "active_sessions"
+                assert "next_eligible_at" not in status
+            else:
+                assert status["wait_reason"] == "idle_delay" and status["next_eligible_at"]
         # Advance persisted activity time instead of making CI wait ten minutes.
         with closing(sqlite3.connect(store, timeout=10)) as db, db:
             db.execute("BEGIN IMMEDIATE")
@@ -84,8 +93,12 @@ with tempfile.TemporaryDirectory(prefix="elephant-idle-") as tmp:
         assert marker.exists() and status["state"]["attempts_today"] == 1
         assert status["state"]["reviewed_generation"] == status["state"]["generation"]
         assert not status["state"].get("last_saved_ids")
+        assert not status["ready"] and status["wait_reason"] == "no_pending_activity"
+        assert "next_eligible_at" not in status
     finally:
         cli("dream-schedule", "--enabled=false")
-        wait_status(lambda s: not s["watcher_running"])
+        paused = wait_status(lambda s: not s["watcher_running"])
+        assert not paused["ready"] and paused["wait_reason"] == "disabled"
+        assert "next_eligible_at" not in paused
 
 print("Detached idle watcher, hook activity, bounded reviewer protocol, no-change receipt and pause passed.")
