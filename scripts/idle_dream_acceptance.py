@@ -1,5 +1,6 @@
 """Exercise detached idle scheduling with a synthetic local reviewer; no model calls."""
 import datetime
+from contextlib import closing
 import json
 import pathlib
 import shutil
@@ -71,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix="elephant-idle-") as tmp:
                 "cwd": str(root), "prompt": "Inspect the pool limit",
             })
         # Advance persisted activity time instead of making CI wait ten minutes.
-        with sqlite3.connect(store, timeout=10) as db:
+        with closing(sqlite3.connect(store, timeout=10)) as db, db:
             db.execute("BEGIN IMMEDIATE")
             key, data = db.execute("SELECT context,data FROM dream_idle").fetchone()
             state = json.loads(data)
