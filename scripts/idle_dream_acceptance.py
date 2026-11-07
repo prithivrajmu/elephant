@@ -16,7 +16,10 @@ with tempfile.TemporaryDirectory(prefix="elephant-idle-") as tmp:
     # Go exec resolves Windows executables through PATHEXT; match release names.
     if sys.platform == "win32" and pathlib.Path(binary).suffix.lower() != ".exe":
         packaged_binary = root / "elephant-test.exe"
-        shutil.copyfile(binary, packaged_binary)
+        source_binary = pathlib.Path(binary)
+        if not source_binary.is_file():
+            source_binary = pathlib.Path(binary + ".exe")
+        shutil.copyfile(source_binary, packaged_binary)
         binary = str(packaged_binary)
     store = root / "memory.sqlite"
     config_path = root / ".elephant" / "automation.json"
