@@ -120,6 +120,15 @@ func ConfigureIdleDream(path string, config IdleDreamConfig, reset bool) (IdleDr
 	if err != nil {
 		return IdleDreamStatus{}, err
 	}
+	unlock, err := lockIdleConfiguration(c.Root)
+	if err != nil {
+		return IdleDreamStatus{}, err
+	}
+	defer unlock()
+	c, err = ReadAutomation(path)
+	if err != nil {
+		return IdleDreamStatus{}, err
+	}
 	if err = config.validate(); err != nil {
 		return IdleDreamStatus{}, err
 	}
@@ -161,6 +170,15 @@ func ConfigureIdleDream(path string, config IdleDreamConfig, reset bool) (IdleDr
 		}
 	}
 	return DreamScheduleStatus(path)
+}
+
+// Share InitAutomation's lock so a concurrent init cannot restore paused state.
+func lockIdleConfiguration(root string) (func(), error) {
+	path := filepath.Join(root, ".elephant", "init.lock")
+	if err := os.Mkdir(path, 0700); err != nil {
+		return nil, fmt.Errorf("Elephant configuration is already being updated: %w", err)
+	}
+	return func() { _ = os.Remove(path) }, nil
 }
 
 func DreamScheduleStatus(path string) (IdleDreamStatus, error) {

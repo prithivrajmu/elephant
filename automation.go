@@ -538,6 +538,15 @@ func Automation(root string, enabled *bool) (AutomationStatus, error) {
 		return AutomationStatus{}, e
 	}
 	if enabled != nil {
+		unlock, err := lockIdleConfiguration(c.Root)
+		if err != nil {
+			return AutomationStatus{}, err
+		}
+		defer unlock()
+		c, e = ReadAutomation(p)
+		if e != nil {
+			return AutomationStatus{}, e
+		}
 		c.Enabled = *enabled
 		b, _ := json.MarshalIndent(c, "", "  ")
 		if e = atomicLocalFile(p, append(b, '\n'), 0600); e != nil {

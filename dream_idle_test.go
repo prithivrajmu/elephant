@@ -16,6 +16,11 @@ import (
 func idleFixture(t *testing.T) (AutomationConfig, string, Memory, string) {
 	t.Helper()
 	s, m := dreamFixture(t)
+	root, err := filepath.EvalSymlinks(s.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Root = root
 	binary, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -354,6 +359,28 @@ func TestIdleConfigurationPauseAndReset(t *testing.T) {
 	settings.Runner = []string{filepath.Join(t.TempDir(), "missing-runner")}
 	if _, err := ConfigureIdleDream(path, settings, false); err == nil {
 		t.Fatal("missing runner accepted")
+	}
+}
+
+func TestIdleConfigurationUsesTheInitializationLock(t *testing.T) {
+	c, path, _, _ := idleFixture(t)
+	lock := filepath.Join(c.Root, ".elephant", "init.lock")
+	if err := os.Mkdir(lock, 0700); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(lock)
+	settings := *c.IdleDream
+	settings.Enabled = false
+	if _, err := ConfigureIdleDream(path, settings, false); err == nil {
+		t.Fatal("idle settings bypassed an active initializer")
+	}
+	paused := false
+	if _, err := Automation(c.Root, &paused); err == nil {
+		t.Fatal("automation pause bypassed an active initializer")
+	}
+	current, _ := ReadAutomation(path)
+	if !current.Enabled || !current.IdleDream.Enabled {
+		t.Fatal("contended configuration was overwritten")
 	}
 }
 
