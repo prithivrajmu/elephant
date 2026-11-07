@@ -6,8 +6,9 @@ existing tools, and saves a correction or consolidates compatible lessons.
 
 Inspired by [Anthropic's components of agent memory](https://www.anthropic.com/research/components-of-agent-memory).
 Elephant supplies storage, isolation, budgets, lineage and atomic replacement.
-The host agent supplies the semantic review. Elephant does not launch a model,
-read transcripts, fetch source URLs, or independently certify an agent's checks.
+The host agent supplies the semantic review. With idle scheduling enabled,
+Elephant launches a configured local reviewer using its existing authentication.
+It does not read transcripts or independently certify an agent's source checks.
 
 ## Run through your agent
 
@@ -79,7 +80,7 @@ fit. If one whole memory cannot fit, increase the budget, up to 64000 bytes.
 
 ## Guarantees and limits
 
-- Preparation is read-only. No transcript capture or model credentials are added.
+- Preparation is read-only. No transcript capture or additional credential store is added.
 - Replacements go through normal validation, credential screening, writing checks
   and duplicate admission. All input revisions are checked in the same SQLite
   transaction as the save and retirement. A failed save leaves all inputs intact.
@@ -97,8 +98,88 @@ fit. If one whole memory cannot fit, increase the budget, up to 64000 bytes.
   containing derived memories rather than upload them without lineage. Other
   scopes remain available; use local backup to preserve derived memories.
 
-This release provides an explicit host-driven pass. It does not install an idle
-daemon, schedule recurring model calls, or automatically run on Stop hooks. A
-host may invoke it between sessions within its own execution and spending budget.
-Benchmark improvement remains unmeasured; correctness contracts test the lifecycle,
-not model judgment or downstream task accuracy.
+## Automatic idle scheduling
+
+After installing and trusting Elephant's normal hooks (`elephant init`), enable
+the local scheduler on the computer that runs your coding agents:
+
+```sh
+elephant dream-schedule --enabled=true
+elephant dream-schedule                    # inspect settings, activity and last result
+elephant dream-schedule --enabled=false    # pause and cancel the current review
+```
+
+The default reviewer is an installed, logged-in Codex CLI. Automatic reviews use
+that login and may consume its usage allowance. Elephant does not install or log
+in to a provider. Use a native executable path with `--runner /path/to/codex` if
+the CLI is not on PATH. The Codex adapter uses a fresh non-interactive read-only
+session, disables inherited MCP servers and hooks, and requests a structured
+proposal. It never gives the reviewer a memory-write interface. The parent
+Elephant process alone validates and saves proposals.
+See the official [Codex non-interactive guide](https://developers.openai.com/codex/noninteractive/)
+for runner login and execution behavior. Unsupported/older CLI flags fail the run
+and receive the same cooldown as other runner failures.
+
+Default limits:
+
+| Setting | Default |
+| --- | --- |
+| Quiet period after all tracked sessions stop | 10 minutes |
+| Minimum interval between attempts, including failures | 6 hours |
+| Maximum attempts per UTC day per project/identity context | 4 |
+| Reviewer timeout | 2 minutes |
+| Memory batch size | 10 memories / 16000 bytes of compact batch JSON |
+| Replacements per pass | 3 |
+
+These bound run frequency, elapsed time and submitted memory. They are not an
+exact token or currency cap; provider-side budgets remain authoritative.
+
+```sh
+elephant dream-schedule --enabled=true --idle 15m --cooldown 8h \
+  --timeout 90s --max-runs 3 --budget 12000 --limit 8 --max-changes 2
+```
+
+Hooks start a detached watcher automatically. One persisted, renewable lease per
+context prevents overlapping runs, including after restart. It checks activity
+every five seconds while waiting and every second during a review. A new prompt,
+tool call or session start cancels the reviewer process tree. Each save also
+checks activity and configuration inside SQLite's memory-write transaction, so
+a late proposal cannot overwrite foreground work. Results saved before activity
+resumes remain valid; later proposals are rejected.
+
+No run starts until hooks have observed activity followed by all active sessions
+stopping. A long-running background task or blocked lesson review keeps its
+session active. A session that crashes without a Stop stays active, rather than
+being declared idle from silence. After inspecting abandoned sessions, clear
+their markers explicitly with `--reset-sessions`; this reset itself does not
+schedule a review. The next completed task re-arms the queue.
+
+Successful/no-change passes process one page and wait for new foreground work.
+The cursor is persisted so later passes can review the rest. Failures retain the
+cursor and retry only after the cooldown, subject to the daily cap. Run counters,
+last result, saved IDs, and metadata-only `DreamIdle` receipts persist locally.
+Prompts, transcripts, runner diagnostics and credentials are not put in receipts.
+`elephant automation --enabled=false` also pauses idle reviews. `elephant init`
+preserves scheduler settings, and normal hooks restart a crashed watcher after
+its 30-second lease expires. No OS service or cron entry is installed: after a
+machine restart, the next hook restarts it. The machine must be awake and the
+local runner available. Existing automatic hook installation supports macOS/Linux;
+Windows/custom harnesses must deliver the same validated hook events themselves.
+
+### Other local runners
+
+Use `--runner-command runner.json` for a trusted executable argument array, e.g.
+`["/absolute/path/to/reviewer", "--read-only"]`. Elephant invokes the array
+directly, without a shell. The process receives JSON on stdin containing
+`instructions`, `batch`, and `output_schema`; it must print one conforming JSON
+object to stdout. Adapters must enforce their own read-only tool permissions.
+Return `{"replacements":[]}` when no change is justified. Each replacement has
+`kind`, `checks`, `incident`, `lesson`, and `source`; checks use the same fields as
+the interactive protocol above. Identity, scope, applicability and classification
+are copied locally from the first input; all other inputs must be compatible.
+Only memories in the prepared batch can be replaced. Commands are private local
+configuration, never executable content loaded from memories or an MCP argument.
+
+Scheduler tests use deterministic fake reviewers and real subprocess fixtures;
+they do not spend model credits. Benchmark improvement remains unmeasured:
+correctness contracts test the lifecycle, not model judgment or downstream accuracy.

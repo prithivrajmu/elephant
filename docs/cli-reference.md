@@ -8,6 +8,14 @@ saves a checked correction or consolidation. Both accept the usual identity,
 store, root, project and conversation flags. Continue pages with `--after`.
 See [Dreaming](dreaming.md) for source checks, revision checks and limits.
 
+Enable idle reviews with `elephant dream-schedule --enabled=true` after installing
+hooks. Run `elephant dream-schedule` to inspect status, or `--enabled=false` to
+pause. Options include `--idle 10m`, `--cooldown 6h`, `--timeout 2m`, `--max-runs 4`,
+`--budget 16000`, `--limit 10`, `--max-changes 3`, `--runner /path/to/codex`, and
+`--runner-command runner.json`. The private configuration uses the runner's
+existing authentication. `dream-worker --config /absolute/path/automation.json`
+is normally started by hooks; custom supervisors may run it directly.
+
 ## Setup and repair
 
 ```sh

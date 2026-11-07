@@ -23,17 +23,18 @@ const reviewPrefix = "Elephant automatic memory review:"
 
 // AutomationConfig is local installation state, not a shared project manifest.
 type AutomationConfig struct {
-	Version      int      `json:"version"`
-	Enabled      bool     `json:"enabled"`
-	Root         string   `json:"root"`
-	Project      string   `json:"project"`
-	Conversation string   `json:"conversation,omitempty"`
-	Unattached   bool     `json:"unattached,omitempty"`
-	Store        string   `json:"store"`
-	Identity     Identity `json:"identity"`
-	Binary       string   `json:"binary"`
-	Budget       int      `json:"byte_budget"`
-	Agents       []string `json:"agents"`
+	Version      int              `json:"version"`
+	Enabled      bool             `json:"enabled"`
+	Root         string           `json:"root"`
+	Project      string           `json:"project"`
+	Conversation string           `json:"conversation,omitempty"`
+	Unattached   bool             `json:"unattached,omitempty"`
+	Store        string           `json:"store"`
+	Identity     Identity         `json:"identity"`
+	Binary       string           `json:"binary"`
+	Budget       int              `json:"byte_budget"`
+	Agents       []string         `json:"agents"`
+	IdleDream    *IdleDreamConfig `json:"idle_dream,omitempty"`
 }
 
 func automationPath(root string) string { return filepath.Join(root, ".elephant", "automation.json") }
@@ -54,6 +55,11 @@ func ReadAutomation(path string) (AutomationConfig, error) {
 	}
 	if c.Version != 1 || !filepath.IsAbs(c.Root) || !filepath.IsAbs(c.Store) || !filepath.IsAbs(c.Binary) || c.Identity.Tenant == "" || c.Identity.User == "" || c.Budget < 512 || c.Budget > 64000 {
 		return c, fmt.Errorf("invalid Elephant automation config")
+	}
+	if c.IdleDream != nil {
+		if err = c.IdleDream.validate(); err != nil {
+			return c, err
+		}
 	}
 	return c, nil
 }
@@ -151,6 +157,7 @@ func InitAutomation(s Service, binary, agent string, budget int) (InitResult, er
 			return r, e
 		}
 		// Keep already installed adapters when enabling another one.
+		c.IdleDream = previous.IdleDream
 		for _, a := range previous.Agents {
 			if !containsString(c.Agents, a) {
 				c.Agents = append(c.Agents, a)

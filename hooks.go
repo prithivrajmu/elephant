@@ -82,8 +82,11 @@ func validLabel(s string) bool {
 
 // RunHook implements the common command-hook contract. It neither reads host
 // transcripts nor invokes another model. The host agent performs semantic review.
-func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) {
-	out := map[string]any{}
+func RunHook(configPath, agent string, input io.Reader) (out map[string]any, err error) {
+	out = map[string]any{}
+	if isDreamRunner() {
+		return out, nil
+	}
 	c, err := ReadAutomation(configPath)
 	if err != nil {
 		return out, err
@@ -133,6 +136,11 @@ func RunHook(configPath, agent string, input io.Reader) (map[string]any, error) 
 	svc := c.Service()
 	sessionKeyBytes, _ := json.Marshal([]string{c.Identity.Tenant, c.Identity.User, c.Project, agent, h.Session})
 	sessionKey := digest(string(sessionKeyBytes))
+	defer func() {
+		if err == nil {
+			err = notifyIdleDream(c, configPath, sessionKey, h, out)
+		}
+	}()
 	x := Experience{ID: newID(), Identity: c.Identity, Project: c.Project, Agent: agent, Session: sessionKey, Event: h.Event, Status: "received", At: time.Now().UTC()}
 	statePath := c.Store + ".sessions/" + sessionKey + ".json"
 	switch h.Event {

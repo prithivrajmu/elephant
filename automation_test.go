@@ -421,3 +421,25 @@ func TestHooksShowOneLineStatus(t *testing.T) {
 		t.Fatal("singular form")
 	}
 }
+
+func TestInitPreservesIdleDreamSettings(t *testing.T) {
+	s, path, binary := autoFixture(t)
+	c, err := ReadAutomation(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings := DefaultIdleDreamConfig()
+	settings.Enabled = false
+	c.IdleDream = &settings
+	b, _ := json.Marshal(c)
+	if err = os.WriteFile(path, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = InitAutomation(s, binary, "both", 4000); err != nil {
+		t.Fatal(err)
+	}
+	next, err := ReadAutomation(path)
+	if err != nil || next.IdleDream == nil || next.IdleDream.Enabled || next.IdleDream.IdleSeconds != settings.IdleSeconds {
+		t.Fatalf("init replaced idle settings: %+v %v", next.IdleDream, err)
+	}
+}

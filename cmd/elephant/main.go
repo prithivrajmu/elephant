@@ -2,13 +2,16 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	memory "github.com/prithivrajmu/elephant"
@@ -22,7 +25,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|dream|dream-commit|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore|sync|team-submit|team-pull> [flags]; see docs/quickstart.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|dream|dream-commit|dream-schedule|dream-worker|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore|sync|team-submit|team-pull> [flags]; see docs/quickstart.md")
 	}
 	command := os.Args[1]
 	if command == "version" {
@@ -30,7 +33,7 @@ func run() error {
 		return nil
 	}
 	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: sync, team-submit, team-pull, version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, dream, dream-commit, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
+		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: sync, team-submit, team-pull, version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, dream, dream-commit, dream-schedule, dream-worker, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
 		return nil
 	}
 	originalCommand := command
@@ -72,6 +75,14 @@ func run() error {
 	budget := f.Int("budget", 4000, "hard context byte budget")
 	limit := f.Int("limit", 6, "max lessons")
 	after := f.String("after", "", "dream: continue after this memory ID")
+	idleDelay := f.Duration("idle", 10*time.Minute, "dream-schedule: quiet period after all sessions stop")
+	idleCooldown := f.Duration("cooldown", 6*time.Hour, "dream-schedule: minimum interval between attempts")
+	idleTimeout := f.Duration("timeout", 2*time.Minute, "dream-schedule: maximum runner time")
+	idleMaxRuns := f.Int("max-runs", 4, "dream-schedule: maximum attempts per UTC day")
+	idleMaxChanges := f.Int("max-changes", 3, "dream-schedule: maximum replacements per pass")
+	idleRunner := f.String("runner", "codex", "dream-schedule: codex executable")
+	idleCommand := f.String("runner-command", "", "dream-schedule: JSON file containing a trusted command argument array")
+	idleReset := f.Bool("reset-sessions", false, "dream-schedule: clear abandoned active-session markers")
 	file := f.String("file", "-", "input/output JSON path, - for stdio")
 	id := f.String("id", "", "memory ID")
 	feedbackID := f.String("feedback-id", "", "stable task/run ID")
@@ -139,6 +150,14 @@ func run() error {
 	}
 	if resolved, e := filepath.EvalSymlinks(abs); e == nil {
 		abs = resolved
+	}
+	if command == "dream-worker" {
+		if *configPath == "" {
+			*configPath = filepath.Join(abs, ".elephant", "automation.json")
+		}
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return memory.WatchIdleDream(ctx, *configPath)
 	}
 	if c, found, e := memory.ConfigForRoot(abs); e != nil {
 		return e
@@ -210,6 +229,78 @@ func run() error {
 		return data, e
 	}
 	switch command {
+	case "dream-schedule":
+		path := *configPath
+		if path == "" {
+			path = filepath.Join(abs, ".elephant", "automation.json")
+		}
+		config, e := memory.ReadAutomation(path)
+		if e != nil {
+			return e
+		}
+		settings := memory.DefaultIdleDreamConfig()
+		if config.IdleDream != nil {
+			settings = *config.IdleDream
+		}
+		changed := false
+		for _, name := range []string{"enabled", "idle", "cooldown", "timeout", "max-runs", "max-changes", "runner", "runner-command", "budget", "limit", "reset-sessions"} {
+			changed = changed || seenFlags[name]
+		}
+		if !changed {
+			r, e := memory.DreamScheduleStatus(path)
+			if e != nil {
+				return e
+			}
+			return printJSON(r)
+		}
+		if seenFlags["enabled"] {
+			settings.Enabled = *enabled
+		}
+		if seenFlags["idle"] {
+			settings.IdleSeconds = int(idleDelay.Seconds())
+		}
+		if seenFlags["cooldown"] {
+			settings.CooldownSeconds = int(idleCooldown.Seconds())
+		}
+		if seenFlags["timeout"] {
+			settings.TimeoutSeconds = int(idleTimeout.Seconds())
+		}
+		if seenFlags["max-runs"] {
+			settings.MaxRunsPerDay = *idleMaxRuns
+		}
+		if seenFlags["max-changes"] {
+			settings.MaxChanges = *idleMaxChanges
+		}
+		if seenFlags["budget"] {
+			settings.ByteBudget = *budget
+		}
+		if seenFlags["limit"] {
+			settings.Limit = *limit
+		}
+		if seenFlags["runner"] {
+			settings.Adapter, settings.Runner = "codex", []string{*idleRunner}
+		}
+		if seenFlags["runner-command"] {
+			if seenFlags["runner"] {
+				return fmt.Errorf("choose runner or runner-command")
+			}
+			b, e := os.ReadFile(*idleCommand)
+			if e != nil {
+				return e
+			}
+			if len(b) > 32768 {
+				return fmt.Errorf("runner command file too large")
+			}
+			if e = json.Unmarshal(b, &settings.Runner); e != nil {
+				return e
+			}
+			settings.Adapter = "command"
+		}
+		r, e := memory.ConfigureIdleDream(path, settings, *idleReset)
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
 	case "dream":
 		r, e := svc.Store.Dream(svc.Identity, svc.Project, svc.Conversation, memory.DreamRequest{ByteBudget: *budget, Limit: *limit, After: *after})
 		if e != nil {

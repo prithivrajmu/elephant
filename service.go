@@ -15,6 +15,7 @@ type Service struct {
 	Conversation string
 	Unattached   bool
 	Task         *TaskCapture
+	idleGuard    *idleCommitGuard
 }
 
 func (s Service) Profile() (Profile, error) {
@@ -76,6 +77,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 		m.Tenant = s.Identity.Tenant
 		m.Owner = s.Identity.User
 		m.Team = s.Identity.Team
+		m.idleGuard = s.idleGuard
 		if name == "commit_dream" {
 			// A backend must support both halves; never silently commit to a
 			// local store when a remote backend is configured.

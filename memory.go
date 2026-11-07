@@ -55,6 +55,8 @@ type Memory struct {
 	DistinctFrom []string `json:"distinct_from,omitempty"`
 	// Dream links a derived lesson to the checked revisions of its inputs.
 	Dream *DreamProvenance `json:"dream,omitempty"`
+	// idleGuard is trusted in-process context and never enters the journal.
+	idleGuard *idleCommitGuard
 }
 type Request struct {
 	Profile         Profile             `json:"profile"`
