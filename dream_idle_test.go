@@ -240,6 +240,41 @@ func TestIdleTracksAllSessionsAndIgnoresWorkerHooks(t *testing.T) {
 	}
 }
 
+func TestIdleHookWaitsForBlockedReviewToFinish(t *testing.T) {
+	c, path, _, _ := idleFixture(t) // The fixture's lease prevents detached startup.
+	call := func(event string, extra map[string]any) map[string]any {
+		t.Helper()
+		h := map[string]any{"hook_event_name": event, "session_id": "foreground", "cwd": c.Root}
+		for key, value := range extra {
+			h[key] = value
+		}
+		b, _ := json.Marshal(h)
+		out, err := RunHook(path, "codex", strings.NewReader(string(b)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	call("UserPromptSubmit", map[string]any{"prompt": "Check the pool limit"})
+	call("PostToolUse", map[string]any{"tool_name": "Edit", "tool_use_id": "edit-one"})
+	if out := call("Stop", nil); out["decision"] != "block" {
+		t.Fatal("lesson review did not block Stop")
+	}
+	status, _ := DreamScheduleStatus(path)
+	if len(status.State.Active) != 1 {
+		t.Fatal("blocked review declared idle")
+	}
+	b, _ := json.Marshal([]string{c.Identity.Tenant, c.Identity.User, c.Project, "codex", "foreground"})
+	if _, err := TaskSummary(path, digest(string(b)), true); err != nil {
+		t.Fatal(err)
+	}
+	call("Stop", map[string]any{"stop_hook_active": true})
+	status, _ = DreamScheduleStatus(path)
+	if len(status.State.Active) != 0 {
+		t.Fatal("completed review remained active")
+	}
+}
+
 func TestIdleProposalCannotEscapePreparedBatch(t *testing.T) {
 	_, _, m, _ := idleFixture(t)
 	p := idleProposal(m)

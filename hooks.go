@@ -80,8 +80,8 @@ func validLabel(s string) bool {
 	return true
 }
 
-// RunHook implements the common command-hook contract. It neither reads host
-// transcripts nor invokes another model. The host agent performs semantic review.
+// RunHook captures bounded metadata and may wake an opted-in idle watcher. It
+// never reads host transcripts or performs semantic review in the foreground.
 func RunHook(configPath, agent string, input io.Reader) (out map[string]any, err error) {
 	out = map[string]any{}
 	if isDreamRunner() {
@@ -137,8 +137,12 @@ func RunHook(configPath, agent string, input io.Reader) (out map[string]any, err
 	sessionKeyBytes, _ := json.Marshal([]string{c.Identity.Tenant, c.Identity.User, c.Project, agent, h.Session})
 	sessionKey := digest(string(sessionKeyBytes))
 	defer func() {
-		if err == nil {
-			err = notifyIdleDream(c, configPath, sessionKey, h, out)
+		activity := h
+		if err != nil {
+			activity.Event = "PostToolUseFailure" // Failed foreground hooks never imply idle.
+		}
+		if e := notifyIdleDream(c, configPath, sessionKey, activity, out); err == nil {
+			err = e
 		}
 	}()
 	x := Experience{ID: newID(), Identity: c.Identity, Project: c.Project, Agent: agent, Session: sessionKey, Event: h.Event, Status: "received", At: time.Now().UTC()}
