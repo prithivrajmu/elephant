@@ -69,6 +69,7 @@ jobs:
         shell: bash
         run: |
           set -eu
+          gofmt -d .
           test -z "$(gofmt -l .)"
           go mod verify
           go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
