@@ -1,10 +1,5 @@
 # Elephant
 
-Dreaming is available as a bounded, source-checked review between tasks. Use
-`elephant dream` or the `memory_dream` MCP prompt to prepare a pass, then
-`commit_dream` to save corrections or consolidate compatible private lessons.
-See [Dreaming](docs/dreaming.md) for the protocol and limits.
-
 Persistent experience for coding agents.
 
 > **Status: closed beta.** Elephant is a pre-1.0 project. See [Status: Beta](#status-beta) for known limitations before you rely on it.
@@ -12,6 +7,8 @@ Persistent experience for coding agents.
 Elephant stores source-backed lessons from development work and recalls relevant experience for the next task. A local Go binary provides automatic Codex and Claude Code hooks, an MCP server, a JSON CLI, and the Memory Palace dashboard.
 
 ## Features
+
+- [Dreaming](docs/dreaming.md) between tasks: bounded source review, corrections and consolidation through the connected agent.
 
 - Relevant recall within a configurable context budget, using task terms, project signals, and applicability conditions.
 - Personal, project, conversation, and reviewed team memory scopes.

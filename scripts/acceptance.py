@@ -95,5 +95,21 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     assert cli('map')['trails']
     assert cli('status')['language']['target_percent']==100
     assert cli('stats')['memories']==22
-    print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
+    # Exercise dreaming across MCP preparation/commit and a CLI retry.
+    dream_args=['--unattached','--conversation','session-1','--store',str(root/'dream.sqlite'),'--tenant','test','--user','alice']
+    dreamer=Client(dream_args)
+    try:
+        original=json.loads(dreamer.tool('record_memory',{'class':'lesson','incident':'SYNTHETIC pool review','lesson':'Check the pool limit.','source':'SYNTHETIC original test'}))
+        batch=json.loads(dreamer.tool('dream_memory',{'byte_budget':16000,'limit':10}))
+        assert len(batch['candidates'])==1 and batch['candidates'][0]['memory']['id']==original['id']
+        replacement={k:original[k] for k in ('scope','project','features')}
+        replacement.update({'conversation':original.get('conversation',''),'class':'lesson','incident':'SYNTHETIC checked pool review','lesson':'Limit active queries to the pool size.','source':'SYNTHETIC checked pool test','dream':{'kind':'correct','checks':[{'id':original['id'],'revision':batch['candidates'][0]['revision'],'source':'SYNTHETIC checked pool test','observation':'The bounded query test passed.'}]}})
+        derived=json.loads(dreamer.tool('commit_dream',replacement))
+        assert derived['supersedes']==[original['id']] and derived['helpful']==0
+        retry=subprocess.run([BINARY,'dream-commit',*dream_args],input=json.dumps(replacement),text=True,capture_output=True,check=True)
+        assert json.loads(retry.stdout)['id']==derived['id']
+        page=json.loads(subprocess.check_output([BINARY,'dream',*dream_args,'--budget','16000'],text=True))
+        assert [c['memory']['id'] for c in page['candidates']]==[derived['id']]
+    finally:dreamer.close()
+    print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'dreaming_mcp_and_cli':True,'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
 
