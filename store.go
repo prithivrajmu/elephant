@@ -165,6 +165,9 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 	m.Created = time.Now().UTC()
 	m.Updated = m.Created
 	err := s.transactSQL(false, nil, func(tx *sql.Tx, _ []Memory, _ map[string]bool) (*Event, error) {
+		if e := validateIdleCommit(tx, m.idleGuard); e != nil {
+			return nil, e
+		}
 		policy, e := s.LanguagePolicy()
 		if e != nil {
 			return nil, e
@@ -198,6 +201,9 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 				}
 				return nil, nil
 			}
+		}
+		if e := validateDreamInputs(m, all); e != nil {
+			return nil, e
 		}
 		if m.Scope != "team" { // sharing a lesson with the team is not a duplicate
 			author := Identity{Tenant: m.Tenant, User: m.Owner}

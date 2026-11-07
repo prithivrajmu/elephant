@@ -227,6 +227,11 @@ func (s Store) SyncCloud(id Identity, o CloudSyncOptions) (CloudSyncResult, erro
 	if len(scopes) == 0 {
 		return result, fmt.Errorf("explicit --sync-scopes required")
 	}
+	// The v1 hosted wire format cannot retain dream provenance. Fail before
+	// any remote calls instead of silently flattening a derived lesson.
+	if err := s.checkDreamSync(id, scopes); err != nil {
+		return result, err
+	}
 	o.Scopes = nil
 	for v := range scopes {
 		o.Scopes = append(o.Scopes, v)
@@ -491,6 +496,11 @@ func (s Store) snapshotCloudOutbox(id Identity, o CloudSyncOptions, connection s
 		all, e := readOwnedSyncMemories(tx, id)
 		if e != nil {
 			return nil, e
+		}
+		for _, m := range all {
+			if scopes[m.Scope] && m.Dream != nil {
+				return nil, fmt.Errorf("cloud sync does not yet support dream provenance; use local backup for these scopes")
+			}
 		}
 		for _, m := range all {
 			if !scopes[m.Scope] {

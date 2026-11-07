@@ -8,6 +8,9 @@ Elephant stores source-backed lessons from development work and recalls relevant
 
 ## Features
 
+- [Dreaming](docs/dreaming.md) between tasks: bounded source review, corrections and consolidation through the connected agent.
+- Opt-in idle dreaming: automatic quiet-period reviews with cooldown, daily limits and cancellation when work resumes (`elephant dream-schedule --enabled=true`).
+
 - Relevant recall within a configurable context budget, using task terms, project signals, and applicability conditions.
 - Personal, project, conversation, and reviewed team memory scopes.
 - Automatic task hooks with evidence-based lesson review and a factual one-line status.
@@ -120,3 +123,4 @@ Bug reports and pull requests are welcome. Source builds require Go 1.25 or late
 ## License
 
 [MIT](LICENSE).
+

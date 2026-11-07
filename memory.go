@@ -53,6 +53,10 @@ type Memory struct {
 	Supersedes []string `json:"supersedes,omitempty"`
 	// DistinctFrom is input only: saved lessons the author checked and found different.
 	DistinctFrom []string `json:"distinct_from,omitempty"`
+	// Dream links a derived lesson to the checked revisions of its inputs.
+	Dream *DreamProvenance `json:"dream,omitempty"`
+	// idleGuard is trusted in-process context and never enters the journal.
+	idleGuard *idleCommitGuard
 }
 type Request struct {
 	Profile         Profile             `json:"profile"`
@@ -211,6 +215,9 @@ func visible(m Memory, id Identity, project string, conversation ...string) bool
 	return false
 }
 func Validate(m Memory) error {
+	if err := validateDreamShape(m.Dream); err != nil {
+		return err
+	}
 	if m.Tenant == "" || m.Owner == "" {
 		return fmt.Errorf("tenant and owner required")
 	}

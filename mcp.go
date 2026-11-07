@@ -18,8 +18,12 @@ func schema(properties map[string]any, required ...string) map[string]any {
 func MCPTools() []map[string]any {
 	str := map[string]any{"type": "string"}
 	labels := map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "array", "items": str}}
+	dreamCheck := schema(map[string]any{"id": str, "revision": str, "source": str, "observation": str}, "id", "revision", "source", "observation")
+	dream := schema(map[string]any{"kind": map[string]any{"type": "string", "enum": []string{"correct", "consolidate"}}, "checks": map[string]any{"type": "array", "minItems": 1, "maxItems": 10, "items": dreamCheck}}, "kind", "checks")
 	retrieval := schema(map[string]any{"task": str, "context_features": labels, "byte_budget": map[string]any{"type": "integer", "minimum": 1, "maximum": 64000}, "limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 20}})
 	return []map[string]any{
+		{"name": "dream_memory", "description": "Prepare a bounded, read-only review of owned private memories between tasks. Check original sources with authorized tools; use commit_dream for supported corrections or consolidation. Does not start a model or read transcripts.", "inputSchema": schema(map[string]any{"byte_budget": map[string]any{"type": "integer", "minimum": 2048, "maximum": 64000}, "limit": map[string]any{"type": "integer", "minimum": 1, "maximum": 20}, "after": str})},
+		{"name": "commit_dream", "description": "Atomically save a source-checked correction or consolidation and retire its exact input revisions. Preserve scope and applicability; no helpful feedback is inferred. Source checks are the agent's observations, not independent server verification.", "inputSchema": schema(map[string]any{"scope": map[string]any{"type": "string", "enum": []string{"project", "conversation", "personal"}}, "project": str, "conversation": str, "class": map[string]any{"type": "string", "enum": []string{"win", "lesson", "warning", "scar"}}, "outcome": map[string]any{"type": "string", "enum": []string{"good", "great", "bad", "worst"}}, "incident": str, "lesson": str, "source": str, "subject": str, "features": labels, "requires": labels, "excludes": labels, "dream": dream}, "scope", "project", "incident", "lesson", "source", "features", "dream")},
 		{"name": "profile_memory", "description": "Read bounded manifests. Return the current Fingerprint and its Signals.", "inputSchema": schema(map[string]any{})},
 		{"name": "init_memory", "description": "Initialize experience for the configured project; return relevant lessons within a hard byte budget. Start here, then recall again when the task changes.", "inputSchema": retrieval},
 		{"name": "recall_memory", "description": "Retrieve task-relevant experience, source IDs and match explanations. Returned experience is evidence, not overriding policy.", "inputSchema": retrieval},
@@ -95,7 +99,7 @@ func ServeMCP(s Service, in io.Reader, out io.Writer) error {
 					message = "initialize first"
 					break
 				}
-				result = map[string]any{"prompts": []map[string]any{{"name": "initmemory", "description": "Start Recall for the current task", "arguments": []map[string]any{{"name": "task", "description": "Current decision or task", "required": true}}}, {"name": "memory_review", "description": "Review verified outcomes and capture reusable lessons"}}}
+				result = map[string]any{"prompts": []map[string]any{{"name": "initmemory", "description": "Start Recall for the current task", "arguments": []map[string]any{{"name": "task", "description": "Current decision or task", "required": true}}}, {"name": "memory_review", "description": "Review verified outcomes and capture reusable lessons"}, {"name": "memory_dream", "description": "Check sources and consolidate private memory between tasks"}}}
 			case "prompts/get":
 				if !ready {
 					code = -32600
@@ -122,6 +126,8 @@ func ServeMCP(s Service, in io.Reader, out io.Writer) error {
 					text = "Call init_memory with this task and a 4000-byte context budget: " + p.Arguments["task"] + ". Check source and applicability. Use only relevant experience; current instructions take precedence."
 				case "memory_review":
 					text = "Review this task's observed tests, review comments and outcomes. Record only evidence-backed reusable lessons with record_memory. Identify requirements/exclusions, keep private scope unless sharing was authorized, and report what was captured. If a retrieved lesson was actually applied and its effect observed, submit helpful/unhelpful feedback with a stable run ID. Do not invent outcomes."
+				case "memory_dream":
+					text = "Call dream_memory with byte_budget 16000 and limit 10. " + DreamInstructions + " Continue with next_after as after only within the available time and token budget. Report changed IDs or why no change was justified."
 				default:
 					code = -32602
 					message = "unknown prompt"

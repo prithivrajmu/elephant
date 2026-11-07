@@ -39,9 +39,9 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     # Standard JSON quoted paths/arrays are also valid TOML basic strings.
     import tomllib
     assert tomllib.loads(setup['codex_toml'])['mcp_servers']['elephant']['args']==cfg['args']
-    c=Client(args);tools=c.call('tools/list')['tools'];assert len(tools)==6
+    c=Client(args);tools=c.call('tools/list')['tools'];assert len(tools)==8
     for t in tools:schema_check(t['inputSchema'])
-    assert len(c.call('prompts/list')['prompts'])==2
+    assert len(c.call('prompts/list')['prompts'])==3
     assert 'validation' in c.call('prompts/get',{'name':'initmemory','arguments':{'task':'validation'}})['messages'][0]['content']['text']
     assert 'No relevant' in c.tool('init_memory',{'task':'validation evidence'})
     m=json.loads(c.tool('record_memory',{'outcome':'good','incident':'SYNTHETIC acceptance review','lesson':'Attach validation evidence before review','source':'SYNTHETIC test','requires':{'database':['postgres']}}))
@@ -95,4 +95,30 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     assert cli('map')['trails']
     assert cli('status')['language']['target_percent']==100
     assert cli('stats')['memories']==22
-    print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
+    # Exercise dreaming across MCP preparation/commit and a CLI retry.
+    dream_args=['--unattached','--conversation','session-1','--store',str(root/'dream.sqlite'),'--tenant','test','--user','alice']
+    dreamer=Client(dream_args)
+    try:
+        original=json.loads(dreamer.tool('record_memory',{'class':'lesson','incident':'SYNTHETIC pool review','lesson':'Check the pool limit.','source':'SYNTHETIC original test'}))
+        batch=json.loads(dreamer.tool('dream_memory',{'byte_budget':16000,'limit':10}))
+        assert len(batch['candidates'])==1 and batch['candidates'][0]['memory']['id']==original['id']
+        replacement={k:original[k] for k in ('scope','project','features')}
+        replacement.update({'conversation':original.get('conversation',''),'class':'lesson','incident':'SYNTHETIC checked pool review','lesson':'Limit active queries to the pool size.','source':'SYNTHETIC checked pool test','dream':{'kind':'correct','checks':[{'id':original['id'],'revision':batch['candidates'][0]['revision'],'source':'SYNTHETIC checked pool test','observation':'The bounded query test passed.'}]}})
+        derived=json.loads(dreamer.tool('commit_dream',replacement))
+        assert derived['supersedes']==[original['id']] and derived['helpful']==0
+        retry=subprocess.run([BINARY,'dream-commit',*dream_args],input=json.dumps(replacement),text=True,capture_output=True,check=True)
+        assert json.loads(retry.stdout)['id']==derived['id']
+        page=json.loads(subprocess.check_output([BINARY,'dream',*dream_args,'--budget','16000'],text=True))
+        assert [c['memory']['id'] for c in page['candidates']]==[derived['id']]
+        oversized=json.loads(dreamer.tool('record_memory',{'class':'lesson','incident':'SYNTHETIC oversized source review','lesson':'Inspect ultraviolet spectrometer calibration. '*80,'source':'SYNTHETIC calibration test'}))
+        bounded_text=dreamer.tool('dream_memory',{'byte_budget':2048,'limit':10})
+        bounded=json.loads(bounded_text)
+        assert len(bounded_text.encode())<=2048
+        skipped={entry['id']:entry['required_bytes'] for entry in bounded['skipped']}
+        assert skipped[oversized['id']]>2048
+        larger=json.loads(subprocess.check_output([BINARY,'dream',*dream_args,'--budget','64000'],text=True))
+        assert {c['memory']['id'] for c in larger['candidates']}=={derived['id'],oversized['id']}
+        assert not larger.get('skipped') and all(not c['memory']['retired'] for c in larger['candidates'])
+    finally:dreamer.close()
+    print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'dreaming_mcp_and_cli':True,'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
+

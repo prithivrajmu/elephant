@@ -69,6 +69,7 @@ jobs:
         shell: bash
         run: |
           set -eu
+          gofmt -d .
           test -z "$(gofmt -l .)"
           go mod verify
           go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
@@ -79,6 +80,7 @@ jobs:
           ./elephant-test selftest
           python scripts/acceptance.py ./elephant-test
           python scripts/storage_acceptance.py ./elephant-test
+          python scripts/idle_dream_acceptance.py ./elephant-test
       - name: Offline memory-tax contracts
         if: runner.os == 'Linux'
         shell: bash
@@ -207,3 +209,4 @@ jobs:
           fi
           case "$version" in *-*) tag=beta;; *) tag=latest;; esac
           npm publish --access public --tag "$tag"
+

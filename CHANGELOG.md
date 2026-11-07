@@ -7,6 +7,31 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Dreaming reports oversized memories in a bounded skip list and continues the
+  queue. Idle status keeps their IDs and byte requirements. Pages containing only
+  skipped memories advance without launching a reviewer.
+- Idle dreaming validates all proposals before the first save, including disjoint
+  inputs, scope, source checks, sensitive content and writing policy. A malformed
+  later proposal no longer leaves an earlier replacement saved.
+
+### Added
+
+- Opt-in automatic idle dreaming through existing hooks: a single leased watcher,
+  persisted activity/session tracking, quiet period, cooldown, daily run cap,
+  reviewer timeout and cancellation on resumed work. A read-only Codex adapter
+  and a trusted command protocol return proposals; Elephant alone commits them
+  after rechecking activity and source revisions. Inspect or pause through
+  `dream-schedule`; reinitialization preserves settings.
+
+- Host-driven dreaming: bounded private-memory review, source-check provenance,
+  and atomic corrections or consolidation through `dream_memory`/`commit_dream`.
+  CLI commands `dream` and `dream-commit`, plus the `memory_dream` prompt, expose
+  the same workflow. Input revisions and applicability conditions are checked
+  before retirement. Interactive passes use the connected agent; no pass infers
+  helpful feedback from generated notes.
+
 ## [0.12.0]
 
 Full notes: [docs/releases/v0.12.0.md](docs/releases/v0.12.0.md).
@@ -220,3 +245,4 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 [0.8.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.7.0-pilot...v0.8.0-beta
 [0.7.0-pilot]: https://github.com/prithivrajmu/elephant/compare/v0.6.0-pilot...v0.7.0-pilot
 [0.6.0-pilot]: https://github.com/prithivrajmu/elephant/releases/tag/v0.6.0-pilot
+
