@@ -199,6 +199,9 @@ func (s Store) Record(m Memory, task ...*TaskCapture) (Memory, error) {
 				return nil, nil
 			}
 		}
+		if e := validateDreamInputs(m, all); e != nil {
+			return nil, e
+		}
 		if m.Scope != "team" { // sharing a lesson with the team is not a duplicate
 			author := Identity{Tenant: m.Tenant, User: m.Owner}
 			recallable := []Memory{}
@@ -294,3 +297,4 @@ func (s Store) readSQL(fn func(*sql.Tx, []Memory) error) error {
 	}
 	return tx.Commit()
 }
+

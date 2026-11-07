@@ -41,6 +41,12 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 	switch name {
 	case "profile_memory":
 		return s.Profile()
+	case "dream_memory":
+		var q DreamRequest
+		if err := decode(args, &q); err != nil {
+			return nil, err
+		}
+		return s.dream(q)
 	case "init_memory", "recall_memory":
 		var q Request
 		if err := decode(args, &q); err != nil {
@@ -62,7 +68,7 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 		}
 		q.Initialize = name == "init_memory"
 		return s.memoryBackend().Recall(s.Identity, q)
-	case "record_memory":
+	case "record_memory", "commit_dream":
 		var m Memory
 		if err := decode(args, &m); err != nil {
 			return nil, reject("invalid", err)
@@ -70,15 +76,37 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 		m.Tenant = s.Identity.Tenant
 		m.Owner = s.Identity.User
 		m.Team = s.Identity.Team
-		m.Project = s.Project
-		m.Conversation = s.Conversation
-		if s.Unattached {
-			m.Project = ""
+		if name == "commit_dream" {
+			// A backend must support both halves; never silently commit to a
+			// local store when a remote backend is configured.
+			if _, ok := s.memoryBackend().(dreamBackend); !ok {
+				return nil, fmt.Errorf("configured backend does not support dreaming")
+			}
+			if m.Dream == nil {
+				return nil, fmt.Errorf("dream provenance required")
+			}
+			if (m.Scope == "project" && (s.Unattached || m.Project != s.Project)) ||
+				(m.Scope == "conversation" && (s.Conversation == "" || m.Conversation != s.Conversation)) {
+				return nil, fmt.Errorf("dream is outside the configured context")
+			}
+			m.Supersedes = nil
+			for _, c := range m.Dream.Checks {
+				m.Supersedes = append(m.Supersedes, c.ID)
+			}
+		} else {
+			if m.Dream != nil {
+				return nil, fmt.Errorf("use commit_dream for derived memories")
+			}
+			m.Project = s.Project
+			m.Conversation = s.Conversation
+			if s.Unattached {
+				m.Project = ""
+			}
 		}
 		if m.Scope == "" {
 			m.Scope = "personal"
 		}
-		if m.Features == nil {
+		if m.Features == nil && name != "commit_dream" {
 			p, err := s.Profile()
 			if err != nil {
 				return nil, err
@@ -112,3 +140,4 @@ func (s Service) Call(name string, args json.RawMessage) (any, error) {
 	}
 	return nil, fmt.Errorf("unknown tool %s", name)
 }
+

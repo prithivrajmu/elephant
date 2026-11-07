@@ -1,5 +1,10 @@
 # Elephant
 
+Dreaming is available as a bounded, source-checked review between tasks. Use
+`elephant dream` or the `memory_dream` MCP prompt to prepare a pass, then
+`commit_dream` to save corrections or consolidate compatible private lessons.
+See [Dreaming](docs/dreaming.md) for the protocol and limits.
+
 Persistent experience for coding agents.
 
 > **Status: closed beta.** Elephant is a pre-1.0 project. See [Status: Beta](#status-beta) for known limitations before you rely on it.
@@ -120,3 +125,4 @@ Bug reports and pull requests are welcome. Source builds require Go 1.25 or late
 ## License
 
 [MIT](LICENSE).
+

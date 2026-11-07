@@ -1,5 +1,13 @@
 # CLI reference
 
+## Dreaming between tasks
+
+`elephant dream --budget 16000 --limit 10` prepares a read-only page of private
+memories for source review. `elephant dream-commit --file replacement.json`
+saves a checked correction or consolidation. Both accept the usual identity,
+store, root, project and conversation flags. Continue pages with `--after`.
+See [Dreaming](dreaming.md) for source checks, revision checks and limits.
+
 ## Setup and repair
 
 ```sh
@@ -98,3 +106,4 @@ Use `--unattached --conversation CONVERSATION_ID` with record, recall, MCP or UI
 For known technical facts without a repository, MCP retrieval accepts `context_features`; CLI retrieval accepts `--context-file` with `{"features":{"database":["snowflake"]}}`. Missing required facts fail closed. These asserted facts never grant permission. Automatic hooks can request evidence-based extraction from the current agent; the engine does not extract from transcripts itself. Conversation project inference and multi-project graph storage remain proposed extensions.
 
 Conversation scope isolates recall and feedback. The owner management dashboard intentionally lists all owned memories across projects/conversations, as well as currently visible shared memories. It is not a conversation-only management view.
+

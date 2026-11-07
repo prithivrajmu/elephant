@@ -7,6 +7,14 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Added
+
+- Host-driven dreaming: bounded private-memory review, source-check provenance,
+  and atomic corrections or consolidation through `dream_memory`/`commit_dream`.
+  CLI commands `dream` and `dream-commit`, plus the `memory_dream` prompt, expose
+  the same workflow. Input revisions and applicability conditions are checked
+  before retirement. Dreaming does not launch a model or infer helpful feedback.
+
 ## [0.12.0]
 
 Full notes: [docs/releases/v0.12.0.md](docs/releases/v0.12.0.md).
@@ -220,3 +228,4 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 [0.8.0-beta]: https://github.com/prithivrajmu/elephant/compare/v0.7.0-pilot...v0.8.0-beta
 [0.7.0-pilot]: https://github.com/prithivrajmu/elephant/compare/v0.6.0-pilot...v0.7.0-pilot
 [0.6.0-pilot]: https://github.com/prithivrajmu/elephant/releases/tag/v0.6.0-pilot
+

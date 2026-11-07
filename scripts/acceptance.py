@@ -39,9 +39,9 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     # Standard JSON quoted paths/arrays are also valid TOML basic strings.
     import tomllib
     assert tomllib.loads(setup['codex_toml'])['mcp_servers']['elephant']['args']==cfg['args']
-    c=Client(args);tools=c.call('tools/list')['tools'];assert len(tools)==6
+    c=Client(args);tools=c.call('tools/list')['tools'];assert len(tools)==8
     for t in tools:schema_check(t['inputSchema'])
-    assert len(c.call('prompts/list')['prompts'])==2
+    assert len(c.call('prompts/list')['prompts'])==3
     assert 'validation' in c.call('prompts/get',{'name':'initmemory','arguments':{'task':'validation'}})['messages'][0]['content']['text']
     assert 'No relevant' in c.tool('init_memory',{'task':'validation evidence'})
     m=json.loads(c.tool('record_memory',{'outcome':'good','incident':'SYNTHETIC acceptance review','lesson':'Attach validation evidence before review','source':'SYNTHETIC test','requires':{'database':['postgres']}}))
@@ -96,3 +96,4 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
     assert cli('status')['language']['target_percent']==100
     assert cli('stats')['memories']==22
     print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
+
