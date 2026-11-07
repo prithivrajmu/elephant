@@ -7,6 +7,10 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.13.0]
+
+Full notes: [docs/releases/v0.13.0.md](docs/releases/v0.13.0.md).
+
 ### Fixed
 
 - The command reviewer now enforces its 256 KiB stdout limit during subprocess
@@ -245,7 +249,9 @@ Full notes: [docs/releases/v0.6.0-pilot.md](docs/releases/v0.6.0-pilot.md).
 - Older binaries cannot read a migrated store.
 - Memories and backups are not encrypted by Elephant.
 
-[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/prithivrajmu/elephant/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/prithivrajmu/elephant/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/prithivrajmu/elephant/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/prithivrajmu/elephant/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/prithivrajmu/elephant/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/prithivrajmu/elephant/compare/v0.9.1...v0.9.2
