@@ -191,7 +191,7 @@ func (s Store) checkDreamSync(id Identity, scopes map[string]bool) error {
 		return err
 	}
 	defer db.Close()
-	all, err := readOwnedSyncMemories(db, id)
+	all, err := readMemoryQuery(db, "SELECT data FROM memories WHERE tenant=? AND owner=? ORDER BY id", id.Tenant, id.User)
 	if err != nil {
 		return err
 	}
