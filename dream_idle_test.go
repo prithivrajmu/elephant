@@ -290,6 +290,164 @@ func TestIdleProposalCannotEscapePreparedBatch(t *testing.T) {
 	}
 }
 
+func TestIdleRejectsInvalidProposalSetBeforeSaving(t *testing.T) {
+	for _, mode := range []string{"outside-batch", "overlapping-input", "empty-lesson", "unchecked-source", "changed-scope", "secret", "writing"} {
+		t.Run(mode, func(t *testing.T) {
+			c, path, old, lease := idleFixture(t)
+			second := old
+			second.Incident, second.Lesson, second.Source = "A retry repeated a completed write.", "Use an idempotency key for each write.", "test:idempotency"
+			if mode == "changed-scope" {
+				second.Scope = "personal"
+			}
+			second, err := c.Service().Store.Record(second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			first, invalid := idleProposal(old), idleProposal(second)
+			switch mode {
+			case "outside-batch":
+				invalid.Checks[0].ID = "not-in-batch"
+			case "overlapping-input":
+				invalid = idleProposal(old)
+				invalid.Lesson = "Check query concurrency against the pool capacity."
+			case "empty-lesson":
+				invalid.Lesson = ""
+			case "unchecked-source":
+				invalid.Source = "unchecked"
+			case "changed-scope":
+				invalid.Kind = "consolidate"
+				invalid.Checks = append(invalid.Checks, first.Checks...)
+			case "secret":
+				invalid.Lesson = "Use ghp_" + strings.Repeat("A", 40)
+			case "writing":
+				if _, err := c.Service().Store.SetLanguagePolicy(100); err != nil {
+					t.Fatal(err)
+				}
+				invalid.Lesson = strings.Repeat("word ", 30) + "."
+			}
+			err = runIdleDream(context.Background(), path, c, lease, func(context.Context, AutomationConfig, DreamBatch) (IdleDreamOutput, error) {
+				return IdleDreamOutput{Replacements: []IdleDreamProposal{first, invalid}}, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			all, err := c.Service().Store.All()
+			if err != nil || len(all) != 2 || all[0].Retired || all[1].Retired {
+				t.Fatalf("invalid proposal set partially saved: %+v %v", all, err)
+			}
+			status, err := DreamScheduleStatus(path)
+			if err != nil || status.State.LastResult != "invalid_output" || status.State.Reviewed == status.State.Generation {
+				t.Fatalf("bad rejection receipt: %+v %v", status, err)
+			}
+		})
+	}
+}
+
+func TestIdleOversizedMemoryDoesNotBlockQueue(t *testing.T) {
+	c, path, old, lease := idleFixture(t)
+	c.IdleDream.ByteBudget = 2048
+	writeIdleConfig(t, path, c)
+	large := old
+	large.ID, large.Lesson = "000-oversized", strings.Repeat("large memory ", 300)
+	if err := c.Service().Store.transact(func([]Memory, map[string]bool) (*Event, error) {
+		return &Event{Kind: "put", Memory: &large}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	if err := runIdleDream(context.Background(), path, c, lease, func(_ context.Context, _ AutomationConfig, batch DreamBatch) (IdleDreamOutput, error) {
+		calls++
+		if len(batch.Candidates) != 1 || batch.Candidates[0].Memory.ID != old.ID {
+			t.Fatalf("wrong review batch: %+v", batch)
+		}
+		return IdleDreamOutput{Replacements: []IdleDreamProposal{}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, err := DreamScheduleStatus(path)
+	if err != nil || calls != 1 || status.State.LastResult != "no_change" || status.State.Reviewed != status.State.Generation {
+		t.Fatalf("oversized memory blocked the queue: %+v, calls=%d, err=%v", status, calls, err)
+	}
+	if len(status.State.LastSkipped) != 1 || status.State.LastSkipped[0].ID != large.ID || status.State.LastSkipped[0].RequiredBytes <= c.IdleDream.ByteBudget {
+		t.Fatalf("skip was not reported: %+v", status.State.LastSkipped)
+	}
+}
+
+func TestIdleSkippedPageAdvancesWithoutRunningReviewer(t *testing.T) {
+	c, path, old, lease := idleFixture(t)
+	c.IdleDream.ByteBudget, c.IdleDream.Limit = 2048, 1
+	writeIdleConfig(t, path, c)
+	large := old
+	large.ID, large.Lesson = "000-oversized", strings.Repeat("large memory ", 300)
+	if err := c.Service().Store.transact(func([]Memory, map[string]bool) (*Event, error) {
+		return &Event{Kind: "put", Memory: &large}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runIdleDream(context.Background(), path, c, lease, func(context.Context, AutomationConfig, DreamBatch) (IdleDreamOutput, error) {
+		t.Fatal("started reviewer for an oversized-only page")
+		return IdleDreamOutput{}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, err := DreamScheduleStatus(path)
+	if err != nil || status.State.LastResult != "skipped" || status.State.Cursor != large.ID || status.State.Reviewed != status.State.Generation || len(status.State.LastSkipped) != 1 {
+		t.Fatalf("skip did not advance the queue: %+v %v", status, err)
+	}
+	// A later completed task continues at the next memory. No wall-clock wait.
+	if err := idleState(c, func(_ *sql.Tx, state *IdleDreamState) error {
+		state.Generation++
+		state.LastAttempt = time.Now().Add(-24 * time.Hour)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	if err := runIdleDream(context.Background(), path, c, lease, func(_ context.Context, _ AutomationConfig, batch DreamBatch) (IdleDreamOutput, error) {
+		calls++
+		if len(batch.Candidates) != 1 || batch.Candidates[0].Memory.ID != old.ID {
+			t.Fatal("did not continue after the skipped memory")
+		}
+		return IdleDreamOutput{Replacements: []IdleDreamProposal{}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, err = DreamScheduleStatus(path)
+	if err != nil || calls != 1 || status.State.LastResult != "no_change" || status.State.Cursor != "" || len(status.State.LastSkipped) != 0 {
+		t.Fatalf("next task did not complete the pass: %+v %v", status, err)
+	}
+}
+
+func TestIdleAcceptsDisjointProposalSet(t *testing.T) {
+	c, path, old, lease := idleFixture(t)
+	second := old
+	second.Incident, second.Lesson, second.Source = "A retry repeated a completed write.", "Use an idempotency key for each write.", "test:idempotency"
+	second, err := c.Service().Store.Record(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := idleProposal(second)
+	p.Incident, p.Lesson = "A source check confirmed the retry contract.", "Reuse the same idempotency key when retrying a write."
+	if err := runIdleDream(context.Background(), path, c, lease, func(context.Context, AutomationConfig, DreamBatch) (IdleDreamOutput, error) {
+		return IdleDreamOutput{Replacements: []IdleDreamProposal{idleProposal(old), p}}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, err := DreamScheduleStatus(path)
+	if err != nil || status.State.LastResult != "saved" || len(status.State.LastSaved) != 2 {
+		t.Fatalf("disjoint proposals were not saved: %+v %v", status, err)
+	}
+	all, err := c.Service().Store.All()
+	if err != nil || len(all) != 4 {
+		t.Fatalf("missing history: count=%d err=%v", len(all), err)
+	}
+	for _, m := range all {
+		if (m.ID == old.ID || m.ID == second.ID) != m.Retired {
+			t.Fatal("wrong retirement state")
+		}
+	}
+}
+
 func TestIdleRunnerProcessHelper(t *testing.T) {
 	if os.Getenv("ELEPHANT_DREAM_TEST_HELPER") != "1" {
 		return

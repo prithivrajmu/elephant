@@ -30,6 +30,8 @@ Ask your connected agent to run the `memory_dream` MCP prompt, or say:
    the inputs. Inputs must agree on all of these fields.
 5. Stop within your time/token budget. If another page is useful, pass the
    returned `next_after` as `after`. An absent cursor means the end of this pass.
+   Check `skipped` even when `candidates` is empty. It lists oversized memory
+   IDs and the bytes needed for a single-memory batch under the current settings.
 
 The queue uses stable ID order, not relevance or an inference that a memory is
 wrong. It includes owned personal memories and the configured project's or
@@ -76,7 +78,14 @@ Use the same identity and project configuration for both commands. CLI `dream`
 only prepares work; running it alone does not perform semantic review. The byte
 budget covers compact JSON for the full batch, including instructions and source
 pointers (CLI pretty printing adds whitespace). Memories are never truncated to
-fit. If one whole memory cannot fit, increase the budget, up to 64000 bytes.
+fit. A memory that cannot fit by itself stays unchanged and appears in `skipped`,
+so it does not block later memories. Skip metadata counts against the byte budget;
+`limit` bounds candidates and skipped entries together. A memory that fits alone
+but exceeds the remaining page space is deferred to the next page.
+
+To retry skipped memories, start another pass without `after` and increase the
+budget, up to 64000 bytes. A `required_bytes` value above that maximum means the
+full memory cannot be reviewed through this bounded protocol.
 
 ## Guarantees and limits
 
@@ -158,6 +167,10 @@ Successful/no-change passes process one page and wait for new foreground work.
 The cursor is persisted so later passes can review the rest. Failures retain the
 cursor and retry only after the cooldown, subject to the daily cap. Run counters,
 last result, saved IDs, and metadata-only `DreamIdle` receipts persist locally.
+`dream-schedule` also reports `last_skipped` IDs and byte requirements from the
+latest attempt. A page containing only oversized memories records `skipped` and
+advances the cursor without invoking the reviewer. It waits for new foreground
+work before the next page, with the same cooldown and daily attempt limit.
 Prompts, transcripts, runner diagnostics and credentials are not put in receipts.
 `elephant automation --enabled=false` also pauses idle reviews. `elephant init`
 preserves scheduler settings, and normal hooks restart a crashed watcher after
@@ -179,6 +192,13 @@ the interactive protocol above. Identity, scope, applicability and classificatio
 are copied locally from the first input; all other inputs must be compatible.
 Only memories in the prepared batch can be replaced. Commands are private local
 configuration, never executable content loaded from memories or an MCP argument.
+
+Proposals must use disjoint inputs. Elephant checks the complete set for batch
+membership, scope, applicability, source-check structure, sensitive content and
+writing policy before saving any replacement. Invalid sets record `invalid_output`
+and leave all inputs unchanged. Each save then rechecks current revisions,
+activity and duplicate admission in its own transaction. A later commit rejection
+can still leave earlier valid saves in place; `last_saved_ids` reports them.
 
 Scheduler tests use deterministic fake reviewers and real subprocess fixtures;
 they do not spend model credits. Benchmark improvement remains unmeasured:

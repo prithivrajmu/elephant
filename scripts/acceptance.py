@@ -110,6 +110,15 @@ with tempfile.TemporaryDirectory(prefix='elephant acceptance ') as tmp:
         assert json.loads(retry.stdout)['id']==derived['id']
         page=json.loads(subprocess.check_output([BINARY,'dream',*dream_args,'--budget','16000'],text=True))
         assert [c['memory']['id'] for c in page['candidates']]==[derived['id']]
+        oversized=json.loads(dreamer.tool('record_memory',{'class':'lesson','incident':'SYNTHETIC oversized source review','lesson':'Inspect ultraviolet spectrometer calibration. '*80,'source':'SYNTHETIC calibration test'}))
+        bounded_text=dreamer.tool('dream_memory',{'byte_budget':2048,'limit':10})
+        bounded=json.loads(bounded_text)
+        assert len(bounded_text.encode())<=2048
+        skipped={entry['id']:entry['required_bytes'] for entry in bounded['skipped']}
+        assert skipped[oversized['id']]>2048
+        larger=json.loads(subprocess.check_output([BINARY,'dream',*dream_args,'--budget','64000'],text=True))
+        assert {c['memory']['id'] for c in larger['candidates']}=={derived['id'],oversized['id']}
+        assert not larger.get('skipped') and all(not c['memory']['retired'] for c in larger['candidates'])
     finally:dreamer.close()
     print(json.dumps({'version':subprocess.check_output([BINARY,'version'],text=True).strip(),'dreaming_mcp_and_cli':True,'external_mcp':True,'schema_shape':True,'config_spaces_and_toml':True,'requirements_and_abstention':True,'restart_persistence':True,'concurrent_mcp_clients_and_dashboard':True,'acknowledged_records':22,'strict_language_and_classes':True,'map_and_cli_vocabulary':True,'feedback_dedup':True}))
 

@@ -7,6 +7,15 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Dreaming reports oversized memories in a bounded skip list and continues the
+  queue. Idle status keeps their IDs and byte requirements. Pages containing only
+  skipped memories advance without launching a reviewer.
+- Idle dreaming validates all proposals before the first save, including disjoint
+  inputs, scope, source checks, sensitive content and writing policy. A malformed
+  later proposal no longer leaves an earlier replacement saved.
+
 ### Added
 
 - Opt-in automatic idle dreaming through existing hooks: a single leased watcher,

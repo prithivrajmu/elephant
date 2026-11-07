@@ -51,7 +51,7 @@ func (b *boundedDreamOutput) Write(p []byte) (int, error) {
 func executeDreamRunner(ctx context.Context, c AutomationConfig, batch DreamBatch) (IdleDreamOutput, error) {
 	var out IdleDreamOutput
 	config := c.IdleDream
-	payload, err := json.Marshal(map[string]any{"instructions": idleRunnerInstructions + DreamInstructions, "batch": batch, "output_schema": idleOutputSchema(config.MaxChanges)})
+	payload, err := json.Marshal(map[string]any{"instructions": idleRunnerInstructions + DreamInstructions + " Each input can appear in only one replacement per pass. Do not propose changes for skipped IDs.", "batch": batch, "output_schema": idleOutputSchema(config.MaxChanges)})
 	if err != nil {
 		return out, err
 	}
@@ -126,8 +126,56 @@ func idleReplacement(proposal IdleDreamProposal, batch DreamBatch) (Memory, erro
 	m := byID[proposal.Checks[0].ID].Memory
 	m.Incident, m.Lesson, m.Source = proposal.Incident, proposal.Lesson, proposal.Source
 	m.Dream = &DreamProvenance{Kind: proposal.Kind, Checks: proposal.Checks}
+	m.Supersedes = nil
+	for _, check := range proposal.Checks {
+		m.Supersedes = append(m.Supersedes, check.ID)
+	}
 	m.DistinctFrom = nil
 	return m, nil
+}
+
+// Validate the complete proposal set before saving the first replacement. The
+// store still rechecks live revisions, policy and activity on every commit.
+func (s Service) prepareIdleReplacements(output IdleDreamOutput, batch DreamBatch, maxChanges int) ([]Memory, error) {
+	if output.Replacements == nil || len(output.Replacements) > maxChanges {
+		return nil, fmt.Errorf("invalid or excessive idle replacements")
+	}
+	policy, err := s.Store.LanguagePolicy()
+	if err != nil {
+		return nil, err
+	}
+	inputs := make([]Memory, 0, len(batch.Candidates))
+	for _, candidate := range batch.Candidates {
+		inputs = append(inputs, candidate.Memory)
+	}
+	replacements := make([]Memory, 0, len(output.Replacements))
+	seen := map[string]bool{}
+	for _, proposal := range output.Replacements {
+		m, err := idleReplacement(proposal, batch)
+		if err != nil {
+			return nil, err
+		}
+		if err = Validate(m); err != nil {
+			return nil, err
+		}
+		if err = ScreenSensitive(m); err != nil {
+			return nil, err
+		}
+		if !CheckLanguage(policy, m.Lesson).Accepted {
+			return nil, fmt.Errorf("idle replacement does not meet the writing policy")
+		}
+		if err = validateDreamInputs(m, inputs); err != nil {
+			return nil, err
+		}
+		for _, check := range proposal.Checks {
+			if seen[check.ID] {
+				return nil, fmt.Errorf("idle proposals must use disjoint inputs")
+			}
+			seen[check.ID] = true
+		}
+		replacements = append(replacements, m)
+	}
+	return replacements, nil
 }
 
 func runIdleDream(parent context.Context, path string, c AutomationConfig, lease string, runner idleDreamRunner) error {
@@ -146,6 +194,7 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 		}
 		state.Attempts++
 		state.LastAttempt, state.LastResult, state.LastSaved = now, "running", nil
+		state.LastSkipped = nil
 		generation, cursor, reserved = state.Generation, state.Cursor, true
 		return nil
 	})
@@ -154,6 +203,7 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 	}
 	status := "runner_failed"
 	saved := []string{}
+	var skipped []DreamSkipped
 	nextCursor := cursor
 	defer func() {
 		_ = idleState(c, func(_ *sql.Tx, state *IdleDreamState) error {
@@ -161,7 +211,8 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 				return nil
 			}
 			state.LastResult, state.LastSaved = status, saved
-			if state.Generation == generation && (status == "saved" || status == "no_change" || status == "empty") {
+			state.LastSkipped = skipped
+			if state.Generation == generation && (status == "saved" || status == "no_change" || status == "empty" || status == "skipped") {
 				state.Reviewed, state.Cursor = generation, nextCursor
 			}
 			return nil
@@ -173,8 +224,12 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 		status = "prepare_failed"
 		return nil
 	}
+	skipped = batch.Skipped
 	if len(batch.Candidates) == 0 {
-		status, nextCursor = "empty", ""
+		status, nextCursor = "empty", batch.NextAfter
+		if len(skipped) > 0 {
+			status = "skipped"
+		}
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(parent, time.Duration(c.IdleDream.TimeoutSeconds)*time.Second)
@@ -207,14 +262,17 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 	output, runnerErr := runner(ctx, c, batch)
 	if ctx.Err() != nil {
 		status = "cancelled"
-	} else if runnerErr == nil && len(output.Replacements) <= c.IdleDream.MaxChanges {
+	} else if runnerErr == nil {
 		status = "no_change"
 		svc := c.Service()
 		svc.idleGuard = guard
-		for _, proposal := range output.Replacements {
-			m, e := idleReplacement(proposal, batch)
-			if e != nil {
-				status = "invalid_output"
+		replacements, e := svc.prepareIdleReplacements(output, batch, c.IdleDream.MaxChanges)
+		if e != nil {
+			status = "invalid_output"
+		}
+		for _, m := range replacements {
+			if ctx.Err() != nil {
+				status = "cancelled"
 				break
 			}
 			b, _ := json.Marshal(m)

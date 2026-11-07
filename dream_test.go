@@ -2,6 +2,7 @@ package memory
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -56,11 +57,8 @@ func TestDreamIsolationPaginationAndBudget(t *testing.T) {
 	}
 	for _, budget := range []int{2048, 4000, 16000, 64000} {
 		batch, err := s.dream(DreamRequest{ByteBudget: budget})
-		if err != nil { // A whole memory never gets truncated to fit.
-			if !strings.Contains(err.Error(), "exceeds dream byte budget") {
-				t.Fatal(err)
-			}
-			continue
+		if err != nil {
+			t.Fatal(err)
 		}
 		b, _ := json.Marshal(batch)
 		if len(b) > budget || len(batch.Candidates) != 1 || batch.Candidates[0].Memory.ID != first.ID || batch.Candidates[0].Revision != dreamRevision(first) {
@@ -83,6 +81,82 @@ func TestDreamIsolationPaginationAndBudget(t *testing.T) {
 	for _, q := range []DreamRequest{{ByteBudget: 1}, {ByteBudget: 64001}, {Limit: -1}, {Limit: 21}} {
 		if _, err := s.dream(q); err == nil {
 			t.Fatalf("accepted invalid request: %+v", q)
+		}
+	}
+}
+
+func TestDreamOversizedPaginationPreservesBudgetAndCoverage(t *testing.T) {
+	s, original := dreamFixture(t)
+	for i := 0; i < 24; i++ {
+		m := original
+		m.ID = fmt.Sprintf("%03d-%s", i, strings.Repeat("x", 220))
+		if i%3 != 0 {
+			// JSON escaping must count toward the byte budget too.
+			m.Lesson = strings.Repeat("\"<large>\" ", 400)
+		}
+		if err := s.Store.transact(func([]Memory, map[string]bool) (*Event, error) {
+			return &Event{Kind: "put", Memory: &m}, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, budget := range []int{2048, 3000, 16000, 64000} {
+		for _, limit := range []int{1, 3, 20} {
+			t.Run(fmt.Sprintf("budget=%d/limit=%d", budget, limit), func(t *testing.T) {
+				seen := map[string]bool{}
+				after := ""
+				for page := 0; ; page++ {
+					if page >= 25 {
+						t.Fatal("pagination did not finish")
+					}
+					batch, err := s.dream(DreamRequest{ByteBudget: budget, Limit: limit, After: after})
+					if err != nil {
+						t.Fatal(err)
+					}
+					encoded, err := json.Marshal(batch)
+					if err != nil || len(encoded) > budget || len(batch.Candidates)+len(batch.Skipped) > limit {
+						t.Fatalf("page exceeded limits: bytes=%d candidates=%d skipped=%d err=%v", len(encoded), len(batch.Candidates), len(batch.Skipped), err)
+					}
+					ids := []string{}
+					for _, candidate := range batch.Candidates {
+						ids = append(ids, candidate.Memory.ID)
+						if candidate.Revision != dreamRevision(candidate.Memory) {
+							t.Fatal("candidate was truncated")
+						}
+					}
+					for _, skipped := range batch.Skipped {
+						ids = append(ids, skipped.ID)
+						if skipped.RequiredBytes <= budget {
+							t.Fatalf("skipped a memory that fits: %+v", skipped)
+						}
+					}
+					for _, id := range ids {
+						if seen[id] || id <= after {
+							t.Fatalf("repeated memory %s", id)
+						}
+						seen[id] = true
+					}
+					if batch.NextAfter == "" {
+						break
+					}
+					if batch.NextAfter <= after || !seen[batch.NextAfter] {
+						t.Fatal("cursor did not advance past a reported memory")
+					}
+					after = batch.NextAfter
+				}
+				if len(seen) != 25 {
+					t.Fatalf("lost memories: saw %d of 25", len(seen))
+				}
+			})
+		}
+	}
+	all, err := s.Store.All()
+	if err != nil || len(all) != 25 {
+		t.Fatalf("preparation changed the store: count=%d err=%v", len(all), err)
+	}
+	for _, m := range all {
+		if m.Retired {
+			t.Fatal("preparation retired a memory")
 		}
 	}
 }

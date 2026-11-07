@@ -57,6 +57,7 @@ type IdleDreamState struct {
 	Cursor       string          `json:"cursor,omitempty"`
 	LastResult   string          `json:"last_result,omitempty"`
 	LastSaved    []string        `json:"last_saved_ids,omitempty"`
+	LastSkipped  []DreamSkipped  `json:"last_skipped,omitempty"`
 }
 
 type IdleDreamStatus struct {

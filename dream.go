@@ -37,9 +37,17 @@ type DreamCandidate struct {
 	Revision string `json:"revision"`
 }
 
+// DreamSkipped reports a whole memory that cannot fit by itself. It stays
+// unchanged and can be reviewed again with a larger budget on a later pass.
+type DreamSkipped struct {
+	ID            string `json:"id"`
+	RequiredBytes int    `json:"required_bytes"`
+}
+
 type DreamBatch struct {
 	Instructions string           `json:"instructions"`
 	Candidates   []DreamCandidate `json:"candidates"`
+	Skipped      []DreamSkipped   `json:"skipped,omitempty"`
 	NextAfter    string           `json:"next_after,omitempty"`
 	ByteBudget   int              `json:"byte_budget"`
 }
@@ -86,6 +94,7 @@ func (s Store) Dream(id Identity, project, conversation string, q DreamRequest) 
 			break
 		}
 		candidate := DreamCandidate{Memory: m, Revision: dreamRevision(m)}
+		previousCursor := out.NextAfter
 		out.Candidates = append(out.Candidates, candidate)
 		out.NextAfter = ""
 		if i+1 < len(all) {
@@ -97,11 +106,30 @@ func (s Store) Dream(id Identity, project, conversation string, q DreamRequest) 
 		}
 		if len(b) > q.ByteBudget {
 			out.Candidates = out.Candidates[:len(out.Candidates)-1]
-			if len(out.Candidates) == 0 {
-				return DreamBatch{}, fmt.Errorf("next memory exceeds dream byte budget; increase byte_budget (max 64000)")
+			single := DreamBatch{Instructions: DreamInstructions, Candidates: []DreamCandidate{candidate}, NextAfter: out.NextAfter, ByteBudget: q.ByteBudget}
+			encoded, err := json.Marshal(single)
+			if err != nil {
+				return out, err
 			}
-			out.NextAfter = out.Candidates[len(out.Candidates)-1].Memory.ID
-			break
+			if len(encoded) <= q.ByteBudget {
+				// It fits on its own: leave it for the next page.
+				out.NextAfter = previousCursor
+				break
+			}
+			out.Skipped = append(out.Skipped, DreamSkipped{ID: m.ID, RequiredBytes: len(encoded)})
+			b, err = json.Marshal(out)
+			if err != nil {
+				return out, err
+			}
+			if len(b) > q.ByteBudget {
+				// Skip metadata also counts against the hard response budget.
+				out.Skipped = out.Skipped[:len(out.Skipped)-1]
+				out.NextAfter = previousCursor
+				if len(out.Candidates)+len(out.Skipped) == 0 {
+					return DreamBatch{}, fmt.Errorf("next memory's skip metadata exceeds dream byte budget")
+				}
+				break
+			}
 		}
 	}
 	return out, nil
