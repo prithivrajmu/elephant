@@ -2,6 +2,7 @@
 import datetime
 import json
 import pathlib
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -12,6 +13,11 @@ binary = str(pathlib.Path(sys.argv[1]).resolve())
 
 with tempfile.TemporaryDirectory(prefix="elephant-idle-") as tmp:
     root = pathlib.Path(tmp).resolve()
+    # Go exec resolves Windows executables through PATHEXT; match release names.
+    if sys.platform == "win32" and pathlib.Path(binary).suffix.lower() != ".exe":
+        packaged_binary = root / "elephant-test.exe"
+        shutil.copyfile(binary, packaged_binary)
+        binary = str(packaged_binary)
     store = root / "memory.sqlite"
     config_path = root / ".elephant" / "automation.json"
     config_path.parent.mkdir()
