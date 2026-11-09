@@ -81,6 +81,7 @@ jobs:
           python scripts/acceptance.py ./elephant-test
           python scripts/storage_acceptance.py ./elephant-test
           python scripts/idle_dream_acceptance.py ./elephant-test
+          python evals/dreaming/run.py ./elephant-test
       - name: Offline memory-tax contracts
         if: runner.os == 'Linux'
         shell: bash

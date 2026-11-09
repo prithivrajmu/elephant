@@ -23,6 +23,8 @@ type IdleDreamConfig struct {
 	ByteBudget      int      `json:"byte_budget"`
 	Limit           int      `json:"limit"`
 	MaxChanges      int      `json:"max_changes"`
+	ReviewOrder     string   `json:"review_order,omitempty"`
+	ProbeFile       string   `json:"probe_file,omitempty"`
 }
 
 func DefaultIdleDreamConfig() IdleDreamConfig {
@@ -30,6 +32,12 @@ func DefaultIdleDreamConfig() IdleDreamConfig {
 }
 
 func (c IdleDreamConfig) validate() error {
+	if c.ReviewOrder != "" && c.ReviewOrder != "id" && c.ReviewOrder != "risk" {
+		return fmt.Errorf("review order must be id or risk")
+	}
+	if c.ProbeFile != "" && !filepath.IsAbs(c.ProbeFile) {
+		return fmt.Errorf("probe file must be an absolute trusted local path")
+	}
 	if (c.Adapter != "codex" && c.Adapter != "command") || len(c.Runner) < 1 || len(c.Runner) > 32 || c.Runner[0] == "" {
 		return fmt.Errorf("idle dreaming requires a codex or command adapter and an executable argument array")
 	}

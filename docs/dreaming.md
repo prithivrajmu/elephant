@@ -271,3 +271,67 @@ These are evaluation and implementation opportunities, not current guarantees:
 
 Keep this guide aligned with `dream.go`, `dream_idle.go`, `dream_runner.go` and
 their tests when these contracts change.
+
+## Retrieval evals and optional save gate
+
+`dream-eval` evaluates proposals through production recall without saving memories,
+usage, or helpful feedback. Supply the same proposal format as the idle runner and
+independently authored source-backed retrieval expectations:
+
+```json
+{
+  "replacements": [],
+  "byte_budget": 4000,
+  "limit": 6,
+  "probes": [{
+    "name": "pool exception",
+    "task": "postgres pool capacity active queries",
+    "features": {"database": ["postgres"]},
+    "contains": ["8 active queries"],
+    "absent": ["64 active queries"]
+  }]
+}
+```
+
+```sh
+elephant dream-eval --root /path/to/project --file evaluation.json
+```
+
+The result reports before/after pass counts, regressions, per-probe byte counts,
+and `passed` (all after-probes pass). A failed probe is a successful diagnostic
+command: inspect the JSON `passed` value, not only its exit status. Exact,
+case-sensitive context fragments are retrieval contracts, not semantic/factual
+certification. Never derive the expected answer solely from a proposed rewrite.
+Empty proposal arrays evaluate the unchanged baseline. There are 1–32 probes,
+up to 16 nonempty fragments per probe, and a 1,000-memory/8 MiB private snapshot
+limit. Hosted backends explicitly reject this local evaluation route.
+
+For an opt-in scheduler gate, put just the probe array in a trusted local file:
+
+```sh
+elephant dream-schedule --root /path/to/project --probe-file /absolute/probes.json
+```
+
+The gate validates the whole proposal set, then checks each replacement against a
+fresh candidate view before saving it. All configured expectations must pass for
+each prospective save; cooperating rewrites that only pass together can therefore
+be conservatively blocked. Missing, malformed, excessive, or failing probes record
+`eval_failed`, retain the cursor, and consume the normal attempt/cooldown budget.
+The normal activity and revision guards still run inside the write transaction.
+Evaluation is a snapshot check, not a transaction spanning all stored memories or
+source files. Other memories or source files can change after evaluation.
+
+No-change reviews skip the save gate because they change nothing. Disable this
+gate explicitly with `--probe-file ''`. Probe files are not passed to the model,
+executed, or stored in receipts. Do not put secrets in them. The default scheduler
+has no probe gate until configured.
+
+`--review-order risk` is available for `dream` and `dream-schedule`. It reviews
+negative-feedback memories first, then groups subject/source within each bounded
+page. The ID-selected page and cursor remain unchanged: this is local ordering,
+not global prioritization, a source-change watcher, or an assertion that a note is
+wrong. `id` (or the unset value) retains the original behavior.
+
+See [dreaming evals](../evals/dreaming/README.md) for reproducible offline controls
+and opt-in live-reviewer checks. A source observation remains an agent assertion;
+these evals do not upgrade it into independently verified evidence.
