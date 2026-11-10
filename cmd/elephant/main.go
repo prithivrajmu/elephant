@@ -25,7 +25,7 @@ func main() {
 }
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|dream|dream-commit|dream-schedule|dream-worker|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore|sync|team-submit|team-pull> [flags]; see docs/quickstart.md")
+		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|dream|dream-eval|dream-commit|dream-schedule|dream-worker|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore|sync|team-submit|team-pull> [flags]; see docs/quickstart.md")
 	}
 	command := os.Args[1]
 	if command == "version" {
@@ -33,7 +33,7 @@ func run() error {
 		return nil
 	}
 	if command == "help" || command == "--help" || command == "-h" {
-		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: sync, team-submit, team-pull, version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, dream, dream-commit, dream-schedule, dream-worker, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
+		fmt.Println("Elephant " + memory.Version + "\nPersistent experience for coding agents.\nCommands: sync, team-submit, team-pull, version, doctor, selftest, setup, language, fingerprint, init, automation, experiences, task-status, update, recall, dream, dream-eval, dream-commit, dream-schedule, dream-worker, remember, imprint, status, inspect, why, scars, map, stats, palace, feedback, forget, approve, mcp, export, import, backup, restore.\nLegacy aliases: profile, record, list, ui.\nStart with: elephant init --root /path/to/project\nUse elephant <command> --help for flags.")
 		return nil
 	}
 	originalCommand := command
@@ -74,6 +74,8 @@ func run() error {
 	contextFile := f.String("context-file", "", "JSON file with explicit current features (max 128 KiB)")
 	budget := f.Int("budget", 4000, "hard context byte budget")
 	limit := f.Int("limit", 6, "max lessons")
+	reviewOrder := f.String("review-order", "", "dream/dream-schedule: id or risk (within each bounded page)")
+	probeFile := f.String("probe-file", "", "dream-schedule: trusted local retrieval probes JSON; empty disables")
 	after := f.String("after", "", "dream: continue after this memory ID")
 	idleDelay := f.Duration("idle", 10*time.Minute, "dream-schedule: quiet period after all sessions stop")
 	idleCooldown := f.Duration("cooldown", 6*time.Hour, "dream-schedule: minimum interval between attempts")
@@ -243,7 +245,7 @@ func run() error {
 			settings = *config.IdleDream
 		}
 		changed := false
-		for _, name := range []string{"enabled", "idle", "cooldown", "timeout", "max-runs", "max-changes", "runner", "runner-command", "budget", "limit", "reset-sessions"} {
+		for _, name := range []string{"enabled", "idle", "cooldown", "timeout", "max-runs", "max-changes", "runner", "runner-command", "budget", "limit", "reset-sessions", "review-order", "probe-file"} {
 			changed = changed || seenFlags[name]
 		}
 		if !changed {
@@ -252,6 +254,21 @@ func run() error {
 				return e
 			}
 			return printJSON(r)
+		}
+		if seenFlags["review-order"] {
+			settings.ReviewOrder = *reviewOrder
+		}
+		if seenFlags["probe-file"] {
+			settings.ProbeFile = *probeFile
+			if settings.ProbeFile != "" {
+				settings.ProbeFile, e = filepath.Abs(settings.ProbeFile)
+				if e != nil {
+					return e
+				}
+				if _, e = memory.ReadDreamProbes(settings.ProbeFile); e != nil {
+					return e
+				}
+			}
 		}
 		if seenFlags["enabled"] {
 			settings.Enabled = *enabled
@@ -302,7 +319,21 @@ func run() error {
 		}
 		return printJSON(r)
 	case "dream":
-		r, e := svc.Store.Dream(svc.Identity, svc.Project, svc.Conversation, memory.DreamRequest{ByteBudget: *budget, Limit: *limit, After: *after})
+		r, e := svc.Store.Dream(svc.Identity, svc.Project, svc.Conversation, memory.DreamRequest{ByteBudget: *budget, Limit: *limit, After: *after, ReviewOrder: *reviewOrder})
+		if e != nil {
+			return e
+		}
+		return printJSON(r)
+	case "dream-eval":
+		b, e := input()
+		if e != nil {
+			return e
+		}
+		var q memory.DreamEvalRequest
+		if e = json.Unmarshal(b, &q); e != nil {
+			return e
+		}
+		r, e := svc.EvaluateDream(q)
 		if e != nil {
 			return e
 		}

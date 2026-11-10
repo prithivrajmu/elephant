@@ -323,7 +323,7 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 		})
 		_ = c.Service().Store.observe(Experience{ID: runID, Identity: c.Identity, Project: c.Project, Agent: "dream-idle", Event: "DreamIdle", Status: status, At: time.Now().UTC()})
 	}()
-	batch, err := c.Service().dream(DreamRequest{ByteBudget: c.IdleDream.ByteBudget, Limit: c.IdleDream.Limit, After: cursor})
+	batch, err := c.Service().dream(DreamRequest{ByteBudget: c.IdleDream.ByteBudget, Limit: c.IdleDream.Limit, After: cursor, ReviewOrder: c.IdleDream.ReviewOrder})
 	if err != nil {
 		status = "prepare_failed"
 		return nil
@@ -376,10 +376,34 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 		if e != nil {
 			status = "invalid_output"
 		}
+		if e == nil && c.IdleDream.ProbeFile != "" && len(replacements) > 0 {
+			probes, probeErr := ReadDreamProbes(c.IdleDream.ProbeFile)
+			if probeErr != nil {
+				status = "eval_failed"
+				replacements = nil
+			} else {
+				result, evalErr := svc.EvaluateDream(DreamEvalRequest{Replacements: output.Replacements, Probes: probes})
+				if evalErr != nil || !result.Passed {
+					status = "eval_failed"
+					replacements = nil
+				}
+			}
+		}
 		for _, m := range replacements {
 			if ctx.Err() != nil {
 				status = "cancelled"
 				break
+			}
+			// Re-evaluate each prospective prefix against a fresh view. A
+			// later failed commit must not leave an unchecked early rewrite.
+			if c.IdleDream.ProbeFile != "" {
+				probes, probeErr := ReadDreamProbes(c.IdleDream.ProbeFile)
+				proposal := IdleDreamProposal{Kind: m.Dream.Kind, Checks: m.Dream.Checks, Incident: m.Incident, Lesson: m.Lesson, Source: m.Source}
+				result, evalErr := svc.EvaluateDream(DreamEvalRequest{Replacements: []IdleDreamProposal{proposal}, Probes: probes})
+				if probeErr != nil || evalErr != nil || !result.Passed {
+					status = "eval_failed"
+					break
+				}
 			}
 			b, _ := json.Marshal(m)
 			v, e := svc.Call("commit_dream", b)

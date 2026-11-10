@@ -1,1 +1,3 @@
 THIRD_PARTY_NOTICES text eol=lf
+# Source-manifest hashes must be stable on every checkout platform.
+evals/dreaming/sources/*.md text eol=lf

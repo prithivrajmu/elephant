@@ -5,6 +5,17 @@ All notable changes to this project are documented here. The format is based on
 pre-1.0 development; compatibility is not yet guaranteed. Versions from 0.9.1 use a
 regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
+## Unreleased
+
+- Add read-only `dream-eval` candidate-view retrieval probes and an optional local
+  scheduler `--probe-file` gate. Failed/missing probes leave affected inputs intact
+  and record `eval_failed`; real usefulness feedback remains separate.
+- Add opt-in `--review-order risk` within bounded ID pages, preserving pagination
+  coverage and byte budgets while reviewing negative-feedback memories first.
+- Add six offline source-backed fixture controls, CI execution, a trusted external
+  reviewer mode, and an opt-in real Codex adapter smoke test. Fixture scores do not
+  establish model quality or downstream coding improvement.
+
 ## [Unreleased]
 
 ## [0.13.0]
