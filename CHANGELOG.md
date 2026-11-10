@@ -5,7 +5,11 @@ All notable changes to this project are documented here. The format is based on
 pre-1.0 development; compatibility is not yet guaranteed. Versions from 0.9.1 use a
 regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
-## Unreleased
+## [Unreleased]
+
+## [0.14.0]
+
+Full notes: [docs/releases/v0.14.0.md](docs/releases/v0.14.0.md).
 
 - Add read-only `dream-eval` candidate-view retrieval probes and an optional local
   scheduler `--probe-file` gate. Failed/missing probes leave affected inputs intact
@@ -15,8 +19,6 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 - Add six offline source-backed fixture controls, CI execution, a trusted external
   reviewer mode, and an opt-in real Codex adapter smoke test. Fixture scores do not
   establish model quality or downstream coding improvement.
-
-## [Unreleased]
 
 ## [0.13.0]
 
