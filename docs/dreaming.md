@@ -332,6 +332,6 @@ page. The ID-selected page and cursor remain unchanged: this is local ordering,
 not global prioritization, a source-change watcher, or an assertion that a note is
 wrong. `id` (or the unset value) retains the original behavior.
 
-See [dreaming evals](../evals/dreaming/README.md) for reproducible offline controls
+See [dreaming evals](https://github.com/prithivrajmu/elephant/blob/main/evals/dreaming/README.md) for reproducible offline controls
 and opt-in live-reviewer checks. A source observation remains an agent assertion;
 these evals do not upgrade it into independently verified evidence.

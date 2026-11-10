@@ -77,3 +77,13 @@ Hold reader/reviewer model and recall budgets fixed. Measure total maintenance
 plus foreground usage and uncertainty across task orders. Evaluate source-change
 prioritization and immutable claim/span evidence as separate additions. Today's
 within-page ordering does not implement either feature.
+
+## Challenge before efficacy testing
+
+Read [the adversarial methodology review](METHODOLOGY.md) before designing new
+quality experiments. Run `python3 evals/dreaming/challenge.py` for analytic
+counterexamples and hypothetical sample-size/cost arithmetic; this is not a benchmark.
+
+Schema v2 separates reviewer time, candidate evaluation time, and total review/evaluate/commit
+time (excluding fixture setup). External `model_calls` is null/unknown;
+`reviewer_invocations` counts subprocesses. Provider usage remains unmeasured.
