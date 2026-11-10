@@ -335,3 +335,6 @@ wrong. `id` (or the unset value) retains the original behavior.
 See [dreaming evals](https://github.com/prithivrajmu/elephant/blob/main/evals/dreaming/README.md) for reproducible offline controls
 and opt-in live-reviewer checks. A source observation remains an agent assertion;
 these evals do not upgrade it into independently verified evidence.
+
+See [research synthesis and delivery gates](dreaming-research.md) for the proposed
+next steps, scientific rejection criteria and current implementation boundaries.

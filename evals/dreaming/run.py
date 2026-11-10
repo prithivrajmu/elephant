@@ -10,6 +10,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import time
+import hashlib
+from preflight import load_json, validate
 
 
 def run(binary, cases, reviewer=None):
@@ -18,7 +20,7 @@ def run(binary, cases, reviewer=None):
         with tempfile.TemporaryDirectory(prefix="elephant-dream-eval-") as tmp:
             root = Path(tmp)
             source = root / "source.md"
-            source.write_text(case["source"], encoding="utf-8")
+            source.write_bytes((case["source"] + "\n").encode("utf-8"))
             base = [str(binary), "--root", tmp, "--project", "synthetic-eval",
                     "--store", str(root / "memory.sqlite"), "--tenant", "eval", "--user", "alice"]
 
@@ -99,10 +101,21 @@ def main():
     parser.add_argument("--reviewer-command", type=Path, help="explicit opt-in: trusted JSON executable argument array; may spend provider allowance")
     args = parser.parse_args()
     cases = json.loads(Path(__file__).with_name("cases.json").read_text())
+    manifest_path = Path(__file__).with_name("development-manifest.json")
+    manifest = load_json(manifest_path)
+    preflight = validate(manifest, manifest_path.parent)
+    records = {case["id"]: case for case in manifest["cases"]}
+    if set(records) != {case["name"] for case in cases}:
+        parser.error("corpus case IDs differ from the source manifest")
+    for case in cases:
+        expected = records[case["name"]]["sources"][0]["sha256"]
+        if hashlib.sha256((case["source"]+"\n").encode("utf-8")).hexdigest() != expected:
+            parser.error("corpus source differs from the reviewed source manifest")
     reviewer = json.loads(args.reviewer_command.read_text()) if args.reviewer_command else None
     if reviewer is not None and (not isinstance(reviewer, list) or not reviewer or not all(isinstance(a,str) for a in reviewer)):
         parser.error("reviewer command must be a nonempty executable argument array")
     result = run(args.binary.resolve(), cases, reviewer)
+    result["source_manifest_sha256"] = preflight["manifest_sha256"]
     output = json.dumps(result, indent=2) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

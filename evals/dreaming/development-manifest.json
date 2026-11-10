@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "stage": "development",
+  "classification": "synthetic_contract_controls_only",
+  "cases": [
+    {
+      "id": "stale-pool-capacity",
+      "incident_family": "stale-pool-capacity",
+      "split": "development",
+      "sources": [
+        {
+          "id": "stale-pool-capacity-source",
+          "path": "sources/stale-pool-capacity.md",
+          "sha256": "fec27c61df940ecd8224c69aba65d53ec34ce6e3235d327057e3de9e44c9ce3b",
+          "start_byte": 0,
+          "end_byte": 60,
+          "span_sha256": "fec27c61df940ecd8224c69aba65d53ec34ce6e3235d327057e3de9e44c9ce3b"
+        }
+      ]
+    },
+    {
+      "id": "preserve-backfill-exception",
+      "incident_family": "preserve-backfill-exception",
+      "split": "development",
+      "sources": [
+        {
+          "id": "preserve-backfill-exception-source",
+          "path": "sources/preserve-backfill-exception.md",
+          "sha256": "157ecaad4f41b7ab374ac60ad8632faa31dd9a6190327aad6f1133e295bebd0a",
+          "start_byte": 0,
+          "end_byte": 102,
+          "span_sha256": "157ecaad4f41b7ab374ac60ad8632faa31dd9a6190327aad6f1133e295bebd0a"
+        }
+      ]
+    },
+    {
+      "id": "retry-procedure",
+      "incident_family": "retry-procedure",
+      "split": "development",
+      "sources": [
+        {
+          "id": "retry-procedure-source",
+          "path": "sources/retry-procedure.md",
+          "sha256": "711496ba81b4d53ed9db435980a0614b44e46d16f12b75f606969b7d4a538465",
+          "start_byte": 0,
+          "end_byte": 102,
+          "span_sha256": "711496ba81b4d53ed9db435980a0614b44e46d16f12b75f606969b7d4a538465"
+        }
+      ]
+    },
+    {
+      "id": "temporal-config-change",
+      "incident_family": "temporal-config-change",
+      "split": "development",
+      "sources": [
+        {
+          "id": "temporal-config-change-source",
+          "path": "sources/temporal-config-change.md",
+          "sha256": "153a25a0d9286c852c23fbc56d3596996f7e26fa27191bfc1e1d2f8fdc405a97",
+          "start_byte": 0,
+          "end_byte": 82,
+          "span_sha256": "153a25a0d9286c852c23fbc56d3596996f7e26fa27191bfc1e1d2f8fdc405a97"
+        }
+      ]
+    },
+    {
+      "id": "unsupported-source-claim",
+      "incident_family": "unsupported-source-claim",
+      "split": "development",
+      "sources": [
+        {
+          "id": "unsupported-source-claim-source",
+          "path": "sources/unsupported-source-claim.md",
+          "sha256": "05cd83d078497d97c146a3748d7128fa651b288003f133b8d05ef2c3639fc4f7",
+          "start_byte": 0,
+          "end_byte": 88,
+          "span_sha256": "05cd83d078497d97c146a3748d7128fa651b288003f133b8d05ef2c3639fc4f7"
+        }
+      ]
+    },
+    {
+      "id": "paraphrase-discovery",
+      "incident_family": "paraphrase-discovery",
+      "split": "development",
+      "sources": [
+        {
+          "id": "paraphrase-discovery-source",
+          "path": "sources/paraphrase-discovery.md",
+          "sha256": "171d0ab7eb5435f5002c95bea947adc71c719d4f1e990c7427b5151332e9f0dc",
+          "start_byte": 0,
+          "end_byte": 118,
+          "span_sha256": "171d0ab7eb5435f5002c95bea947adc71c719d4f1e990c7427b5151332e9f0dc"
+        }
+      ]
+    }
+  ]
+}

@@ -87,3 +87,29 @@ counterexamples and hypothetical sample-size/cost arithmetic; this is not a benc
 Schema v2 separates reviewer time, candidate evaluation time, and total review/evaluate/commit
 time (excluding fixture setup). External `model_calls` is null/unknown;
 `reviewer_invocations` counts subprocesses. Provider usage remains unmeasured.
+
+## Pilot source preflight
+
+```sh
+python3 evals/dreaming/preflight.py evals/dreaming/development-manifest.json
+python3 -m unittest discover -s evals/dreaming -p 'test_*.py' -v
+```
+
+The six existing cases are frozen as **development controls**, not an independent
+pilot or holdout. The CLI driver checks this manifest before running and includes
+its canonical SHA-256 in output. Source files and rendered reviewer sources must
+agree byte-for-byte, including UTF-8 encoding and the terminal newline.
+
+Each case declares an incident family, split and explicit local source with full
+SHA-256 and byte-span SHA-256. Preflight rejects altered sources/spans, paths outside
+the manifest root, duplicate cases, and identical source content or incident
+families crossing splits. Pilot plans cannot consume holdout cases. Pilot and
+confirmatory plans require design fields: reader/reviewer models, exact code
+commit, seeds, primary comparison/endpoint, resource budget, analysis and stopping
+rule. Confirmatory plans require a holdout split.
+
+This does not detect semantic duplicates, prove declared incident independence,
+check source authority or chronology, enforce provider isolation, establish power,
+or constitute external preregistration. A separate pilot corpus and complete model
+configuration are still required before estimating efficacy. See the
+[repo delivery plan](../../docs/dreaming-research.md).
