@@ -13,7 +13,7 @@ mmh3==5.3.1
 numpy==2.5.4
 onnxruntime==1.31.1
 packaging==26.3
-pillow==11.3.0
+pillow==13.0.0
 protobuf==7.36.2
 py-rust-stemmers==0.1.8
 pyyaml==6.0.3
