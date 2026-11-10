@@ -1,0 +1,90 @@
+{
+  "update_refresh": {
+    "base_suite": {
+      "command": [
+        "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+        "test",
+        "-count=1",
+        "-timeout=90s",
+        "./..."
+      ],
+      "exit_code": 0,
+      "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t9.345s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.020s\n",
+      "stderr": "",
+      "elapsed_seconds": 15.037775905000018
+    },
+    "base_regression": {
+      "command": [
+        "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+        "test",
+        "-count=1",
+        "-timeout=90s",
+        "-run",
+        "TestUpdateCommandRefreshesCachedStatus",
+        "./cmd/elephant"
+      ],
+      "exit_code": 1,
+      "stdout": "--- FAIL: TestUpdateCommandRefreshesCachedStatus (0.02s)\n    --- FAIL: TestUpdateCommandRefreshesCachedStatus/plain (0.00s)\n        update_test.go:84: fresh check omitted available version or link: Elephant: No newer compatible release found for this installation.\n    --- FAIL: TestUpdateCommandRefreshesCachedStatus/explicit (0.00s)\n        update_test.go:84: fresh check omitted available version or link: Elephant: A newer compatible Elephant release is available.\nFAIL\nFAIL\tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.024s\nFAIL\n",
+      "stderr": "",
+      "elapsed_seconds": 1.024548388999989
+    },
+    "fixed_suite": {
+      "command": [
+        "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+        "test",
+        "-count=1",
+        "-timeout=90s",
+        "./..."
+      ],
+      "exit_code": 0,
+      "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t9.203s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.059s\n",
+      "stderr": "",
+      "elapsed_seconds": 10.653898115999993
+    },
+    "valid": true
+  },
+  "interrupted_review": {
+    "base_suite": {
+      "command": [
+        "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+        "test",
+        "-count=1",
+        "-timeout=90s",
+        "./..."
+      ],
+      "exit_code": 0,
+      "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t9.386s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.032s\n",
+      "stderr": "",
+      "elapsed_seconds": 10.779711597000016
+    },
+    "base_regression": {
+      "command": [
+        "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+        "test",
+        "-count=1",
+        "-timeout=90s",
+        "-run",
+        "TestTaskStatus|TestUnreviewedWorkCarriesToNextTask",
+        "."
+      ],
+      "exit_code": 1,
+      "stdout": "--- FAIL: TestTaskStatusAcknowledgedSavesAndRestart (0.04s)\n    task_status_test.go:57: stale review captured into the next task task changed before capture\n--- FAIL: TestTaskStatusInterruptedReviewKeepsItsTask (0.03s)\n    task_status_test.go:86: unknown task accepted task changed before capture\n--- FAIL: TestTaskStatusSupersededReview (0.03s)\n    task_status_test.go:130: read-only prompts dropped the pending review task changed before capture\n--- FAIL: TestUnreviewedWorkCarriesToNextTask (0.03s)\n    task_status_test.go:157: unreviewed edit lost at the next prompt map[]\n--- FAIL: TestTaskStatusFailurePauseAndIsolation (0.03s)\n    task_status_test.go:196: paused capture lacks guidance automatic memory is paused\nFAIL\nFAIL\tgithub.com/prithivrajmu/elephant\t0.162s\nFAIL\n",
+      "stderr": "",
+      "elapsed_seconds": 1.174800270999981
+    },
+    "fixed_suite": {
+      "command": [
+        "/workspace/scratch/7afee4bfc463/historical-runtime/toolchain/go/bin/go",
+        "test",
+        "-count=1",
+        "-timeout=90s",
+        "./..."
+      ],
+      "exit_code": 0,
+      "stdout": "ok  \tgithub.com/prithivrajmu/elephant\t9.674s\nok  \tgithub.com/prithivrajmu/elephant/cmd/elephant\t0.040s\n",
+      "stderr": "",
+      "elapsed_seconds": 11.126932017000001
+    },
+    "valid": true
+  }
+}
