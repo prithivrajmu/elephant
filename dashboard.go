@@ -15,6 +15,9 @@ import (
 //go:embed web/index.html
 var dashboardHTML string
 
+//go:embed docs/images/elephant-icon_dark.png
+var dashboardLogo []byte
+
 // dashboardURL is the link printed to the invoking terminal. The token travels
 // in the URL fragment, which browsers never send to the server, so GET / does
 // not need to embed it in the page.
@@ -33,6 +36,11 @@ func DashboardHandler(s Service, host, token string) http.Handler {
 		}
 		if origin := r.Header.Get("Origin"); origin != "" && origin != "http://"+host {
 			http.Error(w, "invalid origin", http.StatusForbidden)
+			return
+		}
+		if r.URL.Path == "/logo.png" && r.Method == "GET" {
+			w.Header().Set("Content-Type", "image/png")
+			w.Write(dashboardLogo)
 			return
 		}
 		if r.URL.Path == "/" && r.Method == "GET" {
