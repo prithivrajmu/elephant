@@ -289,9 +289,19 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 	runID := newID()
 	err := idleState(c, func(_ *sql.Tx, state *IdleDreamState) error {
 		now := time.Now().UTC()
-		if state.Lease != lease || !state.LeaseUntil.After(now) || !idleReady(*state, *c.IdleDream, now) {
+		if state.Lease != lease || !state.LeaseUntil.After(now) {
 			return nil
 		}
+		// An explicit Dream Now request skips only the quiet-period, cooldown
+		// and pending-work gates; pendingManualDream keeps the others.
+		request := pendingManualDream(*state, *c.IdleDream, now)
+		if request == "" && !idleReady(*state, *c.IdleDream, now) {
+			return nil
+		}
+		if request != "" {
+			state.ManualRequest, state.ManualRequestUntil = "", time.Time{}
+		}
+		state.RunID, state.RunRequest, state.CancelRun = runID, request, ""
 		day := now.Format("2006-01-02")
 		if state.Day != day {
 			state.Day, state.Attempts = day, 0
@@ -314,8 +324,17 @@ func runIdleDream(parent context.Context, path string, c AutomationConfig, lease
 			if state.Lease != lease {
 				return nil
 			}
+			// A cancelled run reports the user's choice, not the guard that
+			// enforced it. A run that already finished keeps its real result.
+			if state.CancelRun == runID {
+				if status == "cancelled" || status == "commit_rejected" {
+					status = "cancelled_by_user"
+				}
+				state.CancelRun = ""
+			}
 			state.LastResult, state.LastSaved = status, saved
 			state.LastSkipped = skipped
+			state.LastFinished = time.Now().UTC()
 			if state.Generation == generation && (status == "saved" || status == "no_change" || status == "empty" || status == "skipped") {
 				state.Reviewed, state.Cursor = generation, nextCursor
 			}

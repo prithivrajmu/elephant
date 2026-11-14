@@ -1,3 +1,5 @@
+<img src="docs/images/elephant-logo.svg" alt="Elephant logo" width="112" height="112">
+
 # Elephant
 
 Persistent experience for coding agents.
@@ -41,9 +43,9 @@ curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/
 irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
 ```
 
-Pin a version with `ELEPHANT_VERSION=v0.14.0`. See the [0.14.0 release notes](docs/releases/v0.14.0.md). Or install manually:
+Pin a version with `ELEPHANT_VERSION=v0.15.0`. See the [0.15.0 release notes](docs/releases/v0.15.0.md). Or install manually:
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.14.0 uses a regular release tag; the project's beta limitations still apply.
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.15.0 uses a regular release tag; the project's beta limitations still apply.
 
 | Computer | Archive platform |
 | --- | --- |
@@ -100,6 +102,11 @@ elephant init
 Restart your agent and approve its Elephant hooks through the host's normal approval flow. Work normally: hooks recall relevant memories, observe tool metadata, and request a short lesson review after the task. A saved lesson requires evidence and an acknowledged write; a task may produce no reusable lesson.
 
 Open the local dashboard with `elephant palace`. For Windows, other MCP clients, or explicit tool access, use `elephant setup --wizard` and follow [Client integration](docs/clients.md).
+
+On macOS, MCP servers and Memory Palace share an elephant icon in the top menu bar.
+Use project-grouped **Sessions** to identify clients and open the right dashboard.
+The menu also provides dreaming, update, health/diagnostic, and project-hook controls.
+See [macOS menu bar](docs/dashboard.md#macos-menu-bar) for consent rules and opt-out.
 
 ## Documentation
 

@@ -20,6 +20,13 @@ lease and the last result. `--reset-sessions` clears inspected abandoned session
 markers; it does not arm a review. See [scheduler troubleshooting](dreaming.md#inspect-settings-and-troubleshoot)
 for wait reasons, failure results and partial saves.
 
+## macOS menu bar
+
+`elephant mcp` and `elephant palace` automatically share a native elephant icon
+while running on macOS. Set `ELEPHANT_MENU_BAR=0` in the process environment to
+disable it. **Hide Menu Bar** never stops MCP or agent sessions. See the
+[menu-bar guide](dashboard.md#macos-menu-bar) for lifecycle and dashboard behavior.
+
 ## Setup and repair
 
 ```sh

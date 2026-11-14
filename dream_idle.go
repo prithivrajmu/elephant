@@ -66,26 +66,44 @@ type IdleDreamState struct {
 	LastResult   string          `json:"last_result,omitempty"`
 	LastSaved    []string        `json:"last_saved_ids,omitempty"`
 	LastSkipped  []DreamSkipped  `json:"last_skipped,omitempty"`
+	LastFinished time.Time       `json:"last_finished,omitempty"`
+	// RunID names the current or last review; RunRequest is the Dream Now
+	// request that started it, empty for a scheduled review.
+	RunID      string `json:"run_id,omitempty"`
+	RunRequest string `json:"run_request,omitempty"`
+	// CancelRun is set to RunID by an explicit local cancellation.
+	CancelRun          string    `json:"cancel_run,omitempty"`
+	ManualRequest      string    `json:"manual_request,omitempty"`
+	ManualRequestUntil time.Time `json:"manual_request_until,omitempty"`
 }
 
 type IdleDreamStatus struct {
 	Config         *IdleDreamConfig `json:"config"`
 	State          IdleDreamState   `json:"state"`
 	Running        bool             `json:"watcher_running"`
+	Reviewing      bool             `json:"reviewing"`
 	Ready          bool             `json:"ready"`
 	WaitReason     string           `json:"wait_reason"`
 	NextEligibleAt *time.Time       `json:"next_eligible_at,omitempty"`
+	// ManualBlocker is why Dream Now would be refused now; empty when allowed.
+	ManualBlocker string `json:"manual_blocker,omitempty"`
 }
 
 const idleTable = `CREATE TABLE IF NOT EXISTS dream_idle(context TEXT PRIMARY KEY, data TEXT NOT NULL)`
 
 func readIdleState(tx *sql.Tx, key string) (IdleDreamState, error) {
-	state := IdleDreamState{Active: map[string]bool{}}
 	if _, err := tx.Exec(idleTable); err != nil {
-		return state, err
+		return IdleDreamState{Active: map[string]bool{}}, err
 	}
+	return scanIdleState(tx, key)
+}
+
+func scanIdleState(q interface {
+	QueryRow(string, ...any) *sql.Row
+}, key string) (IdleDreamState, error) {
+	state := IdleDreamState{Active: map[string]bool{}}
 	var data string
-	err := tx.QueryRow("SELECT data FROM dream_idle WHERE context=?", key).Scan(&data)
+	err := q.QueryRow("SELECT data FROM dream_idle WHERE context=?", key).Scan(&data)
 	if err == sql.ErrNoRows {
 		return state, nil
 	}
@@ -97,6 +115,21 @@ func readIdleState(tx *sql.Tx, key string) (IdleDreamState, error) {
 		state.Active = map[string]bool{}
 	}
 	return state, err
+}
+
+// peekIdleState reads scheduler state without a write transaction, so
+// frequent status displays never wait on or block a running review.
+func peekIdleState(c AutomationConfig) (IdleDreamState, error) {
+	db, err := c.Service().Store.database(false)
+	if err != nil {
+		return IdleDreamState{Active: map[string]bool{}}, err
+	}
+	defer db.Close()
+	var exists bool
+	if err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='dream_idle')").Scan(&exists); err != nil || !exists {
+		return IdleDreamState{Active: map[string]bool{}}, err
+	}
+	return scanIdleState(db, taskContext(c))
 }
 
 func writeIdleState(tx *sql.Tx, key string, state IdleDreamState) error {
@@ -124,6 +157,12 @@ func idleState(c AutomationConfig, fn func(*sql.Tx, *IdleDreamState) error) erro
 // ConfigureIdleDream is a local opt-in. Changing settings invalidates in-flight
 // saves under the same SQLite lock used by the memory journal.
 func ConfigureIdleDream(path string, config IdleDreamConfig, reset bool) (IdleDreamStatus, error) {
+	return configureIdleDream(path, config, reset, nil)
+}
+
+// configureIdleDream refuses, under the installer lock, a config that no
+// longer belongs to scope when scope is set.
+func configureIdleDream(path string, config IdleDreamConfig, reset bool, scope *Service) (IdleDreamStatus, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return IdleDreamStatus{}, err
@@ -140,6 +179,9 @@ func ConfigureIdleDream(path string, config IdleDreamConfig, reset bool) (IdleDr
 	c, err = ReadAutomation(path)
 	if err != nil {
 		return IdleDreamStatus{}, err
+	}
+	if scope != nil && !automationMatchesService(c, *scope) {
+		return IdleDreamStatus{}, ErrDreamSetupMismatch
 	}
 	if err = config.validate(); err != nil {
 		return IdleDreamStatus{}, err
@@ -158,7 +200,6 @@ func ConfigureIdleDream(path string, config IdleDreamConfig, reset bool) (IdleDr
 	err = idleState(c, func(_ *sql.Tx, state *IdleDreamState) error {
 		state.Generation++
 		state.LastActivity = time.Now().UTC()
-		state.LastResult = "configured"
 		if reset {
 			state.Active = map[string]bool{}
 		}
@@ -181,7 +222,7 @@ func ConfigureIdleDream(path string, config IdleDreamConfig, reset bool) (IdleDr
 			return IdleDreamStatus{}, err
 		}
 	}
-	return DreamScheduleStatus(path)
+	return idleScheduleStatus(c)
 }
 
 // Share InitAutomation's lock so a concurrent init cannot restore paused state.
@@ -198,26 +239,33 @@ func DreamScheduleStatus(path string) (IdleDreamStatus, error) {
 	if err != nil {
 		return IdleDreamStatus{}, err
 	}
+	return idleScheduleStatus(c)
+}
+
+func idleScheduleStatus(c AutomationConfig) (IdleDreamStatus, error) {
 	out := IdleDreamStatus{Config: c.IdleDream}
-	err = idleState(c, func(_ *sql.Tx, state *IdleDreamState) error {
-		now := time.Now().UTC()
-		out.State = *state
-		out.Running = state.Lease != "" && state.LeaseUntil.After(now)
-		if out.State.Day != now.Format("2006-01-02") {
-			out.State.Attempts = 0
-		}
-		switch {
-		case !c.Enabled:
-			out.WaitReason = "automation_disabled"
-		case c.IdleDream == nil:
-			out.WaitReason = "not_configured"
-		default:
-			out.WaitReason, out.NextEligibleAt = idleEligibility(*state, *c.IdleDream, now)
-			out.Ready = out.WaitReason == "ready"
-		}
-		return nil
-	})
-	return out, err
+	state, err := peekIdleState(c)
+	if err != nil {
+		return out, err
+	}
+	now := time.Now().UTC()
+	out.State = state
+	out.Running = state.Lease != "" && state.LeaseUntil.After(now)
+	out.Reviewing = out.Running && state.LastResult == "running"
+	out.ManualBlocker = manualDreamBlocker(c, state, now)
+	if out.State.Day != now.Format("2006-01-02") {
+		out.State.Attempts = 0
+	}
+	switch {
+	case !c.Enabled:
+		out.WaitReason = "automation_disabled"
+	case c.IdleDream == nil:
+		out.WaitReason = "not_configured"
+	default:
+		out.WaitReason, out.NextEligibleAt = idleEligibility(state, *c.IdleDream, now)
+		out.Ready = out.WaitReason == "ready"
+	}
+	return out, nil
 }
 
 // touchIdleDream runs only for validated main-session hooks. An unmatched active
@@ -343,6 +391,9 @@ func validateIdleCommit(tx *sql.Tx, guard *idleCommitGuard) error {
 	if state.Lease != guard.Lease || !state.LeaseUntil.After(time.Now()) || state.Generation != guard.Generation || len(state.Active) != 0 {
 		return fmt.Errorf("foreground activity resumed or idle lease expired")
 	}
+	if state.CancelRun != "" && state.CancelRun == state.RunID {
+		return fmt.Errorf("review cancelled")
+	}
 	return nil
 }
 
@@ -397,8 +448,9 @@ func WatchIdleDream(ctx context.Context, path string) error {
 			if state.Lease != lease {
 				return fmt.Errorf("idle watcher lease replaced")
 			}
-			state.LeaseUntil = time.Now().Add(30 * time.Second)
-			ready = idleReady(*state, *c.IdleDream, time.Now())
+			now := time.Now()
+			state.LeaseUntil = now.Add(30 * time.Second)
+			ready = idleReady(*state, *c.IdleDream, now) || pendingManualDream(*state, *c.IdleDream, now) != ""
 			return nil
 		})
 		if err != nil {

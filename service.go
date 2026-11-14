@@ -15,7 +15,9 @@ type Service struct {
 	Conversation string
 	Unattached   bool
 	Task         *TaskCapture
-	idleGuard    *idleCommitGuard
+	// ObserveMCP receives only protocol metadata and must not block the server.
+	ObserveMCP func(MCPEvent) `json:"-"`
+	idleGuard  *idleCommitGuard
 }
 
 func (s Service) Profile() (Profile, error) {

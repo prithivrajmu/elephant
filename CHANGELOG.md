@@ -7,6 +7,27 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.15.0]
+
+Full notes: [docs/releases/v0.15.0.md](docs/releases/v0.15.0.md).
+
+### Added
+
+- A native macOS elephant menu-bar icon shared by active MCP and Memory Palace
+  processes. Open a secure local dashboard or hide the icon without stopping an
+  agent session. Set `ELEPHANT_MENU_BAR=0` to disable it; other platforms are unchanged.
+- Project-grouped native Sessions with MCP client identity, short instance IDs,
+  exact-context dashboards, temporary nicknames, and metadata-only activity.
+- Native update checks and explicitly confirmed checksum-verified installation,
+  with installed/running-version distinction and no automatic restarts.
+- Dreaming status, setup/configuration, consented Dream Now, schedule pause/resume,
+  cancellation, and real last-result reporting. Manual requests keep foreground,
+  daily-budget, concurrency, and commit guards; status reads are read-only.
+- Scoped project-hook controls and local health checks with allowlisted redacted
+  clipboard diagnostics. Explicit MCP calls continue while hooks are paused.
+- A shared elephant logo for native dialogs and the README, included with release
+  documentation assets.
+
 ## [0.14.0]
 
 Full notes: [docs/releases/v0.14.0.md](docs/releases/v0.14.0.md).

@@ -1,0 +1,382 @@
+//go:build darwin
+
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	memory "github.com/prithivrajmu/elephant"
+	"github.com/prithivrajmu/elephant/internal/menubar"
+)
+
+type menuControlContext struct {
+	Context    context.Context
+	Service    memory.Service
+	Executable string
+	InstanceID string
+	Prompt     func(menubar.Dialog) (menubar.Action, error)
+	Inform     func(title, message string)
+	Refresh    func()
+	OpenURL    func(string) error
+}
+
+type menuBarView struct {
+	ID        string
+	Session   menuBarSession
+	Observed  menuBarObservation
+	Service   memory.Service
+	Connected time.Time
+	Nickname  string
+	Context   context.Context
+	Sequence  uint64
+}
+
+func (v menuBarView) projectName() string {
+	if v.Session.Unattached {
+		return "No project"
+	}
+	name := v.Session.Project
+	if name == "" || filepath.IsAbs(name) {
+		name = filepath.Base(v.Session.Root)
+	}
+	return cleanMenuText(name, 70)
+}
+
+func (v menuBarView) clientName() string {
+	if v.Session.Kind == "palace" {
+		return "Memory Palace"
+	}
+	if !v.Observed.Initialized {
+		return "MCP client (identifying…)"
+	}
+	if v.Observed.Client.Title != "" {
+		return v.Observed.Client.Title
+	}
+	if v.Observed.Client.Name != "" {
+		return v.Observed.Client.Name
+	}
+	return "Unknown MCP client"
+}
+
+func (v menuBarView) label() string {
+	label := cleanMenuText(v.clientName(), 36) + " · " + v.shortID()
+	if v.Nickname != "" {
+		label = v.Nickname + " · " + label
+	}
+	return label
+}
+
+func (v menuBarView) shortID() string {
+	if len(v.ID) > 6 {
+		return strings.ToUpper(v.ID[:6])
+	}
+	return strings.ToUpper(v.ID)
+}
+
+type menuBarGroup struct {
+	key   string
+	title string
+	views []menuBarView
+}
+
+type menuBarControls struct {
+	ctx     context.Context
+	host    *menuBarHost
+	models  chan menubar.Model
+	changed chan struct{}
+	updates *menuBarUpdates
+	dreams  *menuBarDreams
+
+	mu       sync.Mutex
+	revision uint64
+	dialog   *menubar.Dialog
+	pending  map[string]chan menubar.Action
+	gate     chan struct{}
+	health   map[menuBarHealthKey]menuBarHealth
+}
+
+func newMenuBarControls(ctx context.Context, host *menuBarHost) *menuBarControls {
+	return &menuBarControls{ctx: ctx, host: host, models: make(chan menubar.Model, 1), changed: make(chan struct{}, 1), updates: newMenuBarUpdates(), dreams: newMenuBarDreams(), pending: map[string]chan menubar.Action{}, gate: make(chan struct{}, 1), health: map[menuBarHealthKey]menuBarHealth{}}
+}
+
+func (c *menuBarControls) requestRefresh() {
+	select {
+	case c.changed <- struct{}{}:
+	default:
+	}
+}
+
+func (c *menuBarControls) views() []menuBarView {
+	c.host.mu.Lock()
+	defer c.host.mu.Unlock()
+	views := make([]menuBarView, 0, len(c.host.sessions))
+	for peer := range c.host.sessions {
+		views = append(views, menuBarView{ID: peer.id, Session: peer.session, Observed: peer.observed, Service: peer.svc, Connected: peer.connected, Nickname: peer.nickname, Context: peer.ctx, Sequence: peer.seq})
+	}
+	sort.Slice(views, func(i, j int) bool { return views[i].Sequence < views[j].Sequence })
+	return views
+}
+
+func groupMenuBarViews(views []menuBarView) []menuBarGroup {
+	groups := make([]menuBarGroup, 0)
+	indices := make(map[string]int)
+	for _, view := range views {
+		key := view.Session.Root + "\x00" + view.Session.Project
+		if view.Session.Unattached {
+			key = "\x00unattached"
+		}
+		index, exists := indices[key]
+		if !exists {
+			index = len(groups)
+			indices[key] = index
+			groups = append(groups, menuBarGroup{key: key, title: view.projectName()})
+		}
+		groups[index].views = append(groups[index].views, view)
+	}
+	// Two repositories can share the same basename. Show a parent-folder hint,
+	// without placing full personal paths in the normal menu.
+	counts := make(map[string]int)
+	for _, group := range groups {
+		counts[group.title]++
+	}
+	for i := range groups {
+		if counts[groups[i].title] > 1 {
+			root := groups[i].views[0].Session.Root
+			groups[i].title += " · " + cleanMenuText(filepath.Base(filepath.Dir(root)), 30)
+		}
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		if groups[i].title == groups[j].title {
+			return groups[i].key < groups[j].key
+		}
+		return groups[i].title < groups[j].title
+	})
+	return groups
+}
+
+func menuBarRow(title string) menubar.Item { return menubar.Item{Title: title} }
+func menuBarAction(id, title string) menubar.Item {
+	return menubar.Item{ID: id, Title: title, Enabled: true}
+}
+func menuBarSubmenu(title string, items []menubar.Item) menubar.Item {
+	return menubar.Item{Title: title, Enabled: true, Items: items}
+}
+func menuBarSeparator() menubar.Item { return menubar.Item{Separator: true} }
+
+func scopeMenuBarItems(items []menubar.Item, instanceID string) []menubar.Item {
+	result := make([]menubar.Item, len(items))
+	for i, item := range items {
+		if item.ID != "" {
+			item.ID = "session/" + instanceID + "/" + item.ID
+		}
+		if len(item.Items) != 0 {
+			item.Items = scopeMenuBarItems(item.Items, instanceID)
+		}
+		result[i] = item
+	}
+	return result
+}
+
+func (c *menuBarControls) refresh() {
+	views := c.views()
+	groups := groupMenuBarViews(views)
+	var sessions, updates, dreams, health, projects []menubar.Item
+	attention := false
+	liveHealth := make(map[menuBarHealthKey]bool, len(views))
+	for _, group := range groups {
+		var sessionRows, updateRows, dreamRows, healthRows, projectRows []menubar.Item
+		for _, view := range group.views {
+			liveHealth[healthKey(view.Service)] = true
+			sessionItems := []menubar.Item{menuBarRow("Connected · PID " + fmt.Sprint(view.Session.PID)), menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
+			if view.Observed.Tool != "" {
+				outcome := "completed"
+				if view.Observed.Failed {
+					outcome = "failed"
+				}
+				sessionItems = append(sessionItems, menuBarSeparator(), menuBarRow(view.Observed.Tool+" · "+outcome), menuBarRow(view.Observed.At.Local().Format("15:04:05")))
+			}
+			sessionRows = append(sessionRows, menuBarSubmenu(view.label(), scopeMenuBarItems(sessionItems, view.ID)))
+			scope := c.scope(view)
+			updateItems, updateAttention := c.updates.Items(scope)
+			updateRows = append(updateRows, menuBarSubmenu(view.label(), scopeMenuBarItems(updateItems, view.ID)))
+			dreamItems, dreamAttention := c.dreams.Items(scope)
+			dreamRows = append(dreamRows, menuBarSubmenu(view.label(), scopeMenuBarItems(dreamItems, view.ID)))
+			healthItems, healthAttention := c.healthItems(view)
+			healthRows = append(healthRows, menuBarSubmenu(view.label(), scopeMenuBarItems(healthItems, view.ID)))
+			projectRows = append(projectRows, menuBarSubmenu(view.label(), scopeMenuBarItems(c.projectItems(view), view.ID)))
+			attention = attention || updateAttention || dreamAttention || healthAttention
+		}
+		sessions = append(sessions, menuBarSubmenu(group.title, sessionRows))
+		updates = append(updates, menuBarSubmenu(group.title, updateRows))
+		dreams = append(dreams, menuBarSubmenu(group.title, dreamRows))
+		health = append(health, menuBarSubmenu(group.title, healthRows))
+		projects = append(projects, menuBarSubmenu(group.title, projectRows))
+	}
+	items := []menubar.Item{menuBarRow(fmt.Sprintf("Elephant %s · %d connections", memory.Version, len(views))), menuBarSubmenu("Sessions", sessions), menuBarSeparator(), menuBarSubmenu("Dreaming", dreams), menuBarSubmenu("Updates", updates), menuBarSubmenu("Health & Diagnostics", health), menuBarSubmenu("Project Controls", projects)}
+	c.mu.Lock()
+	for key := range c.health {
+		if !liveHealth[key] {
+			delete(c.health, key)
+		}
+	}
+	c.revision++
+	model := menubar.Model{Revision: c.revision, Tooltip: fmt.Sprintf("Elephant · %d connected instances", len(views)), Attention: attention, Items: items, Dialog: c.dialog}
+	c.mu.Unlock()
+	select {
+	case c.models <- model:
+	default:
+		select {
+		case <-c.models:
+		default:
+		}
+		select {
+		case c.models <- model:
+		case <-c.ctx.Done():
+		}
+	}
+}
+
+func (c *menuBarControls) scope(view menuBarView) menuControlContext {
+	ctx := view.Context
+	return menuControlContext{Context: ctx, Service: view.Service, Executable: view.Session.Executable, InstanceID: view.ID, Prompt: func(dialog menubar.Dialog) (menubar.Action, error) { return c.prompt(ctx, dialog) }, Inform: func(title, message string) {
+		_, _ = c.prompt(ctx, menubar.Dialog{Title: title, Message: message, Buttons: []menubar.Button{{ID: "ok", Title: "OK"}}, Default: "ok", Cancel: "ok"})
+	}, Refresh: c.requestRefresh, OpenURL: c.host.openURL}
+}
+
+func (c *menuBarControls) prompt(ctx context.Context, dialog menubar.Dialog) (menubar.Action, error) {
+	select {
+	case c.gate <- struct{}{}:
+	case <-ctx.Done():
+		return menubar.Action{}, ctx.Err()
+	}
+	defer func() { <-c.gate }()
+	if err := ctx.Err(); err != nil {
+		return menubar.Action{}, err
+	}
+	dialog.ID = "dialog/" + rand.Text()
+	answer := make(chan menubar.Action, 1)
+	c.mu.Lock()
+	c.dialog, c.pending[dialog.ID] = &dialog, answer
+	c.mu.Unlock()
+	c.requestRefresh()
+	defer func() {
+		c.mu.Lock()
+		delete(c.pending, dialog.ID)
+		if c.dialog != nil && c.dialog.ID == dialog.ID {
+			c.dialog = nil
+		}
+		c.mu.Unlock()
+		c.requestRefresh()
+	}()
+	select {
+	case action := <-answer:
+		return action, nil
+	case <-ctx.Done():
+		return menubar.Action{}, ctx.Err()
+	case <-c.ctx.Done():
+		return menubar.Action{}, c.ctx.Err()
+	}
+}
+
+// Called by the native pipe reader. It only routes responses or starts tracked
+// work; native event delivery never waits for a dialog, network, or provider.
+func (c *menuBarControls) action(action menubar.Action) {
+	c.mu.Lock()
+	pending := c.pending[action.ID]
+	c.mu.Unlock()
+	if pending != nil {
+		select {
+		case pending <- action:
+		default:
+		}
+		return
+	}
+	if action.ID == menubar.HideAction {
+		return
+	}
+	parts := strings.SplitN(action.ID, "/", 3)
+	if len(parts) != 3 || parts[0] != "session" {
+		return
+	}
+	var selected menuBarView
+	for _, view := range c.views() {
+		if view.ID == parts[1] {
+			selected = view
+			break
+		}
+	}
+	if selected.ID == "" {
+		return
+	}
+	c.start(func() { c.handle(selected, parts[2]) })
+}
+
+func (c *menuBarControls) start(work func()) {
+	c.host.mu.Lock()
+	if c.host.closing {
+		c.host.mu.Unlock()
+		return
+	}
+	c.host.wg.Add(1)
+	c.host.mu.Unlock()
+	go func() {
+		defer c.host.wg.Done()
+		work()
+	}()
+}
+
+func (c *menuBarControls) handle(view menuBarView, action string) {
+	scope := c.scope(view)
+	if scope.Context.Err() != nil {
+		return
+	}
+	switch action {
+	case "open":
+		url, err := c.host.dashboardURL(view.ID)
+		if err == nil {
+			err = scope.OpenURL(url)
+		}
+		if err != nil && scope.Context.Err() == nil {
+			scope.Inform("Memory Palace unavailable", err.Error())
+		}
+	case "details":
+		conversation := cleanMenuText(view.Session.Conversation, 160)
+		if conversation == "" {
+			conversation = "Not supplied by the client/configuration"
+		}
+		last := "No memory tool calls observed on this connection"
+		if view.Observed.Tool != "" {
+			last = view.Observed.Tool + " at " + view.Observed.At.Local().Format(time.RFC3339)
+			if view.Observed.Failed {
+				last += " (failed)"
+			}
+		}
+		scope.Inform("Elephant Instance · "+view.shortID(), fmt.Sprintf("Project: %s\nClient: %s\nClient version: %s\nEngine: %s\nPID: %d\nConnected: %s\nConversation: %s\nRoot: %s\nStore: %s\nExecutable: %s\nLast activity: %s\n\nConnected does not mean an active chat or foreground task. Nicknames last for this connection.", view.projectName(), view.clientName(), view.Observed.Client.Version, cleanMenuText(view.Session.EngineVersion, 40), view.Session.PID, view.Connected.Local().Format(time.RFC3339), conversation, view.Session.Root, view.Session.Store, view.Session.Executable, last))
+	case "rename":
+		answer, err := scope.Prompt(menubar.Dialog{Title: "Rename Instance", Message: "A nickname distinguishes windows on the same project. It lasts until this connection ends.", Buttons: []menubar.Button{{ID: "save", Title: "Save"}, {ID: "cancel", Title: "Cancel"}}, Default: "save", Cancel: "cancel", Input: true, Value: view.Nickname})
+		if err == nil && answer.Choice == "save" {
+			c.host.mu.Lock()
+			for peer := range c.host.sessions {
+				if peer.id == view.ID {
+					peer.nickname = cleanMenuText(answer.Text, 40)
+				}
+			}
+			c.host.mu.Unlock()
+			c.requestRefresh()
+		}
+	default:
+		if c.updates.Handle(scope, action) || c.dreams.Handle(scope, action) || c.handleHealth(view, action) || c.handleProject(view, action) {
+			return
+		}
+	}
+}
+
+var errMenuBarContextMismatch = errors.New("installed automatic hooks use another store, identity, project, or conversation; select the matching instance instead")

@@ -28,6 +28,9 @@ func run() error {
 		return fmt.Errorf("usage: elephant <version|doctor|selftest|setup|language|fingerprint|init|automation|experiences|task-status|update|hook|recall|dream|dream-eval|dream-commit|dream-schedule|dream-worker|remember|imprint|status|inspect|why|scars|map|stats|palace|feedback|forget|approve|mcp|export|import|backup|restore|sync|team-submit|team-pull> [flags]; see docs/quickstart.md")
 	}
 	command := os.Args[1]
+	if command == menuBarCommand {
+		return runMenuBarHost()
+	}
 	if command == "version" {
 		fmt.Println("Elephant " + memory.Version)
 		return nil
@@ -616,9 +619,9 @@ func run() error {
 		}
 		return printJSON(d)
 	case "mcp":
-		return memory.ServeMCP(svc, os.Stdin, os.Stdout)
+		return serveWithMenuBar(svc, "mcp", func(observed memory.Service) error { return memory.ServeMCP(observed, os.Stdin, os.Stdout) })
 	case "ui":
-		return memory.ServeDashboard(svc, *port)
+		return serveWithMenuBar(svc, "palace", func(observed memory.Service) error { return memory.ServeDashboard(observed, *port) })
 	case "export":
 		data, e := memory.ExportTeam(svc)
 		if e != nil {
