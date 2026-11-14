@@ -84,7 +84,7 @@ For Worker changes, run from `cloudflare/`: `npm ci`, `npm run check`, `npm test
 
 ## Runtime/Tooling Preferences
 
-- `go.mod` requires Go 1.26.0 and selects toolchain Go 1.27.3. Follow it over older README/install prose. The pure-Go SQLite driver supports `CGO_ENABLED=0` releases.
+- `go.mod` requires Go 1.26.0 and selects toolchain Go 1.27.4. Follow it over older README/install prose. The pure-Go SQLite driver supports `CGO_ENABLED=0` releases.
 - Python 3.11+ runs acceptance tools. Node runs dashboard checks. Cloudflare uses npm with its committed lockfile and current Node 22 (CI baseline); the separate npm launcher requires Node 18+.
 - Use direct Go/npm commands; there is no Make/Task wrapper or configured ESLint/Prettier pipeline. Cloudflare uses strict TypeScript, Vitest, and Wrangler.
 - Local identity labels are not authentication. Credential screening is heuristic, not complete redaction. Disable default GitHub release checks in isolated scenarios with `ELEPHANT_UPDATE_CHECKS=0`; never use real user stores for checks.

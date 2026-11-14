@@ -28,6 +28,11 @@ Full notes: [docs/releases/v0.15.0.md](docs/releases/v0.15.0.md).
 - A shared elephant logo for native dialogs and the README, included with release
   documentation assets.
 
+### Security
+
+- Build releases with Go 1.27.4 to fix the reachable `net/http` vulnerability
+  GO-2026-6859. Keep the Go 1.26.0 compatibility floor.
+
 ## [0.14.0]
 
 Full notes: [docs/releases/v0.14.0.md](docs/releases/v0.14.0.md).
