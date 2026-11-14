@@ -42,6 +42,56 @@ The loopback UI uses the per-run token from the printed link, strict Host/Origin
 
 **Token savings are estimates, not measured provider billing reductions.** The estimate is `ceil(bytes / 4)`; it varies with language, text, tokenizer, tool wrappers and prompt caching. The baseline intentionally assumes naive full loading of eligible summaries. This is not a comparison against an optimized competing retrieval layer. Useful memory may add tokens compared with no memory. Quality and execution efficiency are not claimed by this dashboard.
 
+## macOS menu bar
+
+On macOS, `elephant mcp` and `elephant palace` show a monochrome elephant in the
+menu bar while they run. Concurrent processes share one icon. Short CLI commands
+and automatic hooks alone do not keep an icon running.
+
+- **Sessions** groups connections by project, with client names and short instance
+  IDs. Pick a connection to open its token-protected Memory Palace, inspect its
+  process/version/conversation metadata, or give it a temporary nickname. Its
+  dashboard uses a random loopback port and that exact connection's context.
+- Connections are not necessarily chats or foreground tasks. Client identity
+  comes from MCP initialization; conversation IDs appear only when supplied.
+  Last activity records a tool name, time, and success/failure, never arguments,
+  output, prompts, error text, or memory content.
+- **Dreaming** exposes status, next eligibility, last results, bounded manual
+  review, configuration, pause/resume, and cancellation for the selected context.
+  Review/setup/resume dialogs ask for consent before provider use or hook setup.
+  See [Dreaming](dreaming.md#macos-menu-controls) for the remaining safety gates.
+- **Updates** reads cached availability, checks on request, and offers confirmed
+  checksum-verified installation into the selected connection's binary path.
+  Running processes are never restarted automatically. See [Updates](updates.md#macos-menu-bar-installation).
+- **Health & Diagnostics** checks the store, context, hooks, and configured
+  reviewer executable. Provider authentication and host approval remain unchecked.
+  Clipboard diagnostics use an allowlist that excludes paths, identities, names,
+  memory text, activity content, and credentials.
+- **Project Controls** reveals the project in Finder, pauses/resumes automatic
+  hooks, or explicitly sets up/repairs the chosen agent's hooks. Pausing hooks does
+  not disable explicit MCP calls. Controls refuse another store/identity context.
+- Dialogs use the same elephant silhouette as the toolbar and README logo.
+- **Hide Menu Bar** closes only the companion and its dashboard listeners. It does
+  not stop MCP servers or agent sessions. A new Elephant process can show it again.
+- The companion exits when the last connected Elephant process exits, including
+  after an abrupt disconnect.
+
+Disable the icon for a process with:
+
+```sh
+ELEPHANT_MENU_BAR=0 elephant mcp
+```
+
+For an MCP client, set `ELEPHANT_MENU_BAR` to `0` in that server's environment.
+Icon failures warn on stderr without changing MCP protocol output. The companion
+uses macOS's built-in AppKit/JXA runtime. The first launch prepares a private cached
+app bundle with system tools; later launches reuse it. It needs a logged-in desktop
+session, not Swift, Xcode, or an additional package. Linux and Windows behavior is unchanged.
+
+Existing processes keep the executable they started with. After installing this
+build, hide an older companion and restart the intended MCP server with the new
+binary. No agent process is stopped or replaced by the menu bar.
+
 ## Synthetic demo
 
 ```sh

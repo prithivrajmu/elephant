@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 func schema(properties map[string]any, required ...string) map[string]any {
@@ -74,7 +75,8 @@ func ServeMCP(s Service, in io.Reader, out io.Writer) error {
 					break
 				}
 				var p struct {
-					Version string `json:"protocolVersion"`
+					Version string        `json:"protocolVersion"`
+					Client  MCPClientInfo `json:"clientInfo"`
 				}
 				if decode(r.Params, &p) != nil || p.Version == "" {
 					code = -32602
@@ -92,6 +94,9 @@ func ServeMCP(s Service, in io.Reader, out io.Writer) error {
 					break
 				}
 				initialized = true
+				if s.ObserveMCP != nil {
+					s.ObserveMCP(MCPEvent{Client: p.Client, At: time.Now().UTC()})
+				}
 				result = map[string]any{"protocolVersion": version, "capabilities": map[string]any{"tools": map[string]any{}, "prompts": map[string]any{}}, "serverInfo": map[string]string{"name": "elephant", "version": Version}, "instructions": instructions}
 			case "prompts/list":
 				if !ready {
@@ -185,6 +190,9 @@ func ServeMCP(s Service, in io.Reader, out io.Writer) error {
 					txt = string(b)
 				}
 				result = map[string]any{"content": []map[string]string{{"type": "text", "text": txt}}, "isError": e != nil}
+				if s.ObserveMCP != nil {
+					s.ObserveMCP(MCPEvent{Tool: p.Name, At: time.Now().UTC(), Failed: e != nil})
+				}
 			default:
 				code = -32601
 				message = "method not found"

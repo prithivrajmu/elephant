@@ -199,8 +199,10 @@ The JSON status separates eligibility from the watcher lease:
 | `wait_reason` | The gate preventing an attempt, or `ready`. |
 | `next_eligible_at` | Earliest time allowed by the current timing gates, when known. New activity can move it. |
 | `watcher_running` | A watcher holds an unexpired lease; this does not prove a reviewer is running. |
-| `state.last_result` | Result of the last attempt or configuration change. |
+| `state.last_result` | Result of the latest review attempt; configuration changes preserve it. |
 | `state.last_saved_ids` / `state.last_skipped` | Saved replacements and oversized inputs from the latest attempt. |
+| `reviewing` / `manual_blocker` | Whether a reviewer is actually running, and why Dream Now would be refused. |
+| `state.last_finished` | Completion time of the latest finished attempt. |
 
 Use `wait_reason` to choose the next step:
 
@@ -221,12 +223,35 @@ expired lease. A custom supervisor can run `dream-worker --config` directly.
 For `runner_failed`, check that the configured executable exists and its login
 works. For `invalid_output`, check the adapter's JSON contract and replacement
 validation. A timeout or foreground activity can produce `cancelled`.
+`cancelled_by_user` records an explicit cancellation; it does not pause the schedule.
 `prepare_failed` means the batch could not be prepared; confirm the backend
 supports dreaming and the store is accessible. `commit_rejected` means a save
 failed a current revision, policy, duplicate or activity check. Obtain a fresh
 batch before a manual retry. Failures consume an attempt and retain the cursor.
 Runner diagnostics are deliberately discarded; status does not include a raw
 error log. `last_saved_ids` can be nonempty after a later save fails.
+
+### macOS menu controls
+
+Use **Dreaming → project → instance** to inspect the exact selected memory
+context. Setup names the project/store and asks which agent's hooks may be
+installed. Host approval is still required. Configuration accepts Codex or a
+trusted absolute command argument array, editable bounded limits, and an explicit
+choice to enable scheduling or save it paused.
+
+**Dream Now** asks for consent naming the scope, reviewer, provider usage, and
+limits. It requests a real configured reviewer, not just a read-only batch.
+The request expires after one minute if no watcher starts it. It skips the quiet
+period, cooldown, and pending-work requirement only; paused hooks/scheduling,
+foreground activity, daily limits, and overlapping reviews still block it.
+Manual reviews count toward the same daily limit. All source, revision, scope,
+applicability, writing, evaluation, and commit guards still apply.
+
+**Cancel Review** withdraws a pending request or stops the running reviewer.
+Each commit checks cancellation, so no further replacements are saved after the
+flag is set. Already committed changes are not undone. Scheduling stays enabled
+unless separately paused. **Show Last Result** reports observed results and
+counts, not inferred learning quality. Status reads do not write scheduler state.
 
 ### Other local runners
 

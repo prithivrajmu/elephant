@@ -108,6 +108,32 @@ short-lived update lock is separate from the memory journal lock. Lookup failure
 does not block the coding task or change memory data. Hook notices use the host's
 `systemMessage` field, while the memory summary is agent-authored final output.
 
+## macOS menu-bar installation
+
+Open **Updates → project → instance** to inspect the selected binary's on-disk
+version, cached release status, and last check time. Merely opening or refreshing
+the menu makes no network request. **Check for Updates** uses the same explicit
+check and opt-out policy as the CLI. Release notes open the canonical GitHub page.
+
+**Install Elephant …** first names the exact resolved target path, old/new
+versions, checksum trust limits, and restart impact in a native confirmation.
+Cancel is the default. Installation downloads only the matching published
+platform archive and its `SHA256SUMS`, validates size/checksum/executable platform
+and reported version, then atomically replaces that file. Other binaries remain
+unchanged. Staging failures or cancellation before replacement leave it intact.
+A directory-flush warning after replacement reports that installation committed
+but durability could not be confirmed.
+
+Releases are unsigned. A checksum proves agreement with the published asset,
+not the publisher's identity. Downloads trust GitHub TLS and permit only its
+release-delivery redirect hosts; credentials are not forwarded to those hosts.
+
+After installation the menu shows **Restart Needed**. Running MCP servers and
+the companion retain their old process image until explicitly restarted.
+Installation never interrupts or restarts them automatically. A file that changes
+during preparation is not replaced; an unwritable installation must be updated
+with the tool that owns it. Linux/Windows have no native menu-bar installer.
+
 ## Verification
 
 ```sh
