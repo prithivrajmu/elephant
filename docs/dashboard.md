@@ -70,7 +70,8 @@ and automatic hooks alone do not keep an icon running.
 - **Project Controls** reveals the project in Finder, pauses/resumes automatic
   hooks, or explicitly sets up/repairs the chosen agent's hooks. Pausing hooks does
   not disable explicit MCP calls. Controls refuse another store/identity context.
-- Dialogs use the same elephant silhouette as the toolbar and README logo.
+- Dialogs use the supplied Elephant artwork, also used in the dashboard and README.
+  The monochrome menu-bar silhouette is unchanged.
 - **Hide Menu Bar** closes only the companion and its dashboard listeners. It does
   not stop MCP servers or agent sessions. A new Elephant process can show it again.
 - The companion exits when the last connected Elephant process exits, including

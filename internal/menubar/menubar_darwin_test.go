@@ -56,3 +56,17 @@ func TestWriteStatesStopsOnCancel(t *testing.T) {
 		t.Fatal("writer did not stop after cancellation")
 	}
 }
+
+func TestAppExecutablePreservesSignatureWithDialogArtwork(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	executable, err := appExecutable(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle := filepath.Dir(filepath.Dir(filepath.Dir(executable)))
+	if err := nativeTool(ctx, "/usr/bin/codesign", "--verify", "--deep", "--strict", bundle); err != nil {
+		t.Fatalf("native app cannot validate after adding dialog artwork: %v", err)
+	}
+}

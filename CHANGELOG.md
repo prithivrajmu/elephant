@@ -7,6 +7,15 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.15.1]
+
+Full notes: [docs/releases/v0.15.1.md](docs/releases/v0.15.1.md).
+
+### Changed
+
+- Use the supplied Elephant artwork for the dashboard, browser icon, README
+  (light/dark variants), and native dialogs. Keep the menu-bar silhouette unchanged.
+
 ## [0.15.0]
 
 Full notes: [docs/releases/v0.15.0.md](docs/releases/v0.15.0.md).

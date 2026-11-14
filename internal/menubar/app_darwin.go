@@ -5,6 +5,7 @@ package menubar
 import (
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +19,9 @@ import (
 // Keep the compiler's bundle metadata: the system applet launcher depends on it.
 // The script switches to accessory mode after launch instead of LSUIElement.
 
+//go:embed dialog-logo.png
+var dialogLogoPNG []byte
+
 func appExecutable(ctx context.Context) (string, error) {
 	cache, err := os.UserCacheDir()
 	if err != nil {
@@ -27,7 +31,10 @@ func appExecutable(ctx context.Context) (string, error) {
 	if err := os.MkdirAll(base, 0700); err != nil {
 		return "", fmt.Errorf("menubar: create native app cache: %w", err)
 	}
-	sum := sha256.Sum256([]byte(script))
+	hash := sha256.New()
+	hash.Write([]byte(script))
+	hash.Write(dialogLogoPNG)
+	sum := hash.Sum(nil)
 	destination := filepath.Join(base, fmt.Sprintf("%x", sum[:12]))
 	executable := filepath.Join(destination, "Elephant.app", "Contents", "MacOS", "applet")
 	if info, err := os.Stat(executable); err == nil {
@@ -50,6 +57,14 @@ func appExecutable(ctx context.Context) (string, error) {
 	}
 	bundle := filepath.Join(stage, "Elephant.app")
 	if err := nativeTool(ctx, "/usr/bin/osacompile", "-l", "JavaScript", "-o", bundle, source); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(filepath.Join(bundle, "Contents", "Resources", "dialog-logo.png"), dialogLogoPNG, 0600); err != nil {
+		return "", fmt.Errorf("menubar: write dialog logo: %w", err)
+	}
+	// osacompile signs its output before the additional resource exists.
+	// Re-seal the complete bundle with a local ad-hoc signature.
+	if err := nativeTool(ctx, "/usr/bin/codesign", "--force", "--sign", "-", bundle); err != nil {
 		return "", err
 	}
 	if err := os.Remove(source); err != nil {

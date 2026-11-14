@@ -17,26 +17,13 @@ function emit(obj) { writeTo($.NSFileHandle.fileHandleWithStandardOutput, JSON.s
 function logError(msg) { writeTo($.NSFileHandle.fileHandleWithStandardError, 'elephant menu: ' + msg); }
 function str(v) { return typeof v === 'string' ? v : ''; }
 
-// The same 18-unit silhouette appears in docs/images/elephant-logo.svg.
-// Draw at the destination resolution so dialog icons stay sharp on Retina.
-function elephantImage(attention, logo) {
-	var size = logo ? 128 : 18;
+// Preserve the original template silhouette for the menu-bar status item.
+function elephantImage(attention) {
+	var size = 18;
 	var img = $.NSImage.alloc.initWithSize($.NSMakeSize(size, size));
 	img.lockFocus;
 	$.NSGraphicsContext.saveGraphicsState;
-	var green = null;
-	if (logo) {
-		green = $.NSColor.colorWithSRGBRedGreenBlueAlpha(198 / 255, 219 / 255, 171 / 255, 1);
-		green.set;
-		$.NSBezierPath.bezierPathWithRoundedRectXRadiusYRadius($.NSMakeRect(4, 4, 120, 120), 26, 26).fill;
-		var transform = $.NSAffineTransform.transform;
-		transform.translateXByYBy(8.2, 16);
-		transform.scaleBy(6);
-		transform.concat;
-		$.NSColor.colorWithSRGBRedGreenBlueAlpha(38 / 255, 48 / 255, 32 / 255, 1).set;
-	} else {
-		$.NSColor.blackColor.set;
-	}
+	$.NSColor.blackColor.set;
 	var p = $.NSBezierPath.bezierPath;
 	// body, head, and legs
 	p.appendBezierPath($.NSBezierPath.bezierPathWithOvalInRect($.NSMakeRect(1.5, 5, 11, 8)));
@@ -50,20 +37,19 @@ function elephantImage(attention, logo) {
 	t.lineWidth = 1.8;
 	t.lineCapStyle = $.NSLineCapStyleRound;
 	t.stroke;
-	if (logo) green.set;
-	else $.NSGraphicsContext.currentContext.compositingOperation = $.NSCompositingOperationClear;
+	$.NSGraphicsContext.currentContext.compositingOperation = $.NSCompositingOperationClear;
 	var ear = $.NSBezierPath.bezierPathWithOvalInRect($.NSMakeRect(10.3, 9.3, 2.6, 3.4));
 	ear.lineWidth = 0.9;
 	ear.stroke;
 	$.NSBezierPath.bezierPathWithOvalInRect($.NSMakeRect(13.6, 11, 1, 1)).fill;
-	if (attention && !logo) {
+	if (attention) {
 		$.NSBezierPath.bezierPathWithOvalInRect($.NSMakeRect(0, 11, 7, 7)).fill;
 		$.NSGraphicsContext.currentContext.compositingOperation = $.NSCompositingOperationSourceOver;
 		$.NSBezierPath.bezierPathWithOvalInRect($.NSMakeRect(1, 12, 5, 5)).fill;
 	}
 	$.NSGraphicsContext.restoreGraphicsState;
 	img.unlockFocus;
-	img.template = !logo;
+	img.template = true;
 	return img;
 }
 
@@ -194,7 +180,10 @@ function showDialog(d) {
 	}) : [];
 	if (buttons.length === 0) buttons = [{ id: 'ok', title: 'OK' }];
 	var alert = $.NSAlert.alloc.init;
-	if (!dialogLogo) dialogLogo = elephantImage(false, true);
+	if (!dialogLogo) {
+		var path = $.NSBundle.mainBundle.pathForResourceOfType('dialog-logo', 'png');
+		dialogLogo = $.NSImage.alloc.initWithContentsOfFile(path);
+	}
 	alert.icon = dialogLogo;
 	alert.messageText = $(str(d.title));
 	alert.informativeText = $(str(d.message));

@@ -1,4 +1,7 @@
-<img src="docs/images/elephant-logo.svg" alt="Elephant logo" width="112" height="112">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/elephant-full_dark.png">
+  <img src="docs/images/elephant-full_light.png" alt="Elephant — Persistent experience for coding agents" width="640">
+</picture>
 
 # Elephant
 
@@ -43,9 +46,9 @@ curl -fsSL https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/
 irm https://raw.githubusercontent.com/prithivrajmu/elephant/main/scripts/get.ps1 | iex
 ```
 
-Pin a version with `ELEPHANT_VERSION=v0.15.0`. See the [0.15.0 release notes](docs/releases/v0.15.0.md). Or install manually:
+Pin a version with `ELEPHANT_VERSION=v0.15.1`. See the [0.15.1 release notes](docs/releases/v0.15.1.md). Or install manually:
 
-Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.15.0 uses a regular release tag; the project's beta limitations still apply.
+Download the matching ZIP from [Releases](https://github.com/prithivrajmu/elephant/releases). Prebuilt binaries do not require Go. Version 0.15.1 uses a regular release tag; the project's beta limitations still apply.
 
 | Computer | Archive platform |
 | --- | --- |
