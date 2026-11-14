@@ -62,6 +62,11 @@ func appExecutable(ctx context.Context) (string, error) {
 	if err := os.WriteFile(filepath.Join(bundle, "Contents", "Resources", "dialog-logo.png"), dialogLogoPNG, 0600); err != nil {
 		return "", fmt.Errorf("menubar: write dialog logo: %w", err)
 	}
+	// osacompile signs its output before the additional resource exists.
+	// Re-seal the complete bundle with a local ad-hoc signature.
+	if err := nativeTool(ctx, "/usr/bin/codesign", "--force", "--sign", "-", bundle); err != nil {
+		return "", err
+	}
 	if err := os.Remove(source); err != nil {
 		return "", fmt.Errorf("menubar: remove staged native script: %w", err)
 	}
