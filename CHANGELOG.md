@@ -7,6 +7,10 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+## [0.15.3]
+
+Full notes: [docs/releases/v0.15.3.md](docs/releases/v0.15.3.md).
+
 ### Changed
 
 - The macOS menu-bar **Updates** menu now updates Elephant as one product. One
