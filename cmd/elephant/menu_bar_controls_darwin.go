@@ -22,11 +22,24 @@ type menuControlContext struct {
 	Service     memory.Service
 	Executable  string
 	Executables []string // every connected process's binary; product-wide updates only
-	InstanceID  string
-	Prompt      func(menubar.Dialog) (menubar.Action, error)
-	Inform      func(title, message string)
-	Refresh     func()
-	OpenURL     func(string) error
+	// Product-wide updates only. Stores holds every connected store; when
+	// empty, Service.Store is the only store. ReportedExecutables are the
+	// elephant paths each session found on its own PATH.
+	Stores               []memory.Store
+	ReportedExecutables  []string
+	UpdateChecksDisabled bool                // any connected process set ELEPHANT_UPDATE_CHECKS=0
+	Running              []menuRunningBinary // live processes and the version each runs
+	InstanceID           string
+	Prompt               func(menubar.Dialog) (menubar.Action, error)
+	Inform               func(title, message string)
+	Refresh              func()
+	OpenURL              func(string) error
+}
+
+// menuRunningBinary is one live process: the binary it started from and the
+// engine version it runs, which stays fixed until it restarts.
+type menuRunningBinary struct {
+	Executable, Version string
 }
 
 type menuBarView struct {
@@ -224,7 +237,11 @@ func (c *menuBarControls) refresh() {
 		updates, updateAttention = c.updates.Items(c.productScope(views))
 		attention = attention || updateAttention
 	}
-	items := []menubar.Item{menuBarRow(fmt.Sprintf("Elephant %s · %d connections", memory.Version, len(views))), menuBarSubmenu("Sessions", sessions), menuBarSeparator(), menuBarSubmenu("Dreaming", dreams), menuBarSubmenu("Updates", updates), menuBarSubmenu("Health & Diagnostics", health), menuBarSubmenu("Project Controls", projects)}
+	versions := []string{memory.Version}
+	for _, view := range views {
+		versions = append(versions, cleanMenuText(view.Session.EngineVersion, 40))
+	}
+	items := []menubar.Item{menuBarRow(menuBarProductTitle(versions, len(views))), menuBarSubmenu("Sessions", sessions), menuBarSeparator(), menuBarSubmenu("Dreaming", dreams), menuBarSubmenu("Updates", updates), menuBarSubmenu("Health & Diagnostics", health), menuBarSubmenu("Project Controls", projects)}
 	c.mu.Lock()
 	for key := range c.health {
 		if !liveHealth[key] {
@@ -255,16 +272,49 @@ func (c *menuBarControls) scope(view menuBarView) menuControlContext {
 	}, Refresh: c.requestRefresh, OpenURL: c.host.openURL}
 }
 
-// productScope addresses Elephant as a whole: every connected binary, with
-// release status read from the oldest connection's store. It uses the host
+// menuBarProductTitle names every Elephant version running now: the companion
+// and each connected engine. Blank versions are dropped.
+func menuBarProductTitle(versions []string, connections int) string {
+	seen := map[string]bool{}
+	var unique []string
+	for _, v := range versions {
+		if v != "" && !seen[v] {
+			seen[v] = true
+			unique = append(unique, v)
+		}
+	}
+	sort.Strings(unique)
+	return fmt.Sprintf("Elephant %s · %d connections", strings.Join(unique, ", "), connections)
+}
+
+// productScope addresses Elephant as a whole: every connected binary and the
+// elephant each session finds on its PATH, release status from every
+// connected store, and the version each live process runs. It uses the host
 // context so an update survives any single connection ending.
 func (c *menuBarControls) productScope(views []menuBarView) menuControlContext {
-	executables := make([]string, len(views))
-	for i, view := range views {
-		executables[i] = view.Session.Executable
+	executables := make([]string, 0, len(views))
+	var reported []string
+	var stores []memory.Store
+	var running []menuRunningBinary
+	seenStore := map[string]bool{}
+	disabled := false
+	for _, view := range views {
+		executables = append(executables, view.Session.Executable)
+		if view.Session.ElephantPath != "" {
+			reported = append(reported, view.Session.ElephantPath)
+		}
+		if !seenStore[view.Service.Store.Path] {
+			seenStore[view.Service.Store.Path] = true
+			stores = append(stores, view.Service.Store)
+		}
+		running = append(running, menuRunningBinary{Executable: view.Session.Executable, Version: view.Session.EngineVersion})
+		disabled = disabled || view.Session.UpdateChecksDisabled
+	}
+	if self, err := c.updates.self(); err == nil {
+		running = append(running, menuRunningBinary{Executable: self, Version: memory.Version})
 	}
 	ctx := c.ctx
-	return menuControlContext{Context: ctx, Service: views[0].Service, Executables: executables, Prompt: func(dialog menubar.Dialog) (menubar.Action, error) { return c.prompt(ctx, dialog) }, Inform: func(title, message string) {
+	return menuControlContext{Context: ctx, Service: views[0].Service, Executables: executables, Stores: stores, ReportedExecutables: reported, UpdateChecksDisabled: disabled, Running: running, Prompt: func(dialog menubar.Dialog) (menubar.Action, error) { return c.prompt(ctx, dialog) }, Inform: func(title, message string) {
 		_, _ = c.prompt(ctx, menubar.Dialog{Title: title, Message: message, Buttons: []menubar.Button{{ID: "ok", Title: "OK"}}, Default: "ok", Cancel: "ok"})
 	}, Refresh: c.requestRefresh, OpenURL: c.host.openURL}
 }

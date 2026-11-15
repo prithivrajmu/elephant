@@ -10,10 +10,21 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 ### Changed
 
 - The macOS menu-bar **Updates** menu now updates Elephant as one product. One
-  confirmation installs the release into every Elephant binary in use: connected
-  processes, the companion, and `elephant` on `PATH`. Each binary installs
-  separately, and failures are reported per binary. npm launcher cache copies are
-  listed but not replaced. Running processes are still never restarted.
+  confirmation installs into every Elephant binary in use: connected server
+  executables, the companion, and each process's `elephant` on `PATH`. The
+  same file counts once; npm launcher cache copies are listed but not replaced.
+  Each binary uses its own version and release lane, so one install can target
+  different releases. Failures are reported per binary.
+- Disable checks for the whole menu when the companion, any connected session, or
+  any connected store disables them. An enabled store cannot override a disabled
+  store, and the menu does not write the combined decision to store files. The CLI
+  and Memory Palace remain per store. Session GitHub tokens are ignored; private
+  repositories require the token in the process that started the menu bar.
+- List every distinct running companion and engine version in the menu's top row.
+  Show **Restart Needed** whenever a connected process differs from its executable
+  on disk, including replacements made outside this menu. Nothing restarts
+  automatically; replacing the companion requires **Hide Menu Bar** before the new
+  code runs.
 
 ## [0.15.2]
 

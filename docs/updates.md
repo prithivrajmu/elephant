@@ -110,41 +110,61 @@ does not block the coding task or change memory data. Hook notices use the host'
 
 ## macOS menu-bar installation
 
-**Updates** treats Elephant as one product. It covers every distinct binary used
-by a connected MCP server or Memory Palace, the menu-bar companion's own binary,
-and the `elephant` found on `PATH`. Symlinks resolve to their real file, so a
-binary shared by several connections counts once. The menu shows each binary's
-on-disk version, the cached release status, and the last check time. Release
-status comes from the oldest connection's store. Merely opening or refreshing the
-menu makes no network request. **Check for Updates** uses the same explicit check
-and opt-out policy as the CLI. Release notes open the canonical GitHub page.
+**Updates** treats each installed Elephant binary independently. The menu's top
+row lists every distinct running version across the companion and connected
+engines. Each binary is checked from its own on-disk version and release lane, so
+a current companion can still offer an install for an older connected server or
+other Elephant binary. One confirmation can install different release versions
+when the binaries use different lanes.
+
+The menu covers each connected server's executable, the companion's own
+executable, the `elephant` found on the companion process's `PATH`, and the
+absolute `elephant` path that each connected session reports from its own
+`PATH`. Symlinks resolve to their real file, so the same file counts once.
+Copies in the npm launcher's per-version cache (`~/.elephant/bin/<tag>`) are
+listed but never replaced; update those with
+`npx --yes elephant-memory@VERSION`.
+
+Update checks are disabled for the entire menu if the companion process has
+`ELEPHANT_UPDATE_CHECKS=0`, any connected session has it set to `0`, or any
+connected memory store has disabled checks. One enabled store does not override a
+disabled store. The menu does not write this combined decision back to store
+files. The `elephant update` command and Memory Palace update panel continue to
+use the setting from their own store.
+
+Opening the menu does not contact GitHub, except for one background fetch when a
+stored "current" result does not cover an older installed binary. **Check for
+Updates** fetches the release list once unless the whole menu has checks
+disabled. A failed background fetch is not repeated until the next **Check for
+Updates**. Release notes open the canonical GitHub page. A session cannot supply
+a GitHub token to the menu. Private-repository checks still require
+`ELEPHANT_GITHUB_TOKEN` in the environment of the process that started the
+companion.
 
 **Install Elephant … Everywhere…** shows one native confirmation. It lists every
-binary it will replace with its current version. It also lists binaries that are
-already current or whose version cannot be read; those are not changed. It states
-the checksum trust limits and restart impact. Cancel is the default. For each
-binary, installation downloads only the matching published platform archive and
-its `SHA256SUMS`, validates size/checksum/executable platform and reported
-version, then atomically replaces that file. Binaries are installed one at a
-time. A failure leaves that binary unchanged and does not stop the others. The
-result lists each installed and failed binary, and the menu keeps offering the
-release for any binary that still needs it. A directory-flush warning after
-replacement reports that installation committed but durability could not be
-confirmed.
+binary it will replace with its current and target versions, including different
+targets selected for different release lanes. It also lists binaries that are
+already current or whose version cannot be read; those are not changed. Cancel is
+the default. For each binary, installation downloads only the matching published
+platform archive and its `SHA256SUMS`, validates size, checksum, executable
+platform, and reported version, then atomically replaces that file. Binaries are
+installed one at a time. A failure leaves that binary unchanged and does not stop
+the others. The result lists each installed and failed binary, and the menu keeps
+offering an install for any binary that still needs one. A directory-flush warning
+means replacement committed but durability could not be confirmed.
 
-Copies in the npm launcher's per-version cache (`~/.elephant/bin/<tag>`) are
-listed but never replaced, because each cache directory names its version. Update
-those with `npx --yes elephant-memory@VERSION`.
-
-Releases are unsigned. A checksum proves agreement with the published asset,
-not the publisher's identity. Downloads trust GitHub TLS and permit only its
+Releases are unsigned. A checksum proves agreement with the published asset, not
+the publisher's identity. Downloads trust GitHub TLS and permit only its
 release-delivery redirect hosts; credentials are not forwarded to those hosts.
 
-After installation the menu shows **Restart Needed**. Running MCP servers and
-the companion retain their old process image until explicitly restarted.
-Installation never interrupts or restarts them automatically. A file that changes
-during preparation is not replaced; an unwritable installation must be updated
-with the tool that owns it. Linux/Windows have no native menu-bar installer.
+**Restart Needed** appears whenever a connected process's running version differs
+from the version of its executable on disk, even if this menu did not install the
+file. Running servers and the companion retain their process images until
+explicitly restarted; nothing restarts automatically. Replacing the companion's
+own binary requires **Hide Menu Bar** before the menu runs the new code. A file
+that changes during preparation is not replaced; an unwritable installation must
+be updated with the tool that owns it. Linux and Windows have no native menu-bar
+installer.
 
 ## Verification
 
