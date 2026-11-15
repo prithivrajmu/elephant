@@ -7,6 +7,11 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Fixed
+
+- Remove generator marks from the full light and dark Elephant logo artwork while
+  preserving the supplied image content.
+
 ## [0.15.1]
 
 Full notes: [docs/releases/v0.15.1.md](docs/releases/v0.15.1.md).
