@@ -60,9 +60,14 @@ and automatic hooks alone do not keep an icon running.
   review, configuration, pause/resume, and cancellation for the selected context.
   Review/setup/resume dialogs ask for consent before provider use or hook setup.
   See [Dreaming](dreaming.md#macos-menu-controls) for the remaining safety gates.
-- **Updates** reads cached availability, checks on request, and offers confirmed
-  checksum-verified installation into the selected connection's binary path.
-  Running processes are never restarted automatically. See [Updates](updates.md#macos-menu-bar-installation).
+- **Updates** checks each in-use binary from its own version and release lane,
+  including server and companion executables plus each process's `elephant` on
+  `PATH`. One confirmation can install different releases. Any connected
+  session or store that disables checks disables the whole menu; store settings
+  are not changed. Cached npm copies are listed but not replaced. The menu lists
+  all running versions, detects restart needs from the executable on disk, and
+  never restarts processes automatically. See
+  [Updates](updates.md#macos-menu-bar-installation).
 - **Health & Diagnostics** checks the store, context, hooks, and configured
   reviewer executable. Provider authentication and host approval remain unchecked.
   Clipboard diagnostics use an allowlist that excludes paths, identities, names,

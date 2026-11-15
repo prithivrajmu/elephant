@@ -170,7 +170,13 @@ func (d *UpdateStatus) describe() {
 }
 
 func selectRelease(releases []githubRelease) (*ReleaseUpdate, error) {
-	current, ok := parseReleaseVersion(Version)
+	return selectReleaseFor(releases, Version)
+}
+
+// selectReleaseFor returns the newest published release that a binary at
+// baseline may update to under the same major and channel rules as UpdateApplies.
+func selectReleaseFor(releases []githubRelease, baseline string) (*ReleaseUpdate, error) {
+	current, ok := parseReleaseVersion(baseline)
 	if !ok {
 		return nil, &updateCheckError{"invalid_version"}
 	}
@@ -178,7 +184,9 @@ func selectRelease(releases []githubRelease) (*ReleaseUpdate, error) {
 	var found *ReleaseUpdate
 	for _, r := range releases {
 		v, ok := parseReleaseVersion(r.Tag)
-		if !ok || r.Draft || v.parts[0] != current.parts[0] || !newerRelease(v, best) {
+		// A stable installation never moves to prerelease; pilot and RC channels
+		// only see their own prerelease channel or a stable release.
+		if !ok || r.Draft || !releaseApplies(current, v, r.Prerelease) || !newerRelease(v, best) {
 			continue
 		}
 		// A stable installation never moves to prerelease; pilot and RC channels
@@ -210,6 +218,40 @@ func selectRelease(releases []githubRelease) (*ReleaseUpdate, error) {
 	return found, nil
 }
 func fetchRelease(client *http.Client, endpoint string) (*ReleaseUpdate, error) {
+	releases, e := fetchReleases(client, endpoint)
+	if e != nil {
+		return nil, e
+	}
+	return selectRelease(releases)
+}
+
+// ReleasesForBaselines fetches the release list once and selects, for each
+// baseline version, the newest release a binary at that version may update to.
+// Baselines that are not release versions or have no newer applicable release
+// are absent from the result. It reads and writes no store.
+func ReleasesForBaselines(baselines []string) (map[string]*ReleaseUpdate, error) {
+	return releasesForBaselines(updateClient(), releaseAPI, baselines)
+}
+
+func releasesForBaselines(client *http.Client, endpoint string, baselines []string) (map[string]*ReleaseUpdate, error) {
+	releases, e := fetchReleases(client, endpoint)
+	if e != nil {
+		return nil, e
+	}
+	out := make(map[string]*ReleaseUpdate, len(baselines))
+	for _, baseline := range baselines {
+		if found, e := selectReleaseFor(releases, baseline); e == nil && found != nil {
+			out[baseline] = found
+		}
+	}
+	return out, nil
+}
+
+func updateClient() *http.Client {
+	return &http.Client{Timeout: 2 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+func fetchReleases(client *http.Client, endpoint string) ([]githubRelease, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	req, e := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -255,7 +297,7 @@ func fetchRelease(client *http.Client, endpoint string) (*ReleaseUpdate, error) 
 	if e = json.Unmarshal(b, &releases); e != nil || releases == nil {
 		return nil, &updateCheckError{"invalid_metadata"}
 	}
-	return selectRelease(releases)
+	return releases, nil
 }
 func (s Store) CachedUpdate() (UpdateStatus, error) {
 	d := UpdateStatus{Enabled: true, State: "unchecked", Installed: Version}
@@ -283,8 +325,7 @@ func (s Store) CachedUpdate() (UpdateStatus, error) {
 	return d, e
 }
 func (s Store) Updates(opts UpdateOptions) (UpdateStatus, error) {
-	client := &http.Client{Timeout: 2 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
-	return s.updates(opts, client, releaseAPI, time.Now().UTC())
+	return s.updates(opts, updateClient(), releaseAPI, time.Now().UTC())
 }
 func (s Store) updates(opts UpdateOptions, client *http.Client, endpoint string, now time.Time) (UpdateStatus, error) {
 	d, e := s.CachedUpdate()

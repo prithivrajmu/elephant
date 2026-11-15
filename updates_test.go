@@ -115,6 +115,29 @@ func TestUpdateRejectsUnpublishedIncompatibleAndUnsafeMetadata(t *testing.T) {
 		t.Fatal(d, e)
 	}
 }
+func TestUpdateReleasesForBaselinesFetchesOnce(t *testing.T) {
+	t.Setenv("ELEPHANT_UPDATE_CHECKS", "")
+	current, _ := parseReleaseVersion(Version)
+	next := fmt.Sprintf("%d.0.0", current.parts[0]+1)
+	nextTag := fmt.Sprintf("v%d.1.0", current.parts[0]+1)
+	var requests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		json.NewEncoder(w).Encode([]githubRelease{testRelease(futureReleaseTag(1)), testRelease(nextTag)})
+	}))
+	defer server.Close()
+	got, e := releasesForBaselines(server.Client(), server.URL, []string{Version, next, strings.TrimPrefix(nextTag, "v"), "not-a-version"})
+	if e != nil || requests.Load() != 1 || len(got) != 2 {
+		t.Fatal(got, e, requests.Load())
+	}
+	if got[Version] == nil || got[Version].Version != strings.TrimPrefix(futureReleaseTag(1), "v") || got[next] == nil || got[next].Version != strings.TrimPrefix(nextTag, "v") {
+		t.Fatal("release not chosen per baseline", got)
+	}
+	server.Close()
+	if _, e = releasesForBaselines(server.Client(), server.URL, []string{Version}); e == nil {
+		t.Fatal("fetch failure not reported")
+	}
+}
 func TestOfflineUpdateIsUnavailableAndDoesNotClaimCurrent(t *testing.T) {
 	t.Setenv("ELEPHANT_UPDATE_CHECKS", "")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

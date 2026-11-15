@@ -61,11 +61,23 @@ type menuBarSession struct {
 	Executable    string          `json:"executable"`
 	EngineVersion string          `json:"engine_version"`
 	Kind          string          `json:"kind"`
+	// ElephantPath is the elephant this process finds on its own PATH; the
+	// companion's PATH may differ. Empty when the lookup failed.
+	ElephantPath string `json:"elephant_path,omitempty"`
+	// UpdateChecksDisabled reports ELEPHANT_UPDATE_CHECKS=0 in this process.
+	UpdateChecksDisabled bool `json:"update_checks_disabled,omitempty"`
 }
 
 func newMenuBarSession(svc memory.Service) menuBarSession {
 	executable, _ := os.Executable()
-	return menuBarSession{Version: menuBarProtocol, Store: svc.Store.Path, Identity: svc.Identity, Root: svc.Root, Project: svc.Project, Conversation: svc.Conversation, Unattached: svc.Unattached, PID: os.Getpid(), Executable: executable, EngineVersion: memory.Version, Kind: "mcp"}
+	elephantPath, err := exec.LookPath("elephant")
+	if err == nil {
+		elephantPath, err = filepath.Abs(elephantPath)
+	}
+	if err != nil {
+		elephantPath = ""
+	}
+	return menuBarSession{Version: menuBarProtocol, Store: svc.Store.Path, Identity: svc.Identity, Root: svc.Root, Project: svc.Project, Conversation: svc.Conversation, Unattached: svc.Unattached, PID: os.Getpid(), Executable: executable, EngineVersion: memory.Version, Kind: "mcp", ElephantPath: elephantPath, UpdateChecksDisabled: os.Getenv("ELEPHANT_UPDATE_CHECKS") == "0"}
 }
 
 func (s menuBarSession) validate() error {
