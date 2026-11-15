@@ -7,6 +7,14 @@ regular release tag; earlier releases used `-beta` or `-pilot` suffixes.
 
 ## [Unreleased]
 
+### Changed
+
+- The macOS menu-bar **Updates** menu now updates Elephant as one product. One
+  confirmation installs the release into every Elephant binary in use: connected
+  processes, the companion, and `elephant` on `PATH`. Each binary installs
+  separately, and failures are reported per binary. npm launcher cache copies are
+  listed but not replaced. Running processes are still never restarted.
+
 ## [0.15.2]
 
 Full notes: [docs/releases/v0.15.2.md](docs/releases/v0.15.2.md).

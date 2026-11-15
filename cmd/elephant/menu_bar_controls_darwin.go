@@ -18,14 +18,15 @@ import (
 )
 
 type menuControlContext struct {
-	Context    context.Context
-	Service    memory.Service
-	Executable string
-	InstanceID string
-	Prompt     func(menubar.Dialog) (menubar.Action, error)
-	Inform     func(title, message string)
-	Refresh    func()
-	OpenURL    func(string) error
+	Context     context.Context
+	Service     memory.Service
+	Executable  string
+	Executables []string // every connected process's binary; product-wide updates only
+	InstanceID  string
+	Prompt      func(menubar.Dialog) (menubar.Action, error)
+	Inform      func(title, message string)
+	Refresh     func()
+	OpenURL     func(string) error
 }
 
 type menuBarView struct {
@@ -188,11 +189,11 @@ func scopeMenuBarItems(items []menubar.Item, instanceID string) []menubar.Item {
 func (c *menuBarControls) refresh() {
 	views := c.views()
 	groups := groupMenuBarViews(views)
-	var sessions, updates, dreams, health, projects []menubar.Item
+	var sessions, dreams, health, projects []menubar.Item
 	attention := false
 	liveHealth := make(map[menuBarHealthKey]bool, len(views))
 	for _, group := range groups {
-		var sessionRows, updateRows, dreamRows, healthRows, projectRows []menubar.Item
+		var sessionRows, dreamRows, healthRows, projectRows []menubar.Item
 		for _, view := range group.views {
 			liveHealth[healthKey(view.Service)] = true
 			sessionItems := []menubar.Item{menuBarRow("Connected · PID " + fmt.Sprint(view.Session.PID)), menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
@@ -205,20 +206,23 @@ func (c *menuBarControls) refresh() {
 			}
 			sessionRows = append(sessionRows, menuBarSubmenu(view.label(), scopeMenuBarItems(sessionItems, view.ID)))
 			scope := c.scope(view)
-			updateItems, updateAttention := c.updates.Items(scope)
-			updateRows = append(updateRows, menuBarSubmenu(view.label(), scopeMenuBarItems(updateItems, view.ID)))
 			dreamItems, dreamAttention := c.dreams.Items(scope)
 			dreamRows = append(dreamRows, menuBarSubmenu(view.label(), scopeMenuBarItems(dreamItems, view.ID)))
 			healthItems, healthAttention := c.healthItems(view)
 			healthRows = append(healthRows, menuBarSubmenu(view.label(), scopeMenuBarItems(healthItems, view.ID)))
 			projectRows = append(projectRows, menuBarSubmenu(view.label(), scopeMenuBarItems(c.projectItems(view), view.ID)))
-			attention = attention || updateAttention || dreamAttention || healthAttention
+			attention = attention || dreamAttention || healthAttention
 		}
 		sessions = append(sessions, menuBarSubmenu(group.title, sessionRows))
-		updates = append(updates, menuBarSubmenu(group.title, updateRows))
 		dreams = append(dreams, menuBarSubmenu(group.title, dreamRows))
 		health = append(health, menuBarSubmenu(group.title, healthRows))
 		projects = append(projects, menuBarSubmenu(group.title, projectRows))
+	}
+	var updates []menubar.Item
+	if len(views) > 0 {
+		var updateAttention bool
+		updates, updateAttention = c.updates.Items(c.productScope(views))
+		attention = attention || updateAttention
 	}
 	items := []menubar.Item{menuBarRow(fmt.Sprintf("Elephant %s · %d connections", memory.Version, len(views))), menuBarSubmenu("Sessions", sessions), menuBarSeparator(), menuBarSubmenu("Dreaming", dreams), menuBarSubmenu("Updates", updates), menuBarSubmenu("Health & Diagnostics", health), menuBarSubmenu("Project Controls", projects)}
 	c.mu.Lock()
@@ -247,6 +251,20 @@ func (c *menuBarControls) refresh() {
 func (c *menuBarControls) scope(view menuBarView) menuControlContext {
 	ctx := view.Context
 	return menuControlContext{Context: ctx, Service: view.Service, Executable: view.Session.Executable, InstanceID: view.ID, Prompt: func(dialog menubar.Dialog) (menubar.Action, error) { return c.prompt(ctx, dialog) }, Inform: func(title, message string) {
+		_, _ = c.prompt(ctx, menubar.Dialog{Title: title, Message: message, Buttons: []menubar.Button{{ID: "ok", Title: "OK"}}, Default: "ok", Cancel: "ok"})
+	}, Refresh: c.requestRefresh, OpenURL: c.host.openURL}
+}
+
+// productScope addresses Elephant as a whole: every connected binary, with
+// release status read from the oldest connection's store. It uses the host
+// context so an update survives any single connection ending.
+func (c *menuBarControls) productScope(views []menuBarView) menuControlContext {
+	executables := make([]string, len(views))
+	for i, view := range views {
+		executables[i] = view.Session.Executable
+	}
+	ctx := c.ctx
+	return menuControlContext{Context: ctx, Service: views[0].Service, Executables: executables, Prompt: func(dialog menubar.Dialog) (menubar.Action, error) { return c.prompt(ctx, dialog) }, Inform: func(title, message string) {
 		_, _ = c.prompt(ctx, menubar.Dialog{Title: title, Message: message, Buttons: []menubar.Button{{ID: "ok", Title: "OK"}}, Default: "ok", Cancel: "ok"})
 	}, Refresh: c.requestRefresh, OpenURL: c.host.openURL}
 }
@@ -300,6 +318,12 @@ func (c *menuBarControls) action(action menubar.Action) {
 		return
 	}
 	if action.ID == menubar.HideAction {
+		return
+	}
+	if strings.HasPrefix(action.ID, "updates/") {
+		if views := c.views(); len(views) > 0 {
+			c.start(func() { c.updates.Handle(c.productScope(views), action.ID) })
+		}
 		return
 	}
 	parts := strings.SplitN(action.ID, "/", 3)
@@ -373,7 +397,7 @@ func (c *menuBarControls) handle(view menuBarView, action string) {
 			c.requestRefresh()
 		}
 	default:
-		if c.updates.Handle(scope, action) || c.dreams.Handle(scope, action) || c.handleHealth(view, action) || c.handleProject(view, action) {
+		if c.dreams.Handle(scope, action) || c.handleHealth(view, action) || c.handleProject(view, action) {
 			return
 		}
 	}

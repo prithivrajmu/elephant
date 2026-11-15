@@ -6,7 +6,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -14,19 +16,23 @@ import (
 	"github.com/prithivrajmu/elephant/internal/menubar"
 )
 
-// menuBarUpdates shows cached release status for the selected session's binary
-// and installs a release only after a native confirmation naming the target.
-// It never restarts servers. The binary's on-disk version, not the running
-// version, decides whether an install still applies.
+// menuBarUpdates updates Elephant as one product: every binary used by a
+// connected process, the companion itself, and the elephant found on PATH.
+// It installs only after one native confirmation listing every target and
+// never restarts servers. Each binary's on-disk version, not the running
+// version, decides whether an install still applies to it.
 type menuBarUpdates struct {
-	cached  func(memory.Store) (memory.UpdateStatus, error)
-	check   func(memory.Store) (memory.UpdateStatus, error)
-	install func(context.Context, string, string) (memory.UpdateInstallResult, error)
-	probe   func(context.Context, string) (string, error)
+	cached   func(memory.Store) (memory.UpdateStatus, error)
+	check    func(memory.Store) (memory.UpdateStatus, error)
+	install  func(context.Context, string, string) (memory.UpdateInstallResult, error)
+	probe    func(context.Context, string) (string, error)
+	self     func() (string, error)
+	lookPath func(string) (string, error)
+	home     func() (string, error)
 
 	mu       sync.Mutex
 	checking map[string]bool               // store path
-	busy     map[string]string             // resolved binary -> "confirm" or "install"
+	busy     string                        // "", "confirm" or "install"
 	versions map[string]*menuBinaryVersion // resolved binary -> on-disk version
 	restart  map[string]string             // resolved binary -> version installed by this host
 }
@@ -47,23 +53,60 @@ func newMenuBarUpdates() *menuBarUpdates {
 		},
 		install:  memory.InstallUpdate,
 		probe:    memory.ExecutableVersion,
+		self:     os.Executable,
+		lookPath: exec.LookPath,
+		home:     os.UserHomeDir,
 		checking: map[string]bool{},
-		busy:     map[string]string{},
 		versions: map[string]*menuBinaryVersion{},
 		restart:  map[string]string{},
 	}
 }
 
-// resolveMenuExecutable returns the real file a session's binary path names.
+// resolveMenuExecutable returns the real file a binary path names.
 func resolveMenuExecutable(p string) (string, error) {
 	if p == "" {
-		return "", fmt.Errorf("this session did not report its Elephant binary")
+		return "", fmt.Errorf("no Elephant binary path was reported")
 	}
 	abs, err := filepath.Abs(p)
 	if err == nil {
 		abs, err = filepath.EvalSymlinks(abs)
 	}
 	return abs, err
+}
+
+// targets returns the distinct resolved binaries this menu updates, plus the
+// copies owned by the npm launcher. Launcher copies live in per-version cache
+// directories, so replacing one in place would make that cache name lie.
+func (u *menuBarUpdates) targets(c menuControlContext) (installable, launcher []string) {
+	candidates := append([]string(nil), c.Executables...)
+	if p, err := u.self(); err == nil {
+		candidates = append(candidates, p)
+	}
+	if p, err := u.lookPath("elephant"); err == nil {
+		candidates = append(candidates, p)
+	}
+	cache := ""
+	if home, err := u.home(); err == nil {
+		if resolved, err := filepath.EvalSymlinks(filepath.Join(home, ".elephant", "bin")); err == nil {
+			cache = resolved + string(filepath.Separator)
+		}
+	}
+	seen := map[string]bool{}
+	for _, p := range candidates {
+		target, err := resolveMenuExecutable(p)
+		if err != nil || seen[target] {
+			continue
+		}
+		seen[target] = true
+		if cache != "" && strings.HasPrefix(target, cache) {
+			launcher = append(launcher, target)
+		} else {
+			installable = append(installable, target)
+		}
+	}
+	sort.Strings(installable)
+	sort.Strings(launcher)
+	return installable, launcher
 }
 
 // binaryVersion returns the cached on-disk version of target and starts one
@@ -97,50 +140,92 @@ func (u *menuBarUpdates) binaryVersion(c menuControlContext, target string) (ver
 	return "", true
 }
 
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
+}
+
 func (u *menuBarUpdates) Items(c menuControlContext) ([]menubar.Item, bool) {
 	status, statusErr := u.cached(c.Service.Store)
-	target, targetErr := resolveMenuExecutable(c.Executable)
-	installed, probing := "", false
-	if targetErr == nil {
-		installed, probing = u.binaryVersion(c, target)
+	targets, launcher := u.targets(c)
+	installed := make(map[string]string, len(targets))
+	byVersion := map[string]int{}
+	probing, unknown := 0, 0
+	for _, target := range targets {
+		v, p := u.binaryVersion(c, target)
+		installed[target] = v
+		switch {
+		case p:
+			probing++
+		case v == "":
+			unknown++
+		default:
+			byVersion[v]++
+		}
 	}
 	u.mu.Lock()
-	checking, busy, restart := u.checking[c.Service.Store.Path], u.busy[target], u.restart[target]
+	checking, busy := u.checking[c.Service.Store.Path], u.busy
+	restart := ""
+	for _, target := range targets {
+		if v := u.restart[target]; v != "" {
+			restart = v
+		}
+	}
 	u.mu.Unlock()
 
 	var rows []menubar.Item
 	info := func(title string) { rows = append(rows, menubar.Item{Title: title}) }
-	switch {
-	case installed != "":
-		info("Installed: Elephant " + installed)
-	case probing:
-		info("Installed: checking version…")
-	default:
-		info("Installed: version unknown")
+	versions := make([]string, 0, len(byVersion))
+	for v := range byVersion {
+		versions = append(versions, v)
+	}
+	sort.Strings(versions)
+	for _, v := range versions {
+		if len(targets) == 1 {
+			info("Installed: Elephant " + v)
+		} else {
+			info("Installed: Elephant " + v + " · " + plural(byVersion[v], "binary", "binaries"))
+		}
+	}
+	if probing > 0 {
+		info("Installed: checking versions…")
+	}
+	if unknown > 0 {
+		info("Installed: version unknown · " + plural(unknown, "binary", "binaries"))
+	}
+	if len(launcher) > 0 {
+		info("npm launcher: " + plural(len(launcher), "copy", "copies") + " (update with npx)")
 	}
 	attention := false
 	if restart != "" {
 		info("Restart needed to use Elephant " + restart)
 		attention = true
 	}
-	latest := ""
+	latest, pending := "", 0
+	if statusErr == nil && status.Latest != nil {
+		for _, target := range targets {
+			if v := installed[target]; v != "" && memory.UpdateApplies(v, status.Latest.Version) {
+				pending++
+			}
+		}
+	}
 	switch {
 	case statusErr != nil:
 		info("Update status unavailable")
 	case !status.Enabled || status.State == "disabled":
 		info("Update checks are disabled")
-	case status.State == "available" && status.Latest != nil && installed != "" && memory.UpdateApplies(installed, status.Latest.Version):
+	case status.State == "available" && status.Latest != nil && pending > 0:
 		latest = status.Latest.Version
 		info("Available: Elephant " + latest + " — " + status.Latest.Summary)
 		attention = true
-	case status.State == "available" && status.Latest != nil && installed != "":
-		info("No newer release for the installed version")
+	case status.State == "available" && status.Latest != nil && len(byVersion) > 0:
+		info("No newer release for the installed binaries")
 	case status.State == "available" && status.Latest != nil:
-		info("Available: Elephant " + status.Latest.Version + " (installed version not confirmed)")
+		info("Available: Elephant " + status.Latest.Version + " (installed versions not confirmed)")
 	case status.State == "unavailable":
 		info("Last check failed")
-	case status.State == "current" && installed != "" && installed != status.Installed:
-		info("Last check found no release newer than Elephant " + status.Installed)
 	case status.State == "current":
 		info("Up to date")
 	default:
@@ -158,8 +243,8 @@ func (u *menuBarUpdates) Items(c menuControlContext) ([]menubar.Item, bool) {
 	if statusErr == nil && status.Latest != nil {
 		rows = append(rows, menubar.Item{ID: "updates/notes", Title: "Release Notes for Elephant " + status.Latest.Version, Enabled: true})
 	}
-	if latest != "" && restart != latest {
-		title := "Install Elephant " + latest + "…"
+	if latest != "" {
+		title := "Install Elephant " + latest + " Everywhere…"
 		if busy == "install" {
 			title = "Installing Elephant " + latest + "…"
 		}
@@ -207,13 +292,17 @@ func (u *menuBarUpdates) checkNow(c menuControlContext) {
 	msg := status.Message
 	if status.State == "available" && status.Latest != nil {
 		msg = fmt.Sprintf("Elephant %s is available: %s", status.Latest.Version, status.Latest.Summary)
-		target, terr := resolveMenuExecutable(c.Executable)
-		if terr == nil {
-			if installed, perr := u.probe(c.Context, target); perr == nil && !memory.UpdateApplies(installed, status.Latest.Version) {
-				msg += fmt.Sprintf("\n\nThe binary at %s already reports Elephant %s, so there is nothing to install there.", target, installed)
-			} else if perr == nil {
-				msg += fmt.Sprintf("\n\nChoose Install Elephant %s… to update the binary at %s (currently %s).", status.Latest.Version, target, installed)
+		targets, _ := u.targets(c)
+		pending := 0
+		for _, target := range targets {
+			if installed, perr := u.probe(c.Context, target); perr == nil && memory.UpdateApplies(installed, status.Latest.Version) {
+				pending++
 			}
+		}
+		if pending == 0 {
+			msg += "\n\nEvery Elephant binary already reports this version or newer, so there is nothing to install."
+		} else {
+			msg += fmt.Sprintf("\n\nChoose Install Elephant %s Everywhere… to update %s.", status.Latest.Version, plural(pending, "binary", "binaries"))
 		}
 	} else if status.State == "current" && status.Installed != "" {
 		msg += " The check compared releases with Elephant " + status.Installed + "."
@@ -237,6 +326,10 @@ func (u *menuBarUpdates) openNotes(c menuControlContext) {
 	}
 }
 
+type menuInstallTarget struct {
+	path, installed string
+}
+
 func (u *menuBarUpdates) installNow(c menuControlContext) {
 	status, err := u.cached(c.Service.Store)
 	if err != nil || status.State != "available" || status.Latest == nil {
@@ -244,55 +337,79 @@ func (u *menuBarUpdates) installNow(c menuControlContext) {
 		return
 	}
 	latest := status.Latest.Version
-	target, err := resolveMenuExecutable(c.Executable)
-	if err != nil {
-		c.Inform(updatesTitle, "Elephant could not locate this session's binary, so nothing was installed.")
-		return
-	}
 	u.mu.Lock()
-	if u.busy[target] != "" {
+	if u.busy != "" {
 		u.mu.Unlock()
-		c.Inform(updatesTitle, "An update for "+target+" is already in progress.")
+		c.Inform(updatesTitle, "An Elephant update is already in progress.")
 		return
 	}
-	u.busy[target] = "confirm"
+	u.busy = "confirm"
 	u.mu.Unlock()
 	defer func() {
 		u.mu.Lock()
-		delete(u.busy, target)
+		u.busy = ""
 		u.mu.Unlock()
 		c.Refresh()
 	}()
 	c.Refresh()
-	// Decide from the file on disk: after an install the running processes,
+
+	targets, launcher := u.targets(c)
+	// Decide from each file on disk: after an install the running processes,
 	// and the cached status, still report the old version.
-	installed, err := u.probe(c.Context, target)
-	if err != nil {
-		if c.Context.Err() == nil {
-			c.Inform(updatesTitle, "Elephant could not read the version of "+target+", so nothing was installed: "+err.Error())
+	var pending, current []menuInstallTarget
+	var unreadable []string
+	for _, target := range targets {
+		installed, err := u.probe(c.Context, target)
+		if c.Context.Err() != nil {
+			return
 		}
-		return
+		switch {
+		case err != nil:
+			unreadable = append(unreadable, target+" — "+err.Error())
+		case memory.UpdateApplies(installed, latest):
+			pending = append(pending, menuInstallTarget{target, installed})
+		default:
+			current = append(current, menuInstallTarget{target, installed})
+		}
 	}
-	if !memory.UpdateApplies(installed, latest) {
-		msg := fmt.Sprintf("The binary at %s already reports Elephant %s; Elephant %s is not newer for it. Nothing was installed.", target, installed, latest)
+	if len(pending) == 0 {
+		msg := fmt.Sprintf("Every Elephant binary already reports Elephant %s or newer. Nothing was installed.", latest)
+		if len(unreadable) > 0 {
+			msg += "\n\nElephant could not read the version of:\n" + strings.Join(unreadable, "\n")
+		}
 		u.mu.Lock()
-		if u.restart[target] != "" {
-			msg += " Restart running Elephant sessions to use it."
+		for _, t := range current {
+			if u.restart[t.path] != "" {
+				msg += "\n\nRestart running Elephant sessions to use it."
+				break
+			}
 		}
 		u.mu.Unlock()
 		c.Inform(updatesTitle, msg)
 		return
 	}
+
 	var b strings.Builder
-	fmt.Fprintf(&b, "Replace the Elephant binary at:\n%s\n", target)
-	if exe := filepath.Clean(c.Executable); exe != target {
-		fmt.Fprintf(&b, "(this session's %s points to it)\n", exe)
+	fmt.Fprintf(&b, "Elephant %s — %s\n\nReplace these Elephant binaries:\n", latest, status.Latest.Summary)
+	for _, t := range pending {
+		fmt.Fprintf(&b, "%s (Elephant %s)\n", t.path, t.installed)
 	}
-	fmt.Fprintf(&b, "\nInstalled: Elephant %s\nNew: Elephant %s — %s\n\n", installed, latest, status.Latest.Summary)
-	fmt.Fprintf(&b, "Elephant downloads this platform's archive from the GitHub release, checks it against that release's SHA256SUMS, confirms the new binary reports %s, then replaces the file in one step. Releases are not signed: the checksum shows the download matches the published release, not who published it.\n\n", latest)
-	fmt.Fprintf(&b, "Nothing restarts automatically. Running Elephant servers and this menu bar keep their current version until you restart them. Other Elephant binaries are not changed.")
+	if len(current) > 0 {
+		b.WriteString("\nAlready current, not changed:\n")
+		for _, t := range current {
+			fmt.Fprintf(&b, "%s (Elephant %s)\n", t.path, t.installed)
+		}
+	}
+	if len(unreadable) > 0 {
+		b.WriteString("\nVersion unreadable, not changed:\n" + strings.Join(unreadable, "\n") + "\n")
+	}
+	if len(launcher) > 0 {
+		fmt.Fprintf(&b, "\nManaged by the npm launcher, not changed:\n%s\nRun npx --yes elephant-memory@%s to update those.\n", strings.Join(launcher, "\n"), latest)
+	}
+	fmt.Fprintf(&b, "\nFor each binary, Elephant downloads its platform's archive from the GitHub release, checks it against that release's SHA256SUMS, confirms the new binary reports %s, then replaces the file in one step. Releases are not signed: the checksum shows the download matches the published release, not who published it.\n\n", latest)
+	b.WriteString("Nothing restarts automatically. Running Elephant servers and this menu bar keep their current version until you restart them.")
 	choice, err := c.Prompt(menubar.Dialog{
-		ID: "updates/install/confirm", Title: "Install Elephant " + latest + "?", Message: b.String(),
+		ID: "updates/install/confirm", Title: "Update Elephant Everywhere to " + latest + "?", Message: b.String(),
 		Buttons: []menubar.Button{{ID: "cancel", Title: "Cancel"}, {ID: "install", Title: "Install " + latest}},
 		Default: "cancel", Cancel: "cancel",
 	})
@@ -300,27 +417,46 @@ func (u *menuBarUpdates) installNow(c menuControlContext) {
 		return
 	}
 	u.mu.Lock()
-	u.busy[target] = "install"
+	u.busy = "install"
 	u.mu.Unlock()
 	c.Refresh()
-	res, err := u.install(c.Context, target, latest)
-	if res.Version != "" {
+
+	var done, failed []string
+	for _, t := range pending {
+		if c.Context.Err() != nil {
+			failed = append(failed, t.path+" — not attempted: the update was cancelled")
+			continue
+		}
+		res, err := u.install(c.Context, t.path, latest)
+		if res.Version == "" {
+			msg := "unknown error"
+			if err != nil {
+				msg = err.Error()
+			}
+			failed = append(failed, t.path+" — "+msg+" The binary was left in place.")
+			continue
+		}
 		u.mu.Lock()
-		u.restart[target] = res.Version
-		delete(u.versions, target)
+		u.restart[t.path] = res.Version
+		delete(u.versions, t.path)
 		u.mu.Unlock()
+		line := fmt.Sprintf("%s (was %s)", res.Target, res.Previous)
+		if err != nil {
+			line += " — warning: " + err.Error()
+		}
+		done = append(done, line)
 	}
-	if c.Context.Err() != nil && res.Version == "" {
+	var msg strings.Builder
+	if len(done) > 0 {
+		fmt.Fprintf(&msg, "Installed Elephant %s at:\n%s\n\n", latest, strings.Join(done, "\n"))
+	}
+	if len(failed) > 0 {
+		fmt.Fprintf(&msg, "Elephant %s was not installed at:\n%s\n\n", latest, strings.Join(failed, "\n"))
+	}
+	if len(done) == 0 {
+		c.Inform(updatesTitle, strings.TrimSpace(msg.String()))
 		return
 	}
-	switch {
-	case res.Version == "":
-		c.Inform(updatesTitle, fmt.Sprintf("Elephant %s was not installed.\n\n%s\n\nThe binary at %s was left in place.", latest, err.Error(), target))
-	default:
-		msg := fmt.Sprintf("Installed Elephant %s at %s (was %s).\n\nRestart your agent sessions and this menu bar to use it. Nothing was restarted automatically.", res.Version, res.Target, res.Previous)
-		if err != nil {
-			msg += "\n\nWarning: " + err.Error()
-		}
-		c.Inform("Restart Needed", msg)
-	}
+	msg.WriteString("Restart your agent sessions and this menu bar to use it. Nothing was restarted automatically.")
+	c.Inform("Restart Needed", msg.String())
 }

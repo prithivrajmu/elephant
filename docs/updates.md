@@ -110,19 +110,31 @@ does not block the coding task or change memory data. Hook notices use the host'
 
 ## macOS menu-bar installation
 
-Open **Updates → project → instance** to inspect the selected binary's on-disk
-version, cached release status, and last check time. Merely opening or refreshing
-the menu makes no network request. **Check for Updates** uses the same explicit
-check and opt-out policy as the CLI. Release notes open the canonical GitHub page.
+**Updates** treats Elephant as one product. It covers every distinct binary used
+by a connected MCP server or Memory Palace, the menu-bar companion's own binary,
+and the `elephant` found on `PATH`. Symlinks resolve to their real file, so a
+binary shared by several connections counts once. The menu shows each binary's
+on-disk version, the cached release status, and the last check time. Release
+status comes from the oldest connection's store. Merely opening or refreshing the
+menu makes no network request. **Check for Updates** uses the same explicit check
+and opt-out policy as the CLI. Release notes open the canonical GitHub page.
 
-**Install Elephant …** first names the exact resolved target path, old/new
-versions, checksum trust limits, and restart impact in a native confirmation.
-Cancel is the default. Installation downloads only the matching published
-platform archive and its `SHA256SUMS`, validates size/checksum/executable platform
-and reported version, then atomically replaces that file. Other binaries remain
-unchanged. Staging failures or cancellation before replacement leave it intact.
-A directory-flush warning after replacement reports that installation committed
-but durability could not be confirmed.
+**Install Elephant … Everywhere…** shows one native confirmation. It lists every
+binary it will replace with its current version. It also lists binaries that are
+already current or whose version cannot be read; those are not changed. It states
+the checksum trust limits and restart impact. Cancel is the default. For each
+binary, installation downloads only the matching published platform archive and
+its `SHA256SUMS`, validates size/checksum/executable platform and reported
+version, then atomically replaces that file. Binaries are installed one at a
+time. A failure leaves that binary unchanged and does not stop the others. The
+result lists each installed and failed binary, and the menu keeps offering the
+release for any binary that still needs it. A directory-flush warning after
+replacement reports that installation committed but durability could not be
+confirmed.
+
+Copies in the npm launcher's per-version cache (`~/.elephant/bin/<tag>`) are
+listed but never replaced, because each cache directory names its version. Update
+those with `npx --yes elephant-memory@VERSION`.
 
 Releases are unsigned. A checksum proves agreement with the published asset,
 not the publisher's identity. Downloads trust GitHub TLS and permit only its
