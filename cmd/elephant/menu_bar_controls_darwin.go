@@ -98,8 +98,31 @@ func (v menuBarView) idle(now time.Time) bool {
 	return v.Session.Kind != "palace" && now.Sub(v.lastActive()) > menuBarIdleAfter
 }
 
+// runsElsewhere reports an MCP process started outside its configured project
+// root, which happens when a user-level client config pins --root/--project.
+// A working directory inside the root is normal.
+func (v menuBarView) runsElsewhere() bool {
+	s := v.Session
+	if s.Kind != "mcp" || s.Unattached || s.Cwd == "" || s.Root == "" {
+		return false
+	}
+	cwd, root := resolvedPath(s.Cwd), resolvedPath(s.Root)
+	rel, err := filepath.Rel(root, cwd)
+	return err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func resolvedPath(path string) string {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
+	}
+	return filepath.Clean(path)
+}
+
 func (v menuBarView) label() string {
 	label := cleanMenuText(v.clientName(), 36) + " · " + v.shortID()
+	if v.runsElsewhere() {
+		label += " · running in " + cleanMenuText(filepath.Base(v.Session.Cwd), 30)
+	}
 	if v.Nickname != "" {
 		label = v.Nickname + " · " + label
 	}
@@ -235,7 +258,11 @@ func (c *menuBarControls) refresh() {
 			if idle {
 				status += " · last active " + now.Sub(view.lastActive()).Round(time.Minute).String() + " ago"
 			}
-			sessionItems := []menubar.Item{menuBarRow(status), menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
+			sessionItems := []menubar.Item{menuBarRow(status)}
+			if view.runsElsewhere() {
+				sessionItems = append(sessionItems, menuBarRow("Started in "+cleanMenuText(filepath.Base(view.Session.Cwd), 40)+", but configured for "+view.projectName()))
+			}
+			sessionItems = append(sessionItems, menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics"))
 			if view.Observed.Tool != "" {
 				outcome := "completed"
 				if view.Observed.Failed {

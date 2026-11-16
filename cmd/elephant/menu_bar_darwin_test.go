@@ -344,3 +344,28 @@ func TestMenuBarIdleSessions(t *testing.T) {
 		}
 	}
 }
+
+func TestMenuBarRunsElsewhere(t *testing.T) {
+	root, other := t.TempDir(), t.TempDir()
+	sub := filepath.Join(root, "pkg")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name    string
+		session menuBarSession
+		want    bool
+	}{
+		{"cwd is the root", menuBarSession{Kind: "mcp", Root: root, Cwd: root}, false},
+		{"cwd inside the root", menuBarSession{Kind: "mcp", Root: root, Cwd: sub}, false},
+		{"cwd in another repo", menuBarSession{Kind: "mcp", Root: root, Cwd: other}, true},
+		{"older client sent no cwd", menuBarSession{Kind: "mcp", Root: root}, false},
+		{"unattached has no project", menuBarSession{Kind: "mcp", Unattached: true, Cwd: other}, false},
+		{"palace names its root", menuBarSession{Kind: "palace", Root: root, Cwd: other}, false},
+	}
+	for _, c := range cases {
+		if got := (menuBarView{Session: c.session}).runsElsewhere(); got != c.want {
+			t.Errorf("%s: runsElsewhere = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
