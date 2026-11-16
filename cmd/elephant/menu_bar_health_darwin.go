@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -48,7 +49,13 @@ func (c *menuBarControls) healthItems(view menuBarView) ([]menubar.Item, bool) {
 	check.Enabled = !health.Checking
 	show := menuBarAction("health/show", "Show Last Check…")
 	show.Enabled = !health.Checked.IsZero()
-	return []menubar.Item{menuBarRow(state), check, show, menuBarSeparator(), menuBarAction("health/copy", "Copy Redacted Diagnostics")}, attention
+	items := []menubar.Item{menuBarRow(state), check, show, menuBarSeparator(), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
+	if view.Elsewhere {
+		// Memories follow the pinned project, not the directory the agent works in.
+		warning := menuBarRow("⚠ Started in " + cleanMenuText(filepath.Base(view.Session.Cwd), 40) + ", pinned to " + view.projectName() + ": its memories are recorded there. Remove --root/--project from the client's MCP config.")
+		items, attention = append([]menubar.Item{warning, menuBarSeparator()}, items...), true
+	}
+	return items, attention
 }
 
 func (c *menuBarControls) handleHealth(view menuBarView, action string) bool {

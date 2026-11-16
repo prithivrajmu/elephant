@@ -344,3 +344,57 @@ func TestMenuBarIdleSessions(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionRunsElsewhere(t *testing.T) {
+	root, other := t.TempDir(), t.TempDir()
+	sub := filepath.Join(root, "pkg")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// The client resolves its own directory (newMenuBarSession); the root stays
+	// unresolved here so the host's resolution is exercised too.
+	resolve := func(path string) string {
+		resolved, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resolved
+	}
+	cases := []struct {
+		name    string
+		session menuBarSession
+		want    bool
+	}{
+		{"cwd is the root", menuBarSession{Kind: "mcp", Root: root, Cwd: resolve(root)}, false},
+		{"cwd inside the root", menuBarSession{Kind: "mcp", Root: root, Cwd: resolve(sub)}, false},
+		{"cwd in another repo", menuBarSession{Kind: "mcp", Root: root, Cwd: resolve(other)}, true},
+		{"older client sent no cwd", menuBarSession{Kind: "mcp", Root: root}, false},
+		{"unattached has no project", menuBarSession{Kind: "mcp", Unattached: true, Cwd: resolve(other)}, false},
+		{"palace names its root", menuBarSession{Kind: "palace", Root: root, Cwd: resolve(other)}, false},
+	}
+	for _, c := range cases {
+		if got := sessionRunsElsewhere(c.session); got != c.want {
+			t.Errorf("%s: sessionRunsElsewhere = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestProductScopeIgnoresIdleProcessesForRestartChecks(t *testing.T) {
+	now := time.Now()
+	old := now.Add(-menuBarIdleAfter - time.Minute)
+	host := &menuBarHost{sessions: map[*menuBarPeer]struct{}{}}
+	c := newMenuBarControls(context.Background(), host)
+	views := []menuBarView{
+		{Session: menuBarSession{Kind: "mcp", Executable: "/bin/live", EngineVersion: "2"}, Connected: now},
+		{Session: menuBarSession{Kind: "mcp", Executable: "/bin/stale", EngineVersion: "1"}, Connected: old},
+	}
+	scope := c.productScope(views)
+	if len(scope.Executables) != 2 {
+		t.Errorf("Executables = %v, want both processes kept as update targets", scope.Executables)
+	}
+	for _, r := range scope.Running {
+		if r.Executable == "/bin/stale" {
+			t.Errorf("idle process listed as running: %+v", r)
+		}
+	}
+}

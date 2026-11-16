@@ -51,6 +51,8 @@ type menuBarView struct {
 	Nickname  string
 	Context   context.Context
 	Sequence  uint64
+	// Elsewhere is sessionRunsElsewhere, computed once per refresh.
+	Elsewhere bool
 }
 
 func (v menuBarView) projectName() string {
@@ -98,8 +100,27 @@ func (v menuBarView) idle(now time.Time) bool {
 	return v.Session.Kind != "palace" && now.Sub(v.lastActive()) > menuBarIdleAfter
 }
 
+// sessionRunsElsewhere reports an MCP process started outside its configured
+// project root, which happens when a user-level client config pins
+// --root/--project. A working directory inside the root is normal. The client
+// resolves Cwd itself, so only the root is resolved here.
+func sessionRunsElsewhere(s menuBarSession) bool {
+	if s.Kind != "mcp" || s.Unattached || s.Cwd == "" || s.Root == "" {
+		return false
+	}
+	root := s.Root
+	if resolved, err := filepath.EvalSymlinks(root); err == nil {
+		root = resolved
+	}
+	rel, err := filepath.Rel(root, s.Cwd)
+	return err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 func (v menuBarView) label() string {
 	label := cleanMenuText(v.clientName(), 36) + " · " + v.shortID()
+	if v.Elsewhere {
+		label += " · running in " + cleanMenuText(filepath.Base(v.Session.Cwd), 30)
+	}
 	if v.Nickname != "" {
 		label = v.Nickname + " · " + label
 	}
@@ -151,7 +172,7 @@ func (c *menuBarControls) views() []menuBarView {
 	defer c.host.mu.Unlock()
 	views := make([]menuBarView, 0, len(c.host.sessions))
 	for peer := range c.host.sessions {
-		views = append(views, menuBarView{ID: peer.id, Session: peer.session, Observed: peer.observed, Service: peer.svc, Connected: peer.connected, Nickname: peer.nickname, Context: peer.ctx, Sequence: peer.seq})
+		views = append(views, menuBarView{ID: peer.id, Session: peer.session, Observed: peer.observed, Service: peer.svc, Connected: peer.connected, Nickname: peer.nickname, Context: peer.ctx, Sequence: peer.seq, Elsewhere: sessionRunsElsewhere(peer.session)})
 	}
 	sort.Slice(views, func(i, j int) bool { return views[i].Sequence < views[j].Sequence })
 	return views
@@ -235,7 +256,11 @@ func (c *menuBarControls) refresh() {
 			if idle {
 				status += " · last active " + now.Sub(view.lastActive()).Round(time.Minute).String() + " ago"
 			}
-			sessionItems := []menubar.Item{menuBarRow(status), menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
+			sessionItems := []menubar.Item{menuBarRow(status)}
+			if view.Elsewhere {
+				sessionItems = append(sessionItems, menuBarRow("Started in "+cleanMenuText(filepath.Base(view.Session.Cwd), 40)+", but configured for "+view.projectName()))
+			}
+			sessionItems = append(sessionItems, menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics"))
 			if view.Observed.Tool != "" {
 				outcome := "completed"
 				if view.Observed.Failed {
@@ -257,7 +282,7 @@ func (c *menuBarControls) refresh() {
 			healthItems, healthAttention := c.healthItems(view)
 			healthRows = append(healthRows, menuBarSubmenu(view.label(), scopeMenuBarItems(healthItems, view.ID)))
 			projectRows = append(projectRows, menuBarSubmenu(view.label(), scopeMenuBarItems(c.projectItems(view), view.ID)))
-			attention = attention || dreamAttention || healthAttention
+			attention = attention || !idle && (dreamAttention || healthAttention)
 		}
 		if len(sessionRows) > 0 {
 			sessions = append(sessions, menuBarSubmenu(group.title, sessionRows))
@@ -336,6 +361,7 @@ func (c *menuBarControls) productScope(views []menuBarView) menuControlContext {
 	var running []menuRunningBinary
 	seenStore := map[string]bool{}
 	disabled := false
+	now := time.Now()
 	for _, view := range views {
 		executables = append(executables, view.Session.Executable)
 		if view.Session.ElephantPath != "" {
@@ -345,7 +371,11 @@ func (c *menuBarControls) productScope(views []menuBarView) menuControlContext {
 			seenStore[view.Service.Store.Path] = true
 			stores = append(stores, view.Service.Store)
 		}
-		running = append(running, menuRunningBinary{Executable: view.Session.Executable, Version: view.Session.EngineVersion})
+		// An idle process is not in use, so its older build must not hold
+		// "restart needed" and attention for as long as the client keeps it.
+		if !view.idle(now) {
+			running = append(running, menuRunningBinary{Executable: view.Session.Executable, Version: view.Session.EngineVersion})
+		}
 		disabled = disabled || view.Session.UpdateChecksDisabled
 	}
 	if self, err := c.updates.self(); err == nil {
@@ -471,7 +501,7 @@ func (c *menuBarControls) handle(view menuBarView, action string) {
 				last += " (failed)"
 			}
 		}
-		scope.Inform("Elephant Instance · "+view.shortID(), fmt.Sprintf("Project: %s\nClient: %s\nClient version: %s\nEngine: %s\nPID: %d\nConnected: %s\nConversation: %s\nRoot: %s\nStore: %s\nExecutable: %s\nLast activity: %s\n\nConnected does not mean an active chat or foreground task. Nicknames last for this connection.", view.projectName(), view.clientName(), view.Observed.Client.Version, cleanMenuText(view.Session.EngineVersion, 40), view.Session.PID, view.Connected.Local().Format(time.RFC3339), conversation, view.Session.Root, view.Session.Store, view.Session.Executable, last))
+		scope.Inform("Elephant Instance · "+view.shortID(), fmt.Sprintf("Project: %s\nClient: %s\nClient version: %s\nEngine: %s\nPID: %d\nConnected: %s\nConversation: %s\nRoot: %s\nWorking directory: %s\nStore: %s\nExecutable: %s\nLast activity: %s\n\nConnected does not mean an active chat or foreground task. Nicknames last for this connection.", view.projectName(), view.clientName(), view.Observed.Client.Version, cleanMenuText(view.Session.EngineVersion, 40), view.Session.PID, view.Connected.Local().Format(time.RFC3339), conversation, view.Session.Root, cleanMenuText(view.Session.Cwd, 300), view.Session.Store, view.Session.Executable, last))
 	case "rename":
 		answer, err := scope.Prompt(menubar.Dialog{Title: "Rename Instance", Message: "A nickname distinguishes windows on the same project. It lasts until this connection ends.", Buttons: []menubar.Button{{ID: "save", Title: "Save"}, {ID: "cancel", Title: "Cancel"}}, Default: "save", Cancel: "cancel", Input: true, Value: view.Nickname})
 		if err == nil && answer.Choice == "save" {
