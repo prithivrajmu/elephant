@@ -81,6 +81,9 @@ func newMenuBarSession(svc memory.Service) menuBarSession {
 		elephantPath = ""
 	}
 	cwd, _ := os.Getwd()
+	if resolved, err := filepath.EvalSymlinks(cwd); err == nil {
+		cwd = resolved
+	}
 	return menuBarSession{Cwd: cwd, Version: menuBarProtocol, Store: svc.Store.Path, Identity: svc.Identity, Root: svc.Root, Project: svc.Project, Conversation: svc.Conversation, Unattached: svc.Unattached, PID: os.Getpid(), Executable: executable, EngineVersion: memory.Version, Kind: "mcp", ElephantPath: elephantPath, UpdateChecksDisabled: os.Getenv("ELEPHANT_UPDATE_CHECKS") == "0"}
 }
 
