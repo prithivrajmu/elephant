@@ -324,3 +324,23 @@ func findNativeAction(items []menubar.Item, title string) string {
 	}
 	return ""
 }
+
+func TestMenuBarIdleSessions(t *testing.T) {
+	now := time.Now()
+	old := now.Add(-menuBarIdleAfter - time.Minute)
+	cases := []struct {
+		name string
+		view menuBarView
+		want bool
+	}{
+		{"never called, connected long ago", menuBarView{Connected: old}, true},
+		{"old connect, recent tool call", menuBarView{Connected: old, Observed: menuBarObservation{At: now}}, false},
+		{"recent connect", menuBarView{Connected: now}, false},
+		{"palace is never idle", menuBarView{Session: menuBarSession{Kind: "palace"}, Connected: old}, false},
+	}
+	for _, c := range cases {
+		if got := c.view.idle(now); got != c.want {
+			t.Errorf("%s: idle = %v, want %v", c.name, got, c.want)
+		}
+	}
+}

@@ -35,7 +35,7 @@ codex mcp add elephant -- "$ELEPHANT_BIN" mcp \
 codex mcp list
 ```
 
-This writes user-level MCP configuration, normally in `~/.codex/config.toml`. Local Codex clients on the same host share this configuration. Restart the client and inspect `/mcp`. For project-scoped setup, merge the generated `codex-mcp.toml` table into the target project's `.codex/config.toml`; Codex reads it only for trusted projects.
+This writes user-level MCP configuration, normally in `~/.codex/config.toml`. Local Codex clients on the same host share this configuration, so every Codex session in every repository reports the one `--root` and `--project` you register, and the menu bar shows them all under that project. To keep the project per repository, register without `--root` and `--project` (`codex mcp add elephant -- "$ELEPHANT_BIN" mcp`); Elephant then uses each session's working directory. Restart the client and inspect `/mcp`. For project-scoped setup, merge the generated `codex-mcp.toml` table into the target project's `.codex/config.toml`; Codex reads it only for trusted projects.
 
 ### Claude Code
 
