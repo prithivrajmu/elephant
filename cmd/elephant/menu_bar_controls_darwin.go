@@ -80,6 +80,24 @@ func (v menuBarView) clientName() string {
 	return "Unknown MCP client"
 }
 
+// menuBarIdleAfter is how long a client may go without a tool call before the
+// menu lists it as idle. Hosts such as the Codex app-server keep MCP processes
+// alive long after their thread ended, so a live socket does not prove use.
+const menuBarIdleAfter = 2 * time.Hour
+
+func (v menuBarView) lastActive() time.Time {
+	if v.Observed.At.IsZero() {
+		return v.Connected
+	}
+	return v.Observed.At
+}
+
+// idle reports a session with no tool call for menuBarIdleAfter. The Memory
+// Palace serves a dashboard rather than tool calls, so it is never idle.
+func (v menuBarView) idle(now time.Time) bool {
+	return v.Session.Kind != "palace" && now.Sub(v.lastActive()) > menuBarIdleAfter
+}
+
 func (v menuBarView) label() string {
 	label := cleanMenuText(v.clientName(), 36) + " · " + v.shortID()
 	if v.Nickname != "" {
@@ -205,11 +223,19 @@ func (c *menuBarControls) refresh() {
 	var sessions, dreams, health, projects []menubar.Item
 	attention := false
 	liveHealth := make(map[menuBarHealthKey]bool, len(views))
+	now := time.Now()
+	var idleRows []menubar.Item
+	active := 0
 	for _, group := range groups {
 		var sessionRows, dreamRows, healthRows, projectRows []menubar.Item
 		for _, view := range group.views {
 			liveHealth[healthKey(view.Service)] = true
-			sessionItems := []menubar.Item{menuBarRow("Connected · PID " + fmt.Sprint(view.Session.PID)), menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
+			idle := view.idle(now)
+			status := "Connected · PID " + fmt.Sprint(view.Session.PID)
+			if idle {
+				status += " · last active " + now.Sub(view.lastActive()).Round(time.Minute).String() + " ago"
+			}
+			sessionItems := []menubar.Item{menuBarRow(status), menuBarAction("open", "Open Memory Palace"), menuBarAction("details", "Instance Details…"), menuBarAction("rename", "Rename Instance…"), menuBarAction("health/copy", "Copy Redacted Diagnostics")}
 			if view.Observed.Tool != "" {
 				outcome := "completed"
 				if view.Observed.Failed {
@@ -217,7 +243,14 @@ func (c *menuBarControls) refresh() {
 				}
 				sessionItems = append(sessionItems, menuBarSeparator(), menuBarRow(view.Observed.Tool+" · "+outcome), menuBarRow(view.Observed.At.Local().Format("15:04:05")))
 			}
-			sessionRows = append(sessionRows, menuBarSubmenu(view.label(), scopeMenuBarItems(sessionItems, view.ID)))
+			row := menuBarSubmenu(view.label(), scopeMenuBarItems(sessionItems, view.ID))
+			if idle {
+				row.Title = group.title + " · " + row.Title
+				idleRows = append(idleRows, row)
+			} else {
+				active++
+				sessionRows = append(sessionRows, row)
+			}
 			scope := c.scope(view)
 			dreamItems, dreamAttention := c.dreams.Items(scope)
 			dreamRows = append(dreamRows, menuBarSubmenu(view.label(), scopeMenuBarItems(dreamItems, view.ID)))
@@ -226,10 +259,15 @@ func (c *menuBarControls) refresh() {
 			projectRows = append(projectRows, menuBarSubmenu(view.label(), scopeMenuBarItems(c.projectItems(view), view.ID)))
 			attention = attention || dreamAttention || healthAttention
 		}
-		sessions = append(sessions, menuBarSubmenu(group.title, sessionRows))
+		if len(sessionRows) > 0 {
+			sessions = append(sessions, menuBarSubmenu(group.title, sessionRows))
+		}
 		dreams = append(dreams, menuBarSubmenu(group.title, dreamRows))
 		health = append(health, menuBarSubmenu(group.title, healthRows))
 		projects = append(projects, menuBarSubmenu(group.title, projectRows))
+	}
+	if len(idleRows) > 0 {
+		sessions = append(sessions, menuBarSeparator(), menuBarSubmenu(fmt.Sprintf("Idle (%d) · no tool call for %s", len(idleRows), menuBarIdleAfter), idleRows))
 	}
 	var updates []menubar.Item
 	if len(views) > 0 {
@@ -249,7 +287,7 @@ func (c *menuBarControls) refresh() {
 		}
 	}
 	c.revision++
-	model := menubar.Model{Revision: c.revision, Tooltip: fmt.Sprintf("Elephant · %d connected instances", len(views)), Attention: attention, Items: items, Dialog: c.dialog}
+	model := menubar.Model{Revision: c.revision, Tooltip: fmt.Sprintf("Elephant · %d active, %d idle", active, len(idleRows)), Attention: attention, Items: items, Dialog: c.dialog}
 	c.mu.Unlock()
 	select {
 	case c.models <- model:
